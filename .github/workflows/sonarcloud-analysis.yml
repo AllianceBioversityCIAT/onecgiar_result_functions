@@ -2,9 +2,9 @@ name: Sonar (Lambdas)
 
 on:
   push:
-    branches: [main, develop]
+    branches: [ main,staging,dev ]
   pull_request:
-    branches: [main, develop]
+    branches: [ main,staging,dev ]
 
 permissions:
   contents: read
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      SONAR_ORG: your_org_slug # <-- ajusta
+      SONAR_ORG: your_org_slug            # <-- ajusta
       SONAR_PROJECT_KEY: your_project_key # <-- ajusta
 
     steps:
@@ -25,20 +25,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Java (Sonar needs JRE)
+      - name: Set up Java (required by Sonar)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      # 👉 Node SIN cache-dependency-path (evita fallo si faltan lockfiles)
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # 👉 Cache de ~/.npm con clave que tolera ausencia de lockfiles
-      - name: Compute lockfile hashes
+      # Cache ~/.npm (tolerante a ausencia de lockfiles)
+      - name: Compute lock hashes
         id: lock
         shell: bash
         run: |
@@ -51,12 +50,19 @@ jobs:
         with:
           path: ~/.npm
           key: npm-${{ runner.os }}-${{ steps.lock.outputs.norm }}-${{ steps.lock.outputs.load }}
+          restore-keys: |
+            npm-${{ runner.os }}-
 
-      # -------- Normalizer --------
-      - name: Install deps (normalizer)
-        if: hashFiles('services/normalizer/package.json') != ''
+      # ========== Normalizer ==========
+      - name: Install deps (normalizer: ci)
+        if: hashFiles('services/normalizer/package-lock.json') != ''
         working-directory: services/normalizer
         run: npm ci
+
+      - name: Install deps (normalizer: install fallback)
+        if: hashFiles('services/normalizer/package-lock.json') == '' && hashFiles('services/normalizer/package.json') != ''
+        working-directory: services/normalizer
+        run: npm install --no-audit --no-fund
 
       - name: Build (normalizer)
         if: hashFiles('services/normalizer/package.json') != ''
@@ -69,11 +75,16 @@ jobs:
         run: |
           npm test -- --ci --coverage || echo "no tests"
 
-      # -------- Loader S3 --------
-      - name: Install deps (loader-s3)
-        if: hashFiles('services/loader-s3/package.json') != ''
+      # ========== Loader S3 ==========
+      - name: Install deps (loader-s3: ci)
+        if: hashFiles('services/loader-s3/package-lock.json') != ''
         working-directory: services/loader-s3
         run: npm ci
+
+      - name: Install deps (loader-s3: install fallback)
+        if: hashFiles('services/loader-s3/package-lock.json') == '' && hashFiles('services/loader-s3/package.json') != ''
+        working-directory: services/loader-s3
+        run: npm install --no-audit --no-fund
 
       - name: Build (loader-s3)
         if: hashFiles('services/loader-s3/package.json') != ''
@@ -86,7 +97,7 @@ jobs:
         run: |
           npm test -- --ci --coverage || echo "no tests"
 
-      # -------- Cobertura combinada --------
+      # ========== Merge cobertura ==========
       - name: Merge LCOVs
         run: |
           mkdir -p coverage-merged
@@ -115,7 +126,7 @@ jobs:
             -Dsonar.organization=${{ env.SONAR_ORG }}
             -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
             -Dsonar.sources=services/normalizer,services/loader-s3
-            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/*.spec.ts,**/*.spec.tsx,**/*.test.ts,**/*.test.tsx
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/*.spec.ts,**/*.test.ts
             -Dsonar.javascript.lcov.reportPaths=coverage-merged/lcov.info
             -Dsonar.coverage.exclusions=**/dist/**,**/build/**,**/*.config.js,**/*.config.ts
 
