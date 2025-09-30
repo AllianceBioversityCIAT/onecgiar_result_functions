@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: 20
 
-      # Cache ~/.npm (tolerante a ausencia de lockfiles)
+      # Cache ~/.npm (tolerant to absence of lockfiles)
       - name: Compute lock hashes
         id: lock
         shell: bash
