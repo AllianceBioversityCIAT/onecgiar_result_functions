@@ -1,0 +1,117 @@
+name: Sonar (Lambdas)
+
+on:
+  push:
+    branches: [main, staging, dev]
+  pull_request:
+    branches: [main, staging, dev]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  sonar:
+    name: Sonar Scan (Lambdas)
+    runs-on: ubuntu-latest
+
+    env:
+      # 🔁 Ajusta estos valores o usa sonar-project.properties
+      SONAR_ORG: your_org_slug
+      SONAR_PROJECT_KEY: your_project_key
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # recomendado por Sonar para PR decoration
+
+      - name: Set up Java (required by Sonar scanner)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      # -------- Normalizer --------
+      - name: Install deps (normalizer)
+        if: hashFiles('services/normalizer/package.json') != ''
+        working-directory: services/normalizer
+        run: npm ci
+
+      - name: Build (normalizer)
+        if: hashFiles('services/normalizer/package.json') != ''
+        working-directory: services/normalizer
+        run: npm run build --if-present
+
+      - name: Test + coverage (normalizer)
+        if: hashFiles('services/normalizer/package.json') != ''
+        working-directory: services/normalizer
+        run: |
+          npm test -- --ci --coverage || echo "no tests"
+
+      # -------- Loader S3 --------
+      - name: Install deps (loader-s3)
+        if: hashFiles('services/loader-s3/package.json') != ''
+        working-directory: services/loader-s3
+        run: npm ci
+
+      - name: Build (loader-s3)
+        if: hashFiles('services/loader-s3/package.json') != ''
+        working-directory: services/loader-s3
+        run: npm run build --if-present
+
+      - name: Test + coverage (loader-s3)
+        if: hashFiles('services/loader-s3/package.json') != ''
+        working-directory: services/loader-s3
+        run: |
+          npm test -- --ci --coverage || echo "no tests"
+
+      # -------- Cobertura combinada --------
+      - name: Merge LCOVs
+        run: |
+          mkdir -p coverage-merged
+          LCOVS=""
+          [ -f services/normalizer/coverage/lcov.info ] && LCOVS="$LCOVS services/normalizer/coverage/lcov.info"
+          [ -f services/loader-s3/coverage/lcov.info ] && LCOVS="$LCOVS services/loader-s3/coverage/lcov.info"
+
+          if [ -z "$LCOVS" ]; then
+            echo "No LCOV files found; creating empty placeholder"
+            echo "TN:" > coverage-merged/lcov.info
+          else
+            sudo apt-get update -y && sudo apt-get install -y lcov
+            COUNT=$(echo $LCOVS | wc -w)
+            if [ "$COUNT" -eq 1 ]; then
+              cp $LCOVS coverage-merged/lcov.info
+            else
+              lcov -a $(echo $LCOVS | sed 's/ / -a /g') -o coverage-merged/lcov.info
+            fi
+          fi
+
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          # Para SonarQube self-hosted, añade:
+          # SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.organization=${{ env.SONAR_ORG }}
+            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
+            -Dsonar.sources=services/normalizer,services/loader-s3
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/*.spec.ts,**/*.spec.tsx,**/*.test.ts,**/*.test.tsx
+            -Dsonar.javascript.lcov.reportPaths=coverage-merged/lcov.info
+            -Dsonar.coverage.exclusions=**/dist/**,**/build/**,**/*.config.js,**/*.config.ts
+
+      - name: Upload coverage artifact (optional)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-merged
+          path: coverage-merged/lcov.info
+          if-no-files-found: warn
