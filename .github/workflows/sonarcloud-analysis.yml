@@ -16,27 +16,29 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # 🔁 Ajusta estos valores o usa sonar-project.properties
-      SONAR_ORG: your_org_slug
-      SONAR_PROJECT_KEY: your_project_key
+      SONAR_ORG: your_org_slug # <-- ajusta
+      SONAR_PROJECT_KEY: your_project_key # <-- ajusta
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # recomendado por Sonar para PR decoration
+          fetch-depth: 0
 
-      - name: Set up Java (required by Sonar scanner)
+      - name: Set up Java (Sonar needs JRE)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      - name: Set up Node
+      - name: Set up Node (with cache for subprojects)
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
+          cache: npm
+          cache-dependency-path: |
+            services/normalizer/package-lock.json
+            services/loader-s3/package-lock.json
 
       # -------- Normalizer --------
       - name: Install deps (normalizer)
@@ -81,7 +83,6 @@ jobs:
           [ -f services/loader-s3/coverage/lcov.info ] && LCOVS="$LCOVS services/loader-s3/coverage/lcov.info"
 
           if [ -z "$LCOVS" ]; then
-            echo "No LCOV files found; creating empty placeholder"
             echo "TN:" > coverage-merged/lcov.info
           else
             sudo apt-get update -y && sudo apt-get install -y lcov
@@ -97,8 +98,6 @@ jobs:
         uses: sonarsource/sonarcloud-github-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          # Para SonarQube self-hosted, añade:
-          # SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           args: >
             -Dsonar.organization=${{ env.SONAR_ORG }}
