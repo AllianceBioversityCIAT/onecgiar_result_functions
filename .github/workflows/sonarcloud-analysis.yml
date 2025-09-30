@@ -54,12 +54,12 @@ jobs:
             npm-${{ runner.os }}-
 
       # ========== Normalizer ==========
-      - name: Install deps (normalizer: ci)
+      - name: "Install deps (normalizer: ci)"
         if: hashFiles('services/normalizer/package-lock.json') != ''
         working-directory: services/normalizer
         run: npm ci
 
-      - name: Install deps (normalizer: install fallback)
+      - name: "Install deps (normalizer: install fallback)"
         if: hashFiles('services/normalizer/package-lock.json') == '' && hashFiles('services/normalizer/package.json') != ''
         working-directory: services/normalizer
         run: npm install --no-audit --no-fund
@@ -76,12 +76,12 @@ jobs:
           npm test -- --ci --coverage || echo "no tests"
 
       # ========== Loader S3 ==========
-      - name: Install deps (loader-s3: ci)
+      - name: "Install deps (loader-s3: ci)"
         if: hashFiles('services/loader-s3/package-lock.json') != ''
         working-directory: services/loader-s3
         run: npm ci
 
-      - name: Install deps (loader-s3: install fallback)
+      - name: "Install deps (loader-s3: install fallback)"
         if: hashFiles('services/loader-s3/package-lock.json') == '' && hashFiles('services/loader-s3/package.json') != ''
         working-directory: services/loader-s3
         run: npm install --no-audit --no-fund
