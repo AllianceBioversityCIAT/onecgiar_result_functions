@@ -2,9 +2,9 @@ name: Sonar (Lambdas)
 
 on:
   push:
-    branches: [main, staging, dev]
+    branches: [main, develop]
   pull_request:
-    branches: [main, staging, dev]
+    branches: [main, develop]
 
 permissions:
   contents: read
@@ -31,14 +31,26 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Set up Node (with cache for subprojects)
+      # 👉 Node SIN cache-dependency-path (evita fallo si faltan lockfiles)
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: |
-            services/normalizer/package-lock.json
-            services/loader-s3/package-lock.json
+
+      # 👉 Cache de ~/.npm con clave que tolera ausencia de lockfiles
+      - name: Compute lockfile hashes
+        id: lock
+        shell: bash
+        run: |
+          hash_or_none () { [ -f "$1" ] && sha256sum "$1" | cut -d' ' -f1 || echo "none"; }
+          echo "norm=$(hash_or_none services/normalizer/package-lock.json)" >> "$GITHUB_OUTPUT"
+          echo "load=$(hash_or_none services/loader-s3/package-lock.json)"   >> "$GITHUB_OUTPUT"
+
+      - name: Cache npm downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ steps.lock.outputs.norm }}-${{ steps.lock.outputs.load }}
 
       # -------- Normalizer --------
       - name: Install deps (normalizer)
