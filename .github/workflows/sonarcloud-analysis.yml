@@ -2,9 +2,9 @@ name: Sonar (Lambdas)
 
 on:
   push:
-    branches: [ main,staging,dev ]
+    branches: [main, staging, dev]
   pull_request:
-    branches: [ main,staging,dev ]
+    branches: [main, staging, dev]
 
 permissions:
   contents: read
@@ -16,8 +16,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      SONAR_ORG: your_org_slug            # <-- ajusta
-      SONAR_PROJECT_KEY: your_project_key # <-- ajusta
+      SONAR_ORG: ${{ secrets.SONAR_ORG }}
+      SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
 
     steps:
       - name: Checkout
