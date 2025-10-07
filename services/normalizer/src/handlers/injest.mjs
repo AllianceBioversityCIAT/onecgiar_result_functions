@@ -22,6 +22,7 @@ const log = (level, message, meta = {}) => {
 };
 
 export const handler = async (req, context = {}) => {
+  log("debug", "Initializing handler");
   const requestId =
     context.awsRequestId ||
     req?.requestContext?.requestId ||
