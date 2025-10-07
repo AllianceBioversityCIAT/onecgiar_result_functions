@@ -1,6 +1,6 @@
-import { buildDetailWithOffload, putEventsBatch } from "../utils.js";
-import { validateByType } from "../validator/registry.js";
-import { normalizeCommon } from "../normalizer.mjs";
+import { buildDetailWithOffload, putEventsBatch } from "./utils.js";
+import { validateByType } from "./validator/registry.js";
+import { normalizeCommon } from "./normalizer.mjs";
 
 const SERVICE_VERSION = process.env.SERVICE_VERSION || "normalizer-20241007";
 const BUS = process.env.EVENT_BUS || "prms-ingestion-bus";

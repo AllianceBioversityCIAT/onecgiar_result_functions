@@ -7,7 +7,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "rm -rf dist && npx esbuild src/handlers/injest.mjs --bundle --platform=node --target=node20 --format=cjs --outfile=dist/handler.cjs"
+    "build": "rm -rf dist && npx esbuild src/handler.mjs --bundle --platform=node --target=node20 --format=cjs --outfile=dist/handler.cjs"
   },
   "dependencies": {
     "@aws-sdk/client-eventbridge": "^3.899.0",
