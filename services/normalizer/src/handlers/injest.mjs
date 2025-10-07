@@ -2,25 +2,43 @@ import { buildDetailWithOffload, putEventsBatch } from "../utils.js";
 import { validateByType } from "../validator/registry.js";
 import { normalizeCommon } from "../normalizer.mjs";
 
+const SERVICE_VERSION = process.env.SERVICE_VERSION || "normalizer-20241007";
 const BUS = process.env.EVENT_BUS || "prms-ingestion-bus";
 const SRC_NS = process.env.SOURCE_NS || "client";
 const DEFAULT_OP = process.env.DEFAULT_OP || "create";
 
 const log = (level, message, meta = {}) => {
-  const payload = { level, msg: message, service: "normalizer", ...meta };
+  const payload = {
+    level,
+    msg: message,
+    service: "normalizer",
+    version: SERVICE_VERSION,
+    ...meta,
+  };
   const serialized = JSON.stringify(payload);
   if (level === "error") console.error(serialized);
   else if (level === "warn") console.warn(serialized);
   else console.log(serialized);
 };
 
-export const handler = async (req) => {
+export const handler = async (req, context = {}) => {
+  const requestId =
+    context.awsRequestId ||
+    req?.requestContext?.requestId ||
+    req?.headers?.["x-amzn-trace-id"];
+  log("info", "Handler invoked", { requestId });
+
   let body = {};
   try {
     body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
   } catch (err) {
-    log("warn", "Invalid JSON received", { error: err?.message });
-    return r(400, { ok: false, error: "invalid_json", message: err?.message });
+    log("warn", "Invalid JSON received", { error: err?.message, requestId });
+    return r(400, {
+      ok: false,
+      error: "invalid_json",
+      message: err?.message,
+      requestId,
+    });
   }
 
   const tenant = (body.tenant || "unknown").toLowerCase();
@@ -36,14 +54,16 @@ export const handler = async (req) => {
     tenant,
     opDefault,
     receivedCount: list.length,
+    requestId,
   });
 
   if (!list.length) {
-    log("warn", "Missing results in payload", { tenant });
+    log("warn", "Missing results in payload", { tenant, requestId });
     return r(400, {
       ok: false,
       error: "results_missing",
       message: "results is required (array or object)",
+      requestId,
     });
   }
 
@@ -60,13 +80,13 @@ export const handler = async (req) => {
     if (!type) {
       const rejection = { index: i, reason: "type is required" };
       rejected.push(rejection);
-      log("warn", "Rejected item missing type", { index: i });
+      log("warn", "Rejected item missing type", { index: i, requestId });
       continue;
     }
     if (!data || typeof data !== "object") {
       const rejection = { index: i, type, reason: "data is required" };
       rejected.push(rejection);
-      log("warn", "Rejected item missing data", { index: i, type });
+      log("warn", "Rejected item missing data", { index: i, type, requestId });
       continue;
     }
 
@@ -82,6 +102,7 @@ export const handler = async (req) => {
         index: i,
         type,
         errors: v.errors,
+        requestId,
       });
       continue;
     }
@@ -99,7 +120,12 @@ export const handler = async (req) => {
     // Offload si excede MAX
     const { detail, offloaded } = await buildDetailWithOffload(detailPayload);
     if (offloaded) {
-      log("info", "Payload offloaded to S3", { index: i, tenant, type });
+      log("info", "Payload offloaded to S3", {
+        index: i,
+        tenant,
+        type,
+        requestId,
+      });
     }
 
     // Armar entry
@@ -118,6 +144,7 @@ export const handler = async (req) => {
     log("warn", "All items rejected", {
       tenant,
       rejectedCount: rejected.length,
+      requestId,
     });
     return r(422, {
       ok: false,
@@ -126,6 +153,7 @@ export const handler = async (req) => {
       acceptedCount: 0,
       rejectedCount: rejected.length,
       rejected,
+      requestId,
     });
   }
 
@@ -151,6 +179,7 @@ export const handler = async (req) => {
             index: originalIdx,
             code: e.ErrorCode,
             message: e.ErrorMessage,
+            requestId,
           };
           failed.push(failure);
           log("warn", "EventBridge reported failed entry", failure);
@@ -175,19 +204,25 @@ export const handler = async (req) => {
       acceptedCount: response.acceptedCount,
       rejectedCount: response.rejectedCount,
       failedCount: response.failedCount,
+      requestId,
     });
 
-    return r(202, response);
+    return r(202, {
+      ...response,
+      requestId,
+    });
   } catch (error) {
     log("error", "PutEvents error", {
       message: error?.message,
       stack: error?.stack,
+      requestId,
     });
     return r(500, {
       ok: false,
       error: "eventbridge_error",
       message: error?.message,
       rejected,
+      requestId,
     });
   }
 };
@@ -195,5 +230,8 @@ export const handler = async (req) => {
 const r = (code, body) => ({
   statusCode: code,
   headers: { "content-type": "application/json" },
-  body: JSON.stringify(body),
+  body: JSON.stringify({
+    serviceVersion: SERVICE_VERSION,
+    ...body,
+  }),
 });
