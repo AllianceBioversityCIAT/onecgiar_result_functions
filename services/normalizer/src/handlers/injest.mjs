@@ -6,12 +6,21 @@ const BUS = process.env.EVENT_BUS || "prms-ingestion-bus";
 const SRC_NS = process.env.SOURCE_NS || "client";
 const DEFAULT_OP = process.env.DEFAULT_OP || "create";
 
+const log = (level, message, meta = {}) => {
+  const payload = { level, msg: message, service: "normalizer", ...meta };
+  const serialized = JSON.stringify(payload);
+  if (level === "error") console.error(serialized);
+  else if (level === "warn") console.warn(serialized);
+  else console.log(serialized);
+};
+
 export const handler = async (req) => {
   let body = {};
   try {
     body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
-  } catch {
-    return r(400, { ok: false, error: "invalid_json" });
+  } catch (err) {
+    log("warn", "Invalid JSON received", { error: err?.message });
+    return r(400, { ok: false, error: "invalid_json", message: err?.message });
   }
 
   const tenant = (body.tenant || "unknown").toLowerCase();
@@ -23,11 +32,20 @@ export const handler = async (req) => {
     ? [body.results]
     : [];
 
-  if (!list.length)
+  log("info", "Incoming payload", {
+    tenant,
+    opDefault,
+    receivedCount: list.length,
+  });
+
+  if (!list.length) {
+    log("warn", "Missing results in payload", { tenant });
     return r(400, {
       ok: false,
-      error: "results is required (array or object)",
+      error: "results_missing",
+      message: "results is required (array or object)",
     });
+  }
 
   const entries = [];
   const rejected = [];
@@ -40,11 +58,15 @@ export const handler = async (req) => {
     const data = item.data;
 
     if (!type) {
-      rejected.push({ index: i, reason: "type is required" });
+      const rejection = { index: i, reason: "type is required" };
+      rejected.push(rejection);
+      log("warn", "Rejected item missing type", { index: i });
       continue;
     }
     if (!data || typeof data !== "object") {
-      rejected.push({ index: i, type, reason: "data is required" });
+      const rejection = { index: i, type, reason: "data is required" };
+      rejected.push(rejection);
+      log("warn", "Rejected item missing data", { index: i, type });
       continue;
     }
 
@@ -54,7 +76,13 @@ export const handler = async (req) => {
     // Validar por tipo
     const v = validateByType(type, normalized);
     if (!v.ok) {
-      rejected.push({ index: i, type, errors: v.errors });
+      const rejection = { index: i, type, errors: v.errors };
+      rejected.push(rejection);
+      log("warn", "Rejected item by schema validation", {
+        index: i,
+        type,
+        errors: v.errors,
+      });
       continue;
     }
 
@@ -69,7 +97,10 @@ export const handler = async (req) => {
     };
 
     // Offload si excede MAX
-    const { detail } = await buildDetailWithOffload(detailPayload);
+    const { detail, offloaded } = await buildDetailWithOffload(detailPayload);
+    if (offloaded) {
+      log("info", "Payload offloaded to S3", { index: i, tenant, type });
+    }
 
     // Armar entry
     const entry = {
@@ -84,8 +115,14 @@ export const handler = async (req) => {
   }
 
   if (!entries.length) {
+    log("warn", "All items rejected", {
+      tenant,
+      rejectedCount: rejected.length,
+    });
     return r(422, {
       ok: false,
+      error: "validation_failed",
+      message: "Every result was rejected. See details in 'rejected'.",
       acceptedCount: 0,
       rejectedCount: rejected.length,
       rejected,
@@ -110,28 +147,48 @@ export const handler = async (req) => {
         const originalIdx = acceptedIndexes[globalIndex]; // original results[] index
         if (e?.EventId) eventIds.push(e.EventId);
         if (e?.ErrorCode || e?.ErrorMessage) {
-          failed.push({
+          const failure = {
             index: originalIdx,
             code: e.ErrorCode,
             message: e.ErrorMessage,
-          });
+          };
+          failed.push(failure);
+          log("warn", "EventBridge reported failed entry", failure);
         }
       }
       accIdx += ents.length;
     }
 
-    return r(202, {
+    const response = {
       ok: failedCount === 0,
+      status: failedCount === 0 ? "accepted" : "partial_failure",
       acceptedCount: entries.length,
       rejectedCount: rejected.length,
       failedCount,
       eventIds,
       rejected,
       failed,
+    };
+
+    log("info", "Processing completed", {
+      tenant,
+      acceptedCount: response.acceptedCount,
+      rejectedCount: response.rejectedCount,
+      failedCount: response.failedCount,
     });
-  } catch (e) {
-    console.error("PutEvents error", e);
-    return r(500, { ok: false, error: e.message, rejected });
+
+    return r(202, response);
+  } catch (error) {
+    log("error", "PutEvents error", {
+      message: error?.message,
+      stack: error?.stack,
+    });
+    return r(500, {
+      ok: false,
+      error: "eventbridge_error",
+      message: error?.message,
+      rejected,
+    });
   }
 };
 
