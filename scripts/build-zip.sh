@@ -34,7 +34,7 @@ echo "Packaging into $ZIP_TARGET"
 #    - si existe ./dist y contiene handler, empaquetar dist/ (modo build)
 #    - si no, empaquetar src/ (modo JS puro)
 PAYLOAD_DIR="src"
-if [ -d "dist" ] && [ -f "dist/handlers/injest.mjs" ]; then
+if [ -d "dist" ] && [ -f "dist/handlers.mjs" ]; then
   PAYLOAD_DIR="dist"
 fi
 
