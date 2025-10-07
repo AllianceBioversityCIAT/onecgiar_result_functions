@@ -1,0 +1,190 @@
+{
+  "$id": "https://prms/schemas/common_fields.json",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "result_level",
+    "indicator_category",
+    "title",
+    "description",
+    "contributing_initiatives",
+    "geo_focus",
+    "contributing_center",
+    "contributing_partners",
+    "evidence"
+  ],
+  "properties": {
+    "result_level": { "type": "number" },
+    "indicator_category": { "type": "number" },
+
+    "title": { "type": "string", "maxWords": 30 },
+    "description": { "type": "string", "maxWords": 150 },
+
+    "contributing_initiatives": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "SP01",
+          "SP02",
+          "SP03",
+          "SP04",
+          "SP05",
+          "SP06",
+          "SP07",
+          "SP08",
+          "SP09",
+          "SP10",
+          "SP11",
+          "SP12",
+          "SP13"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+
+    "toc_mapping": { "type": "array" },
+
+    "geo_focus": {
+      "type": "object",
+      "required": ["scope_code"],
+      "additionalProperties": false,
+      "properties": {
+        "scope_code": { "type": "number", "enum": [1, 2, 3, 4, 5, 50] },
+        "scope_label": { "type": "string" },
+        "regions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["um49code", "name"],
+            "properties": {
+              "um49code": { "type": "number" },
+              "name": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "countries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "iso_alpha_3", "iso_alpha_2"],
+            "properties": {
+              "id": { "type": "number" },
+              "name": { "type": "string" },
+              "iso_alpha_3": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3
+              },
+              "iso_alpha_2": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "admin1": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name"],
+            "properties": {
+              "id": { "type": "number" },
+              "name": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "scope_code": { "const": 50 } } },
+          "then": { "properties": {} }
+        },
+        {
+          "if": { "properties": { "scope_code": { "const": 1 } } },
+          "then": {
+            "not": {
+              "anyOf": [
+                { "required": ["regions"] },
+                { "required": ["countries"] },
+                { "required": ["admin1"] }
+              ]
+            }
+          }
+        },
+        {
+          "if": { "properties": { "scope_code": { "const": 2 } } },
+          "then": { "required": ["regions"] }
+        },
+        {
+          "if": { "properties": { "scope_code": { "const": 3 } } },
+          "then": {
+            "required": ["countries"],
+            "properties": { "countries": { "minItems": 2 } }
+          }
+        },
+        {
+          "if": { "properties": { "scope_code": { "const": 4 } } },
+          "then": {
+            "required": ["countries"],
+            "properties": { "countries": { "minItems": 1 } }
+          }
+        },
+        {
+          "if": { "properties": { "scope_code": { "const": 5 } } },
+          "then": {
+            "required": ["countries", "admin1"],
+            "properties": {
+              "countries": { "minItems": 1 },
+              "admin1": { "minItems": 1 }
+            }
+          }
+        }
+      ]
+    },
+
+    "contributing_center": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "institution_id"],
+        "properties": {
+          "code": { "type": "string" },
+          "institution_id": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "contributing_partners": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["intitution_id", "acronym"],
+        "properties": {
+          "intitution_id": { "type": "number" },
+          "acronym": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["link", "description"],
+        "properties": {
+          "link": { "type": "string", "format": "uri" },
+          "description": { "type": "string", "maxWords": 50 }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

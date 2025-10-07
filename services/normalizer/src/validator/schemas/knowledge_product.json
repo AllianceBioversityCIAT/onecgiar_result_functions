@@ -1,0 +1,14 @@
+{
+  "$id": "https://prms/schemas/knowledge_product.json",
+  "type": "object",
+  "allOf": [
+    { "$ref": "https://prms/schemas/common_fields.json" },
+    {
+      "type": "object",
+      "properties": {
+        "handle": { "type": "string" }
+      },
+      "required": ["handle"]
+    }
+  ]
+}
