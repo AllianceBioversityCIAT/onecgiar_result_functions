@@ -1,4 +1,4 @@
-import ajv from "./ajv.mjs";
+import ajv from "./ajv.js";
 import common from "./schemas/common_fields.json" assert { type: "json" };
 import kp from "./schemas/knowledge_product.json" assert { type: "json" };
 

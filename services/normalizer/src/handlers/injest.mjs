@@ -1,5 +1,5 @@
 import { buildDetailWithOffload, putEventsBatch } from "../utils.js";
-import { validateByType } from "../validator/registry.mjs";
+import { validateByType } from "../validator/registry.js";
 import { normalizeCommon } from "../normalizer.mjs";
 
 const BUS = process.env.EVENT_BUS || "prms-ingestion-bus";

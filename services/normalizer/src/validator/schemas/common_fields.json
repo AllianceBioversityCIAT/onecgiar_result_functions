@@ -165,9 +165,9 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["intitution_id", "acronym"],
+        "required": ["institution_id", "acronym"],
         "properties": {
-          "intitution_id": { "type": "number" },
+          "institution_id": { "type": "number" },
           "acronym": { "type": "string" }
         },
         "additionalProperties": false
