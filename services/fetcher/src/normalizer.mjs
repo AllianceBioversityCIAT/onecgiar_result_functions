@@ -16,13 +16,11 @@ export function normalizeCommon(d) {
     }
   };
 
-  // Campos mínimos (si existen)
   if ("title" in d) d.title = collapse(d.title);
   if ("description" in d) d.description = collapse(d.description);
   normalizeNumberField(d, "result_level");
   normalizeNumberField(d, "indicator_category");
 
-  // contributing_initiatives: mayúsculas y trim
   if (Array.isArray(d.contributing_initiatives)) {
     d.contributing_initiatives = d.contributing_initiatives.map((x) =>
       String(x).toUpperCase().trim()

@@ -1,13 +1,10 @@
 import express from "express";
-import swaggerUi from "swagger-ui-express";
 
-// Reusa tu lógica actual:
-import { normalizeCommon } from "./normalizer.mjs"; // asegúrate que exporte esta función
-import { validateByType } from "./validator/registry.js"; // ya lo tienes
-import { buildDetailWithOffload, putEventsBatch } from "./utils.js"; // ya lo tienes
+import { normalizeCommon } from "./normalizer.mjs"; 
+import { validateByType } from "./validator/registry.js"; 
+import { buildDetailWithOffload, putEventsBatch } from "./utils.js"; 
 
-// Carga OpenAPI (JSON) para Swagger UI
-import openapi from "./docs/openapi.json" assert { type: "json" };
+import openapi from "./docs/openapi.json" with { type: "json" };
 
 const BUS = process.env.EVENT_BUS || "prms-ingestion-bus";
 const DEFAULT_OP = (process.env.DEFAULT_OP || "create").toLowerCase();
@@ -15,16 +12,65 @@ const DEFAULT_OP = (process.env.DEFAULT_OP || "create").toLowerCase();
 const app = express();
 app.use(express.json({ limit: "5mb" }));
 
-// Healthcheck
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "normalizer", ts: new Date().toISOString() });
 });
 
-// Swagger UI
 app.get("/openapi.json", (_req, res) => res.json(openapi));
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapi));
 
-// Ingest endpoint
+const swaggerHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>PRMS Normalizer API</title>
+      <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui.css" />
+    </head>
+    <body>
+      <div id="swagger-ui"></div>
+      <script src="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui-bundle.js"></script>
+      <script>
+        SwaggerUIBundle({
+          url: '/openapi.json',
+          dom_id: '#swagger-ui',
+          presets: [
+            SwaggerUIBundle.presets.apis,
+            SwaggerUIBundle.presets.standalone
+          ]
+        });
+      </script>
+    </body>
+    </html>`;
+
+app.get("/docs", (_req, res) => {
+  res.send(swaggerHtml);
+});
+
+app.get("/api-docs", (_req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>PRMS Normalizer API</title>
+      <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui.css" />
+    </head>
+    <body>
+      <div id="swagger-ui"></div>
+      <script src="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui-bundle.js"></script>
+      <script>
+        SwaggerUIBundle({
+          url: '/openapi.json',
+          dom_id: '#swagger-ui',
+          presets: [
+            SwaggerUIBundle.presets.apis,
+            SwaggerUIBundle.presets.standalone
+          ]
+        });
+      </script>
+    </body>
+    </html>
+  `);
+});
+
 app.post("/ingest", async (req, res) => {
   const requestId =
     req.headers["x-amzn-trace-id"] || req.headers["x-request-id"];
@@ -66,19 +112,16 @@ app.post("/ingest", async (req, res) => {
       continue;
     }
 
-    // Normaliza (si tu normalizer incluye esta función)
     const normalized = normalizeCommon
       ? normalizeCommon({ ...data })
       : { ...data };
 
-    // Valida por tipo (Ajv)
     const v = validateByType(type, normalized);
     if (!v.ok) {
       rejected.push({ index: i, type, errors: v.errors });
       continue;
     }
 
-    // Construye detail (offload a S3 si excede tamaño)
     const detailPayload = {
       ...normalized,
       tenant,
@@ -92,10 +135,9 @@ app.post("/ingest", async (req, res) => {
 
     const { detail } = await buildDetailWithOffload(detailPayload);
 
-    // Entrada EventBridge
     entries.push({
-      Source: `client.${tenant}`, // p.ej. client.star
-      DetailType: `${type}.${op}`, // p.ej. knowledge_product.create
+      Source: `client.${tenant}`, 
+      DetailType: `${type}.${op}`, 
       EventBusName: BUS,
       Detail: JSON.stringify(detail),
     });

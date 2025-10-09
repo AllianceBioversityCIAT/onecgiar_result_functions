@@ -2,12 +2,11 @@ import ajv from "./ajv.js";
 import common from "./schemas/common_fields.json" with { type: "json" };
 import kp from "./schemas/knowledge_product.json" with { type: "json" };
 
-// registra el schema base (para que el $ref resuelva)
 ajv.addSchema(common);
 
 const validators = {
   knowledge_product: ajv.compile(kp),
-  kp: ajv.compile(kp), // alias corto opcional
+  kp: ajv.compile(kp),
 };
 
 export function validateByType(type, data) {

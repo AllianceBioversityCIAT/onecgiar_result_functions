@@ -51,7 +51,6 @@ export async function buildDetailWithOffload(payload) {
 }
 
 export async function putEventsBatch(entries) {
-  // entries: [{ Source, DetailType, EventBusName, Detail }]
   const chunks = chunk(entries, 10);
   const results = [];
   for (const c of chunks) {
