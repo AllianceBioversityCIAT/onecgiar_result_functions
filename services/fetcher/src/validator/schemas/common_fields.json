@@ -1,29 +1,28 @@
 {
   "$id": "https://prms/schemas/common_fields.json",
+  "title": "Common Fields for Results",
+  "description": "Common fields shared by all result types.",
   "type": "object",
   "additionalProperties": true,
   "required": [
-    "result_level",
-    "indicator_category",
+    "submitted_by",
+    "lead_center",
     "title",
     "description",
-    "contributing_initiatives",
+    "toc_mapping",
     "geo_focus",
     "contributing_center",
     "contributing_partners",
-    "evidence"
+    "evidence",
+    "contributing_bilateral_projects"
   ],
 
   "properties": {
     "submitted_by": {
       "type": "object",
       "description": "Information about the user who submitted the result.",
-      "required": ["user_app_id", "email", "name"],
+      "required": ["email", "name"],
       "properties": {
-        "user_app_id": {
-          "type": "string",
-          "description": "Unique user identifier from the application submitting the result."
-        },
         "email": {
           "type": "string",
           "format": "email",
@@ -32,109 +31,76 @@
         "name": {
           "type": "string",
           "description": "Full name of the user who submitted the result."
+        },
+        "comment": {
+          "type": "string",
+          "description": "Optional comment from the submitter."
+        },
+        "submitted_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date when the result was submitted. If empty, current date will be used."
         }
       },
       "additionalProperties": false
     },
 
-    "center": {
+    "lead_center": {
       "type": "string",
       "description": "Name or acronym of the main center responsible for the result."
-    },
-
-    "project_title": {
-      "type": "string",
-      "description": "Title of the project or funding initiative under which this result was produced."
-    },
-
-    "submitter": {
-      "type": "string",
-      "description": "Identifier of the primary Science Program (SP) submitting the result.",
-      "enum": [
-        "SP01",
-        "SP02",
-        "SP03",
-        "SP04",
-        "SP05",
-        "SP06",
-        "SP07",
-        "SP08",
-        "SP09",
-        "SP10",
-        "SP11",
-        "SP12",
-        "SP13"
-      ]
-    },
-
-    "result_level": {
-      "type": "number",
-      "description": "Result level (3, 4)"
-    },
-
-    "indicator_category": {
-      "type": "number",
-      "description": "Indicator category (1, 3, 4, 5, 6, 7, 8, 9)"
     },
 
     "title": { "type": "string", "maxWords": 30 },
 
     "description": { "type": "string", "maxWords": 150 },
 
-    "contributing_initiatives": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "enum": [
-          "SP01",
-          "SP02",
-          "SP03",
-          "SP04",
-          "SP05",
-          "SP06",
-          "SP07",
-          "SP08",
-          "SP09",
-          "SP10",
-          "SP11",
-          "SP12",
-          "SP13"
-        ]
-      },
-      "minItems": 1,
-      "uniqueItems": true
-    },
-
     "toc_mapping": {
-      "type": "object",
-      "required": [
-        "program_id",
-        "aow_compose_code",
-        "result_title",
-        "result_indicator_description",
-        "result_indicator_type_name"
-      ],
-      "properties": {
-        "program_id": { "type": "string" },
-        "aow_compose_code": { "type": "string" },
-        "result_title": { "type": "string" },
-        "result_indicator_description": { "type": "string" },
-        "result_indicator_type_name": { "type": "string" }
-      }
+      "type": "array",
+      "description": "Array of TOC mappings, can map to multiple Science Programs",
+      "items": {
+        "type": "object",
+        "required": [
+          "science_program_id",
+          "aow_compose_code",
+          "result_title",
+          "result_indicator_description",
+          "result_indicator_type_name"
+        ],
+        "properties": {
+          "science_program_id": { "type": "string" },
+          "aow_compose_code": { "type": "string" },
+          "result_title": { "type": "string" },
+          "result_indicator_description": { "type": "string" },
+          "result_indicator_type_name": { "type": "string" }
+        }
+      },
+      "minItems": 1
     },
 
     "geo_focus": {
       "type": "object",
-      "required": ["scope_code"],
       "additionalProperties": false,
+      "anyOf": [
+        { "required": ["scope_code"] },
+        { "required": ["scope_label"] }
+      ],
       "properties": {
-        "scope_code": { "type": "number", "enum": [1, 2, 3, 4, 5, 50] },
-        "scope_label": { "type": "string" },
+        "scope_code": { "type": "number", "enum": [1, 2, 4, 5, 50] },
+        "scope_label": {
+          "type": "string",
+          "enum": [
+            "Global",
+            "Regional",
+            "National",
+            "Sub-national",
+            "This is yet to be determined"
+          ]
+        },
         "regions": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["um49code", "name"],
+            "anyOf": [{ "required": ["um49code"] }, { "required": ["name"] }],
             "properties": {
               "um49code": { "type": "number" },
               "name": { "type": "string" }
@@ -146,7 +112,12 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["id", "name", "iso_alpha_3", "iso_alpha_2"],
+            "anyOf": [
+              { "required": ["id"] },
+              { "required": ["name"] },
+              { "required": ["iso_alpha_3"] },
+              { "required": ["iso_alpha_2"] }
+            ],
             "properties": {
               "id": { "type": "number" },
               "name": { "type": "string" },
@@ -168,7 +139,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["id", "name"],
+            "anyOf": [{ "required": ["id"] }, { "required": ["name"] }],
             "properties": {
               "id": { "type": "number" },
               "name": { "type": "string" }
@@ -179,41 +150,55 @@
       },
       "allOf": [
         {
-          "if": { "properties": { "scope_code": { "const": 50 } } },
+          "if": {
+            "anyOf": [
+              { "properties": { "scope_code": { "const": 50 } } },
+              {
+                "properties": {
+                  "scope_label": { "const": "This is yet to be determined" }
+                }
+              }
+            ]
+          },
           "then": { "properties": {} }
         },
         {
-          "if": { "properties": { "scope_code": { "const": 1 } } },
-          "then": {
-            "not": {
-              "anyOf": [
-                { "required": ["regions"] },
-                { "required": ["countries"] },
-                { "required": ["subnational_areas"] }
-              ]
-            }
-          }
+          "if": {
+            "anyOf": [
+              { "properties": { "scope_code": { "const": 1 } } },
+              { "properties": { "scope_label": { "const": "Global" } } }
+            ]
+          },
+          "then": { "properties": {} }
         },
         {
-          "if": { "properties": { "scope_code": { "const": 2 } } },
+          "if": {
+            "anyOf": [
+              { "properties": { "scope_code": { "const": 2 } } },
+              { "properties": { "scope_label": { "const": "Regional" } } }
+            ]
+          },
           "then": { "required": ["regions"] }
         },
         {
-          "if": { "properties": { "scope_code": { "const": 3 } } },
-          "then": {
-            "required": ["countries"],
-            "properties": { "countries": { "minItems": 2 } }
-          }
-        },
-        {
-          "if": { "properties": { "scope_code": { "const": 4 } } },
+          "if": {
+            "anyOf": [
+              { "properties": { "scope_code": { "const": 4 } } },
+              { "properties": { "scope_label": { "const": "National" } } }
+            ]
+          },
           "then": {
             "required": ["countries"],
             "properties": { "countries": { "minItems": 1 } }
           }
         },
         {
-          "if": { "properties": { "scope_code": { "const": 5 } } },
+          "if": {
+            "anyOf": [
+              { "properties": { "scope_code": { "const": 5 } } },
+              { "properties": { "scope_label": { "const": "Sub-national" } } }
+            ]
+          },
           "then": {
             "required": ["countries", "subnational_areas"],
             "properties": {
@@ -229,12 +214,15 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["institution_id", "name"],
+        "anyOf": [
+          { "required": ["institution_id"] },
+          { "required": ["name"] },
+          { "required": ["code"] }
+        ],
         "properties": {
           "code": { "type": "string" },
           "institution_id": { "type": "number" },
-          "acronym": { "type": "string" },
-          "name": { "type": "string" }
+          "acronym": { "type": "string" }
         }
       }
     },
@@ -243,10 +231,15 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["institution_id", "acronym"],
+        "anyOf": [
+          { "required": ["institution_id"] },
+          { "required": ["acronym"] },
+          { "required": ["name"] }
+        ],
         "properties": {
           "institution_id": { "type": "number" },
-          "acronym": { "type": "string" }
+          "acronym": { "type": "string" },
+          "name": { "type": "string" }
         },
         "additionalProperties": false
       }
@@ -265,16 +258,17 @@
       }
     },
 
-    "contributing_npp": {
+    "contributing_bilateral_projects": {
       "type": "array",
+      "description": "Array of bilateral project grants that contributed to this result",
       "items": {
         "type": "object",
-        "required": ["grant_title", "center_grant_id", "funder_institution_id"],
+        "required": ["grant_title"],
         "properties": {
-          "grant_title": { "type": "string" },
-          "center_grant_id": { "type": "string" },
-          "funder_institution_id": { "type": "number" },
-          "funder_acronym": { "type": "string" }
+          "grant_title": {
+            "type": "string",
+            "description": "Title of the bilateral grant/project"
+          }
         },
         "additionalProperties": false
       }

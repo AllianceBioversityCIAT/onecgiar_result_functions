@@ -2,9 +2,13 @@
   "openapi": "3.0.3",
   "info": {
     "title": "PRMS Normalizer API",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Validates, normalizes and publishes results to EventBridge."
   },
+  "servers": [
+    { "url": "/{stage}", "variables": { "stage": { "default": "dev" } } },
+    { "url": "/" }
+  ],
   "paths": {
     "/ingest": {
       "post": {
@@ -15,7 +19,8 @@
             "application/json": {
               "schema": { "$ref": "#/components/schemas/IngestRequest" },
               "examples": {
-                "knowledgeProduct": {
+                "kpRegional": {
+                  "summary": "Knowledge Product — Regional (scope_code=2, requiere regions[])",
                   "value": {
                     "tenant": "star",
                     "op": "create",
@@ -24,25 +29,23 @@
                         "type": "knowledge_product",
                         "data": {
                           "submitted_by": {
-                            "user_app_id": "615",
                             "email": "j.doe@alliancebioversityciat.org",
-                            "name": "Juan David Delgado"
+                            "name": "Juan David Delgado",
+                            "comment": "Carga inicial desde STAR",
+                            "submitted_date": "2025-10-09T12:00:00Z"
                           },
-                          "center": "Alliance of Bioversity International and CIAT",
-                          "project_title": "OneRicePH",
-                          "submitter": "SP12",
-                          "result_level": 3,
-                          "indicator_category": 6,
+                          "lead_center": "Alliance of Bioversity International and CIAT",
                           "title": "Improved seed varieties adoption in drylands",
                           "description": "This knowledge product summarizes adoption barriers and enabling factors across regions to inform policy and practice for smallholders in drylands.",
-                          "contributing_initiatives": ["SP01", "SP03"],
-                          "toc_mapping": {
-                            "program_id": "SP012",
-                            "aow_compose_code": "SP12-AOW01",
-                            "result_title": "Adoption of improved seed varieties",
-                            "result_indicator_description": "Share of farmers adopting improved seeds",
-                            "result_indicator_type_name": "# Of Knowledge Products"
-                          },
+                          "toc_mapping": [
+                            {
+                              "science_program_id": "SP12",
+                              "aow_compose_code": "SP12-AOW01",
+                              "result_title": "Adoption of improved seed varieties",
+                              "result_indicator_description": "Share of farmers adopting improved seeds",
+                              "result_indicator_type_name": "# Of Knowledge Products"
+                            }
+                          ],
                           "geo_focus": {
                             "scope_code": 2,
                             "scope_label": "Regional",
@@ -53,15 +56,10 @@
                           "contributing_center": [
                             {
                               "institution_id": 1279,
-                              "name": "International Center for Agricultural Research in the Dry Areas",
                               "acronym": "ICARDA",
                               "code": "CENTER-07"
                             },
-                            {
-                              "institution_id": 115,
-                              "name": "Center for International Forestry Research",
-                              "acronym": "CIFOR"
-                            }
+                            { "institution_id": 115, "acronym": "CIFOR" }
                           ],
                           "contributing_partners": [
                             { "institution_id": 1, "acronym": "WUR" },
@@ -73,42 +71,426 @@
                               "description": "Peer-reviewed article summarizing multi-country trials and yield effects."
                             }
                           ],
-                          "contributing_npp": [
-                            {
-                              "grant_title": "Seed Innovation Window",
-                              "center_grant_id": "GR-2025-001",
-                              "funder_institution_id": 9001,
-                              "funder_acronym": "BMGF"
+                          "contributing_bilateral_projects": [
+                            { "grant_title": "Seed Innovation Window" },
+                            { "grant_title": "Climate-Resilient Varieties" }
+                          ],
+                          "knowledge_product": {
+                            "handle": "hdl:20.500.12345/abc-2025",
+                            "knowledge_product_type": "Journal Article",
+                            "metadataCG": {
+                              "source": "CGSpace",
+                              "accessibility": true,
+                              "doi": "10.1000/j.jas.2025.01.001",
+                              "is_isi": true,
+                              "is_peer_reviewed": true,
+                              "issue_year": 2025
                             },
+                            "licence": "CC-BY 4.0",
+                            "agrovoc_keywords": [
+                              "Wheat",
+                              "Variety trials",
+                              "Climate adaptation"
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "kpNational": {
+                  "summary": "Knowledge Product — Nacional (scope_code=4, requiere countries[≥1])",
+                  "value": {
+                    "tenant": "star",
+                    "results": [
+                      {
+                        "type": "knowledge_product",
+                        "data": {
+                          "submitted_by": {
+                            "email": "m.lee@alliancebioversityciat.org",
+                            "name": "María Lee"
+                          },
+                          "lead_center": "CIAT",
+                          "title": "National varietal release guidelines",
+                          "description": "Guidelines to streamline varietal release at national level.",
+                          "toc_mapping": [
                             {
-                              "grant_title": "Climate-Resilient Varieties",
-                              "center_grant_id": "GR-2025-014",
-                              "funder_institution_id": 9002,
-                              "funder_acronym": "USAID"
+                              "science_program_id": "SP05",
+                              "aow_compose_code": "SP05-AOW02",
+                              "result_title": "National policy brief",
+                              "result_indicator_description": "Policy briefs produced",
+                              "result_indicator_type_name": "# Of Knowledge Products"
                             }
                           ],
-                          "handle": "hdl:20.500.12345/abc-2025",
-                          "knowledge_product_type": "Journal Article",
-                          "metadataCG": {
-                            "source": "CGSpace",
-                            "accessibility": true,
-                            "doi": "10.1000/j.jas.2025.01.001",
-                            "is_isi": true,
-                            "is_peer_reviewed": true,
-                            "issue_year": 2025,
-                            "online_year": 2024
+                          "geo_focus": {
+                            "scope_code": 4,
+                            "scope_label": "National",
+                            "countries": [
+                              {
+                                "id": 170,
+                                "name": "Colombia",
+                                "iso_alpha_3": "COL",
+                                "iso_alpha_2": "CO"
+                              }
+                            ]
                           },
-                          "licence": "CC-BY 4.0",
-                          "keywords": [
-                            "seed adoption",
-                            "drylands",
-                            "food security"
+                          "contributing_center": [
+                            { "institution_id": 115, "acronym": "CIFOR" }
                           ],
-                          "agrovoc_keywords": [
-                            "Wheat",
-                            "Variety trials",
-                            "Climate adaptation"
-                          ]
+                          "contributing_partners": [
+                            { "institution_id": 22, "acronym": "MADR" }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://example.org/policy-brief",
+                              "description": "Official policy brief"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            { "grant_title": "AgPolicy 2025" }
+                          ],
+                          "knowledge_product": {
+                            "handle": "hdl:20.500.12345/pb-2025-01",
+                            "knowledge_product_type": "Policy Brief",
+                            "metadataCG": {
+                              "source": "CGSpace",
+                              "accessibility": true,
+                              "doi": "10.1000/pb.2025.01",
+                              "is_isi": false,
+                              "is_peer_reviewed": false,
+                              "issue_year": 2025
+                            },
+                            "licence": "CC-BY 4.0",
+                            "agrovoc_keywords": ["Policy", "Agriculture"]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "kpMultinational": {
+                  "summary": "Knowledge Product — Multinacional (scope_code=3, requiere countries[≥2])",
+                  "value": {
+                    "tenant": "star",
+                    "results": [
+                      {
+                        "type": "knowledge_product",
+                        "data": {
+                          "submitted_by": {
+                            "email": "a.rossi@alliancebioversityciat.org",
+                            "name": "Andrea Rossi"
+                          },
+                          "lead_center": "Bioversity",
+                          "title": "Cross-border seed systems analysis",
+                          "description": "Comparative study across two countries.",
+                          "toc_mapping": [
+                            {
+                              "science_program_id": "SP03",
+                              "aow_compose_code": "SP03-AOW03",
+                              "result_title": "Seed system analysis",
+                              "result_indicator_description": "Comparative studies completed",
+                              "result_indicator_type_name": "# Of Knowledge Products"
+                            }
+                          ],
+                          "geo_focus": {
+                            "scope_code": 3,
+                            "scope_label": "Multi-national",
+                            "countries": [
+                              {
+                                "id": 360,
+                                "name": "Indonesia",
+                                "iso_alpha_3": "IDN",
+                                "iso_alpha_2": "ID"
+                              },
+                              {
+                                "id": 458,
+                                "name": "Malaysia",
+                                "iso_alpha_3": "MYS",
+                                "iso_alpha_2": "MY"
+                              }
+                            ]
+                          },
+                          "contributing_center": [
+                            { "institution_id": 1279, "acronym": "ICARDA" }
+                          ],
+                          "contributing_partners": [
+                            { "institution_id": 99, "acronym": "MOA" }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://example.org/cross-border",
+                              "description": "Cross-border report"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            { "grant_title": "Seed-X Border" }
+                          ],
+                          "knowledge_product": {
+                            "handle": "hdl:20.500.12345/cross-2025",
+                            "knowledge_product_type": "Report",
+                            "metadataCG": {
+                              "source": "CGSpace",
+                              "accessibility": true,
+                              "doi": "10.1000/rpt.2025.22",
+                              "is_isi": false,
+                              "is_peer_reviewed": true,
+                              "issue_year": 2025
+                            },
+                            "licence": "CC-BY 4.0",
+                            "agrovoc_keywords": ["Seeds", "Trade"]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "kpSubnational": {
+                  "summary": "Knowledge Product — Sub-nacional (scope_code=5, requiere countries[≥1] y admin1[≥1])",
+                  "value": {
+                    "tenant": "star",
+                    "results": [
+                      {
+                        "type": "knowledge_product",
+                        "data": {
+                          "submitted_by": {
+                            "email": "l.garcia@alliancebioversityciat.org",
+                            "name": "Luis García"
+                          },
+                          "lead_center": "CIAT",
+                          "title": "County-level varietal adoption",
+                          "description": "Dataset on varietal adoption at sub-national level.",
+                          "toc_mapping": [
+                            {
+                              "science_program_id": "SP07",
+                              "aow_compose_code": "SP07-AOW01",
+                              "result_title": "Sub-national dataset",
+                              "result_indicator_description": "Datasets published",
+                              "result_indicator_type_name": "# Of Knowledge Products"
+                            }
+                          ],
+                          "geo_focus": {
+                            "scope_code": 5,
+                            "scope_label": "Sub-national",
+                            "countries": [
+                              {
+                                "id": 404,
+                                "name": "Kenya",
+                                "iso_alpha_3": "KEN",
+                                "iso_alpha_2": "KE"
+                              }
+                            ],
+                            "admin1": [{ "id": 1, "name": "Nairobi County" }]
+                          },
+                          "contributing_center": [
+                            { "institution_id": 115, "acronym": "CIFOR" }
+                          ],
+                          "contributing_partners": [
+                            { "institution_id": 501, "acronym": "NEMA" }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://example.org/dataset",
+                              "description": "Open dataset landing page"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            { "grant_title": "County Seed Data" }
+                          ],
+                          "knowledge_product": {
+                            "handle": "hdl:20.500.12345/kedata-2025",
+                            "knowledge_product_type": "Dataset",
+                            "metadataCG": {
+                              "source": "CGSpace",
+                              "accessibility": true,
+                              "doi": "10.1000/ds.2025.09",
+                              "is_isi": false,
+                              "is_peer_reviewed": false,
+                              "issue_year": 2025
+                            },
+                            "licence": "CC-BY 4.0",
+                            "agrovoc_keywords": ["Datasets", "Adoption"]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "kpGlobal": {
+                  "summary": "Knowledge Product — Global (scope_code=1, NO debe enviar regions/countries/admin1)",
+                  "value": {
+                    "tenant": "star",
+                    "results": [
+                      {
+                        "type": "knowledge_product",
+                        "data": {
+                          "submitted_by": {
+                            "email": "g.khan@alliancebioversityciat.org",
+                            "name": "Gul Khan"
+                          },
+                          "lead_center": "Alliance",
+                          "title": "Global meta-analysis on seed adoption",
+                          "description": "A meta-analysis summarizing seed adoption globally.",
+                          "toc_mapping": [
+                            {
+                              "science_program_id": "SP01",
+                              "aow_compose_code": "SP01-AOW01",
+                              "result_title": "Global meta-analysis",
+                              "result_indicator_description": "Meta-analyses completed",
+                              "result_indicator_type_name": "# Of Knowledge Products"
+                            }
+                          ],
+                          "geo_focus": {
+                            "scope_code": 1,
+                            "scope_label": "Global"
+                          },
+                          "contributing_center": [
+                            { "institution_id": 1279, "acronym": "ICARDA" }
+                          ],
+                          "contributing_partners": [
+                            { "institution_id": 10, "acronym": "FAO" }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://example.org/global-meta",
+                              "description": "Global meta study"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            { "grant_title": "Global Evidence 2025" }
+                          ],
+                          "knowledge_product": {
+                            "handle": "hdl:20.500.12345/global-2025",
+                            "knowledge_product_type": "Journal Article",
+                            "metadataCG": {
+                              "source": "CGSpace",
+                              "accessibility": true,
+                              "doi": "10.1000/j.jas.2025.77",
+                              "is_isi": true,
+                              "is_peer_reviewed": true,
+                              "issue_year": 2025
+                            },
+                            "licence": "CC-BY 4.0",
+                            "agrovoc_keywords": ["Global", "Seeds"]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "kpMinimal": {
+                  "summary": "Ejemplo mínimo válido (campos obligatorios)",
+                  "value": {
+                    "tenant": "star",
+                    "results": [
+                      {
+                        "type": "knowledge_product",
+                        "data": {
+                          "submitted_by": {
+                            "email": "min.user@alliance.org",
+                            "name": "Min User"
+                          },
+                          "lead_center": "CIAT",
+                          "title": "Minimal KP",
+                          "description": "Short description.",
+                          "toc_mapping": [
+                            {
+                              "science_program_id": "SP02",
+                              "aow_compose_code": "SP02-AOW01",
+                              "result_title": "Minimal",
+                              "result_indicator_description": "n/a",
+                              "result_indicator_type_name": "# Of Knowledge Products"
+                            }
+                          ],
+                          "geo_focus": {
+                            "scope_code": 1,
+                            "scope_label": "Global"
+                          },
+                          "contributing_center": [
+                            { "institution_id": 115, "acronym": "CIFOR" }
+                          ],
+                          "contributing_partners": [
+                            { "institution_id": 2, "acronym": "CGIAR" }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://example.org/min",
+                              "description": "ref"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            { "grant_title": "MIN-001" }
+                          ],
+                          "knowledge_product": {
+                            "handle": "hdl:20.500.12345/min",
+                            "knowledge_product_type": "Other",
+                            "metadataCG": {
+                              "source": "CGSpace",
+                              "accessibility": true,
+                              "doi": "10.1000/min.1",
+                              "is_isi": false,
+                              "is_peer_reviewed": false,
+                              "issue_year": 2025
+                            },
+                            "licence": "CC-BY 4.0",
+                            "agrovoc_keywords": ["Test"]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "kpBatchTwo": {
+                  "summary": "Batch con 2 resultados",
+                  "value": {
+                    "tenant": "star",
+                    "op": "create",
+                    "results": [
+                      {
+                        "$ref": "#/paths/~1ingest/post/requestBody/content/application~1json/examples/kpRegional/value/results/0"
+                      },
+                      {
+                        "$ref": "#/paths/~1ingest/post/requestBody/content/application~1json/examples/kpNational/value/results/0"
+                      }
+                    ]
+                  }
+                },
+                "invalidExample": {
+                  "summary": "Ejemplo inválido (falla validación)",
+                  "value": {
+                    "tenant": "star",
+                    "results": [
+                      {
+                        "type": "knowledge_product",
+                        "data": {
+                          "submitted_by": {
+                            "email": "bad@alliance.org",
+                            "name": "Bad User"
+                          },
+                          "lead_center": "CIAT",
+                          "title": "Invalid KP",
+                          "description": "Missing geo_focus and evidence, will fail.",
+                          "toc_mapping": [
+                            {
+                              "science_program_id": "SP99",
+                              "aow_compose_code": "SP99-AOW01",
+                              "result_title": "Invalid",
+                              "result_indicator_description": "n/a",
+                              "result_indicator_type_name": "# Of Knowledge Products"
+                            }
+                          ],
+                          "knowledge_product": {
+                            "handle": "hdl:20.500.12345/invalid",
+                            "knowledge_product_type": "Other",
+                            "metadataCG": {
+                              "source": "CGSpace",
+                              "accessibility": true,
+                              "doi": "10.1000/invalid.1",
+                              "is_isi": false,
+                              "is_peer_reviewed": false,
+                              "issue_year": 2025
+                            },
+                            "licence": "CC-BY 4.0"
+                          }
                         }
                       }
                     ]
