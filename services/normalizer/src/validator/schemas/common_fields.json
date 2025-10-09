@@ -13,11 +13,72 @@
     "contributing_partners",
     "evidence"
   ],
+
   "properties": {
-    "result_level": { "type": "number" },
-    "indicator_category": { "type": "number" },
+    "submitted_by": {
+      "type": "object",
+      "description": "Information about the user who submitted the result.",
+      "required": ["user_app_id", "email", "name"],
+      "properties": {
+        "user_app_id": {
+          "type": "string",
+          "description": "Unique user identifier from the application submitting the result."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address of the user who submitted the result."
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the user who submitted the result."
+        }
+      },
+      "additionalProperties": false
+    },
+    
+    "center": {
+      "type": "string",
+      "description": "Name or acronym of the main center responsible for the result."
+    },
+
+    "project_title": {
+      "type": "string",
+      "description": "Title of the project or funding initiative under which this result was produced."
+    },
+
+    "submitter": {
+      "type": "string",
+      "description": "Identifier of the primary Science Program (SP) submitting the result.",
+      "enum": [
+        "SP01",
+        "SP02",
+        "SP03",
+        "SP04",
+        "SP05",
+        "SP06",
+        "SP07",
+        "SP08",
+        "SP09",
+        "SP10",
+        "SP11",
+        "SP12",
+        "SP13"
+      ]
+    },
+
+    "result_level": {
+      "type": "number",
+      "description": "Result level (2, 4)"
+    },
+
+    "indicator_category": {
+      "type": "number",
+      "description": "Indicator category (1, 3, 4, 5, 6, 7, 8, 9)"
+    },
 
     "title": { "type": "string", "maxWords": 30 },
+
     "description": { "type": "string", "maxWords": 150 },
 
     "contributing_initiatives": {
@@ -44,7 +105,23 @@
       "uniqueItems": true
     },
 
-    "toc_mapping": { "type": "array" },
+    "toc_mapping": {
+      "type": "object",
+      "required": [
+        "program_id",
+        "aow_compose_code",
+        "result_title",
+        "result_indicator_description",
+        "result_indicator_type_name"
+      ],
+      "properties": {
+        "program_id": { "type": "string" },
+        "aow_compose_code": { "type": "string" },
+        "result_title": { "type": "string" },
+        "result_indicator_description": { "type": "string" },
+        "result_indicator_type_name": { "type": "string" }
+      }
+    },
 
     "geo_focus": {
       "type": "object",
@@ -152,12 +229,13 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["code", "institution_id"],
+        "required": ["institution_id", "name"],
         "properties": {
           "code": { "type": "string" },
-          "institution_id": { "type": "string" }
-        },
-        "additionalProperties": false
+          "institution_id": { "type": "number" },
+          "acronym": { "type": "string" },
+          "name": { "type": "string" }
+        }
       }
     },
 
@@ -182,6 +260,21 @@
         "properties": {
           "link": { "type": "string", "format": "uri" },
           "description": { "type": "string", "maxWords": 50 }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "contributing_npp": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["grant_title", "center_grant_id", "funder_institution_id"],
+        "properties": {
+          "grant_title": { "type": "string" },
+          "center_grant_id": { "type": "string" },
+          "funder_institution_id": { "type": "number" },
+          "funder_acronym": { "type": "string" }
         },
         "additionalProperties": false
       }

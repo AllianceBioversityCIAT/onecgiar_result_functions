@@ -4,7 +4,6 @@ import { normalizeCommon } from "./normalizer.mjs";
 
 const SERVICE_VERSION = process.env.SERVICE_VERSION || "normalizer-20241007";
 const BUS = process.env.EVENT_BUS || "prms-ingestion-bus";
-const SRC_NS = process.env.SOURCE_NS || "client";
 const DEFAULT_OP = process.env.DEFAULT_OP || "create";
 
 const log = (level, message, meta = {}) => {
@@ -131,8 +130,8 @@ export const handler = async (req, context = {}) => {
 
     // Armar entry
     const entry = {
-      Source: `${SRC_NS}.${tenant}`,
-      DetailType: `${type}.${op}`,
+      Source: "prms.result-management.api",
+      DetailType: "dataset.ingest.requested",
       EventBusName: BUS,
       Detail: JSON.stringify(detail),
     };

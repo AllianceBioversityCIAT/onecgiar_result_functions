@@ -1,14 +1,52 @@
 {
   "$id": "https://prms/schemas/knowledge_product.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Knowledge Product",
+  "description": "Schema for Knowledge Product results, extending common_fields.json",
   "type": "object",
   "allOf": [
     { "$ref": "https://prms/schemas/common_fields.json" },
     {
       "type": "object",
       "properties": {
-        "handle": { "type": "string" }
+        "handle": {
+          "type": "string",
+          "description": "Unique identifier or handle for the knowledge product (e.g. DOI or institutional handle)"
+        },
+        "knowledge_product_type": {
+          "type": "string",
+          "description": "Type of knowledge product (e.g. Journal Article, Policy Brief, Report)"
+        },
+        "metadataCG": {
+          "type": "object",
+          "description": "Metadata describing accessibility, DOI, peer-review status, and publication dates.",
+          "properties": {
+            "source": { "type": "string" },
+            "accessibility": { "type": "boolean" },
+            "doi": { "type": "string" },
+            "is_isi": { "type": "boolean" },
+            "is_peer_reviewed": { "type": "boolean" },
+            "issue_year": { "type": "number" },
+            "online_year": { "type": "number" }
+          },
+          "required": ["source", "accessibility", "doi"]
+        },
+        "licence": {
+          "type": "string",
+          "description": "License under which the knowledge product is published (e.g. CC-BY 4.0)"
+        },
+        "keywords": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Free-form list of descriptive keywords."
+        },
+        "agrovoc_keywords": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Controlled vocabulary keywords from AGROVOC."
+        }
       },
-      "required": ["handle"]
+      "required": ["handle", "knowledge_product_type", "metadataCG", "licence"]
     }
   ]
 }
