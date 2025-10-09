@@ -1,0 +1,169 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PRMS Normalizer API",
+    "version": "1.0.0",
+    "description": "Validates, normalizes and publishes results to EventBridge."
+  },
+  "paths": {
+    "/ingest": {
+      "post": {
+        "summary": "Ingest 1..n results",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/IngestRequest" },
+              "examples": {
+                "knowledgeProduct": {
+                  "value": {
+                    "tenant": "star",
+                    "op": "create",
+                    "results": [
+                      {
+                        "type": "knowledge_product",
+                        "data": {
+                          "submitted_by": {
+                            "user_app_id": "615",
+                            "email": "j.doe@alliancebioversityciat.org",
+                            "name": "Juan David Delgado"
+                          },
+                          "center": "Alliance of Bioversity International and CIAT",
+                          "project_title": "OneRicePH",
+                          "submitter": "SP12",
+                          "result_level": 3,
+                          "indicator_category": 6,
+                          "title": "Improved seed varieties adoption in drylands",
+                          "description": "This knowledge product summarizes adoption barriers and enabling factors across regions to inform policy and practice for smallholders in drylands.",
+                          "contributing_initiatives": ["SP01", "SP03"],
+                          "toc_mapping": {
+                            "program_id": "SP012",
+                            "aow_compose_code": "SP12-AOW01",
+                            "result_title": "Adoption of improved seed varieties",
+                            "result_indicator_description": "Share of farmers adopting improved seeds",
+                            "result_indicator_type_name": "# Of Knowledge Products"
+                          },
+                          "geo_focus": {
+                            "scope_code": 2,
+                            "scope_label": "Regional",
+                            "regions": [
+                              { "um49code": 145, "name": "Sub-Saharan Africa" }
+                            ]
+                          },
+                          "contributing_center": [
+                            {
+                              "institution_id": 1279,
+                              "name": "International Center for Agricultural Research in the Dry Areas",
+                              "acronym": "ICARDA",
+                              "code": "CENTER-07"
+                            },
+                            {
+                              "institution_id": 115,
+                              "name": "Center for International Forestry Research",
+                              "acronym": "CIFOR"
+                            }
+                          ],
+                          "contributing_partners": [
+                            { "institution_id": 1, "acronym": "WUR" },
+                            { "institution_id": 7, "acronym": "NARO" }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://example.org/paper-123",
+                              "description": "Peer-reviewed article summarizing multi-country trials and yield effects."
+                            }
+                          ],
+                          "contributing_npp": [
+                            {
+                              "grant_title": "Seed Innovation Window",
+                              "center_grant_id": "GR-2025-001",
+                              "funder_institution_id": 9001,
+                              "funder_acronym": "BMGF"
+                            },
+                            {
+                              "grant_title": "Climate-Resilient Varieties",
+                              "center_grant_id": "GR-2025-014",
+                              "funder_institution_id": 9002,
+                              "funder_acronym": "USAID"
+                            }
+                          ],
+                          "handle": "hdl:20.500.12345/abc-2025",
+                          "knowledge_product_type": "Journal Article",
+                          "metadataCG": {
+                            "source": "CGSpace",
+                            "accessibility": true,
+                            "doi": "10.1000/j.jas.2025.01.001",
+                            "is_isi": true,
+                            "is_peer_reviewed": true,
+                            "issue_year": 2025,
+                            "online_year": 2024
+                          },
+                          "licence": "CC-BY 4.0",
+                          "keywords": [
+                            "seed adoption",
+                            "drylands",
+                            "food security"
+                          ],
+                          "agrovoc_keywords": [
+                            "Wheat",
+                            "Variety trials",
+                            "Climate adaptation"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": { "description": "Accepted and published to EventBridge" },
+          "400": { "description": "Bad Request (missing wrapper fields)" },
+          "422": { "description": "Validation failed for all items" },
+          "500": { "description": "Internal error (EventBridge/S3)" }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Healthcheck",
+        "responses": {
+          "200": { "description": "Service OK" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "IngestRequest": {
+        "type": "object",
+        "required": ["results"],
+        "properties": {
+          "tenant": { "type": "string", "example": "star" },
+          "op": {
+            "type": "string",
+            "enum": ["create", "update", "delete"],
+            "default": "create"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["type", "data"],
+              "properties": {
+                "type": { "type": "string", "example": "knowledge_product" },
+                "op": {
+                  "type": "string",
+                  "enum": ["create", "update", "delete"]
+                },
+                "data": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
