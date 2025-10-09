@@ -17,7 +17,7 @@
               "schema": { "$ref": "#/components/schemas/IngestRequest" },
               "examples": {
                 "kpRegional": {
-                  "summary": "Knowledge Product — Regional (scope_code=2, requiere regions[])",
+                  "summary": "Knowledge Product — Regional (scope_code=2, requires regions[])",
                   "value": {
                     "tenant": "star",
                     "op": "create",
@@ -28,7 +28,7 @@
                           "submitted_by": {
                             "email": "j.doe@alliancebioversityciat.org",
                             "name": "Juan David Delgado",
-                            "comment": "Carga inicial desde STAR",
+                            "comment": "Initial load from STAR",
                             "submitted_date": "2025-10-09T12:00:00Z"
                           },
                           "lead_center": "Alliance of Bioversity International and CIAT",
@@ -96,7 +96,7 @@
                   }
                 },
                 "kpNational": {
-                  "summary": "Knowledge Product — Nacional (scope_code=4, requiere countries[≥1])",
+                  "summary": "Knowledge Product — National (scope_code=4, requires countries[≥1])",
                   "value": {
                     "tenant": "star",
                     "results": [
@@ -165,84 +165,8 @@
                     ]
                   }
                 },
-                "kpMultinational": {
-                  "summary": "Knowledge Product — Multinacional (scope_code=3, requiere countries[≥2])",
-                  "value": {
-                    "tenant": "star",
-                    "results": [
-                      {
-                        "type": "knowledge_product",
-                        "data": {
-                          "submitted_by": {
-                            "email": "a.rossi@alliancebioversityciat.org",
-                            "name": "Andrea Rossi"
-                          },
-                          "lead_center": "Bioversity",
-                          "title": "Cross-border seed systems analysis",
-                          "description": "Comparative study across two countries.",
-                          "toc_mapping": [
-                            {
-                              "science_program_id": "SP03",
-                              "aow_compose_code": "SP03-AOW03",
-                              "result_title": "Seed system analysis",
-                              "result_indicator_description": "Comparative studies completed",
-                              "result_indicator_type_name": "# Of Knowledge Products"
-                            }
-                          ],
-                          "geo_focus": {
-                            "scope_code": 3,
-                            "scope_label": "Multi-national",
-                            "countries": [
-                              {
-                                "id": 360,
-                                "name": "Indonesia",
-                                "iso_alpha_3": "IDN",
-                                "iso_alpha_2": "ID"
-                              },
-                              {
-                                "id": 458,
-                                "name": "Malaysia",
-                                "iso_alpha_3": "MYS",
-                                "iso_alpha_2": "MY"
-                              }
-                            ]
-                          },
-                          "contributing_center": [
-                            { "institution_id": 1279, "acronym": "ICARDA" }
-                          ],
-                          "contributing_partners": [
-                            { "institution_id": 99, "acronym": "MOA" }
-                          ],
-                          "evidence": [
-                            {
-                              "link": "https://example.org/cross-border",
-                              "description": "Cross-border report"
-                            }
-                          ],
-                          "contributing_bilateral_projects": [
-                            { "grant_title": "Seed-X Border" }
-                          ],
-                          "knowledge_product": {
-                            "handle": "hdl:20.500.12345/cross-2025",
-                            "knowledge_product_type": "Report",
-                            "metadataCG": {
-                              "source": "CGSpace",
-                              "accessibility": true,
-                              "doi": "10.1000/rpt.2025.22",
-                              "is_isi": false,
-                              "is_peer_reviewed": true,
-                              "issue_year": 2025
-                            },
-                            "licence": "CC-BY 4.0",
-                            "agrovoc_keywords": ["Seeds", "Trade"]
-                          }
-                        }
-                      }
-                    ]
-                  }
-                },
                 "kpSubnational": {
-                  "summary": "Knowledge Product — Sub-nacional (scope_code=5, requiere countries[≥1] y admin1[≥1])",
+                  "summary": "Knowledge Product — Sub-national (scope_code=5, requires countries[≥1] and subnational_areas[≥1])",
                   "value": {
                     "tenant": "star",
                     "results": [
@@ -276,7 +200,9 @@
                                 "iso_alpha_2": "KE"
                               }
                             ],
-                            "admin1": [{ "id": 1, "name": "Nairobi County" }]
+                            "subnational_areas": [
+                              { "id": 1, "name": "Nairobi County" }
+                            ]
                           },
                           "contributing_center": [
                             { "institution_id": 115, "acronym": "CIFOR" }
@@ -313,7 +239,7 @@
                   }
                 },
                 "kpGlobal": {
-                  "summary": "Knowledge Product — Global (scope_code=1, NO debe enviar regions/countries/admin1)",
+                  "summary": "Knowledge Product — Global (scope_code=1, should NOT send regions/countries/subnational_areas)",
                   "value": {
                     "tenant": "star",
                     "results": [
@@ -375,7 +301,7 @@
                   }
                 },
                 "kpMinimal": {
-                  "summary": "Ejemplo mínimo válido (campos obligatorios)",
+                  "summary": "Minimal valid example (required fields only)",
                   "value": {
                     "tenant": "star",
                     "results": [
@@ -437,7 +363,7 @@
                   }
                 },
                 "kpBatchTwo": {
-                  "summary": "Batch con 2 resultados",
+                  "summary": "Batch with 2 results",
                   "value": {
                     "tenant": "star",
                     "op": "create",
@@ -452,7 +378,7 @@
                   }
                 },
                 "invalidExample": {
-                  "summary": "Ejemplo inválido (falla validación)",
+                  "summary": "Invalid example (validation fails)",
                   "value": {
                     "tenant": "star",
                     "results": [
