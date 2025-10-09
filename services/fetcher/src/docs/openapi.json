@@ -5,10 +5,7 @@
     "version": "1.1.0",
     "description": "Validates, normalizes and publishes results to EventBridge."
   },
-  "servers": [
-    { "url": "/{stage}", "variables": { "stage": { "default": "dev" } } },
-    { "url": "/" }
-  ],
+  "servers": [{ "url": "/" }],
   "paths": {
     "/ingest": {
       "post": {
