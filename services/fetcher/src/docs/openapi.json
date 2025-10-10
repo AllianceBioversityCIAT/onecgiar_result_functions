@@ -26,7 +26,7 @@
                         "type": "knowledge_product",
                         "data": {
                           "submitted_by": {
-                            "email": "j.doe@alliancebioversityciat.org",
+                            "email": "j.doe@cgiar.org",
                             "name": "Juan David Delgado",
                             "comment": "Initial load from STAR",
                             "submitted_date": "2025-10-09T12:00:00Z"
@@ -53,8 +53,7 @@
                           "contributing_center": [
                             {
                               "institution_id": 1279,
-                              "acronym": "ICARDA",
-                              "code": "CENTER-07"
+                              "acronym": "ICARDA"
                             },
                             { "institution_id": 115, "acronym": "CIFOR" }
                           ],
@@ -104,8 +103,9 @@
                         "type": "knowledge_product",
                         "data": {
                           "submitted_by": {
-                            "email": "m.lee@alliancebioversityciat.org",
-                            "name": "María Lee"
+                            "email": "m.lee@cgiar.org",
+                            "name": "María Lee",
+                            "submitted_date": "2025-10-10T10:30:00Z"
                           },
                           "lead_center": "CIAT",
                           "title": "National varietal release guidelines",
@@ -174,8 +174,9 @@
                         "type": "knowledge_product",
                         "data": {
                           "submitted_by": {
-                            "email": "l.garcia@alliancebioversityciat.org",
-                            "name": "Luis García"
+                            "email": "l.garcia@cgiar.org",
+                            "name": "Luis García",
+                            "submitted_date": "2025-10-10T11:15:00Z"
                           },
                           "lead_center": "CIAT",
                           "title": "County-level varietal adoption",
@@ -247,8 +248,9 @@
                         "type": "knowledge_product",
                         "data": {
                           "submitted_by": {
-                            "email": "g.khan@alliancebioversityciat.org",
-                            "name": "Gul Khan"
+                            "email": "g.khan@cgiar.org",
+                            "name": "Gul Khan",
+                            "submitted_date": "2025-10-10T14:20:00Z"
                           },
                           "lead_center": "Alliance",
                           "title": "Global meta-analysis on seed adoption",
@@ -310,7 +312,8 @@
                         "data": {
                           "submitted_by": {
                             "email": "min.user@alliance.org",
-                            "name": "Min User"
+                            "name": "Min User",
+                            "submitted_date": "2025-10-10T09:00:00Z"
                           },
                           "lead_center": "CIAT",
                           "title": "Minimal KP",
@@ -387,7 +390,8 @@
                         "data": {
                           "submitted_by": {
                             "email": "bad@alliance.org",
-                            "name": "Bad User"
+                            "name": "Bad User",
+                            "submitted_date": "2025-10-10T16:45:00Z"
                           },
                           "lead_center": "CIAT",
                           "title": "Invalid KP",

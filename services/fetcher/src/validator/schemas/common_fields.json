@@ -21,7 +21,7 @@
     "submitted_by": {
       "type": "object",
       "description": "Information about the user who submitted the result.",
-      "required": ["email", "name"],
+      "required": ["email", "name", "submitted_date"],
       "properties": {
         "email": {
           "type": "string",
@@ -216,13 +216,13 @@
         "type": "object",
         "anyOf": [
           { "required": ["institution_id"] },
-          { "required": ["name"] },
-          { "required": ["code"] }
+          { "required": ["acronym"] },
+          { "required": ["name"] }
         ],
         "properties": {
-          "code": { "type": "string" },
           "institution_id": { "type": "number" },
-          "acronym": { "type": "string" }
+          "acronym": { "type": "string" },
+          "name": { "type": "string" }
         }
       }
     },
