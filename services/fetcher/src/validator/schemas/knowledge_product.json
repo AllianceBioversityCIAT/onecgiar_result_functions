@@ -30,7 +30,7 @@
                 "is_peer_reviewed": { "type": "boolean" },
                 "issue_year": { "type": "number" }
               },
-              "required": ["source", "accessibility", "doi"]
+              "required": ["source", "accessibility", "is_isi", "is_peer_reviewed", "issue_year"]
             },
             "licence": {
               "type": "string",
