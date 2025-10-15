@@ -5,6 +5,8 @@
   "type": "object",
   "additionalProperties": true,
   "required": [
+    "created_date",
+    "created_by",
     "submitted_by",
     "lead_center",
     "title",
@@ -23,7 +25,7 @@
       "format": "date-time",
       "description": "Date when the result was created. If empty, current date will be used."
     },
-    
+
     "created_by": {
       "type": "object",
       "description": "Information about the user who created the result.",
