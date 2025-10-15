@@ -25,6 +25,11 @@
                       {
                         "type": "knowledge_product",
                         "data": {
+                          "created_date": "2025-10-08T14:30:00Z",
+                          "created_by": {
+                            "email": "researcher@cgiar.org",
+                            "name": "Research Team Lead"
+                          },
                           "submitted_by": {
                             "email": "j.doe@cgiar.org",
                             "name": "Juan David Delgado",
@@ -102,6 +107,11 @@
                       {
                         "type": "knowledge_product",
                         "data": {
+                          "created_date": "2025-10-09T16:45:00Z",
+                          "created_by": {
+                            "email": "policy.team@cgiar.org",
+                            "name": "Policy Research Team"
+                          },
                           "submitted_by": {
                             "email": "m.lee@cgiar.org",
                             "name": "María Lee",
@@ -173,6 +183,11 @@
                       {
                         "type": "knowledge_product",
                         "data": {
+                          "created_date": "2025-10-09T09:20:00Z",
+                          "created_by": {
+                            "email": "data.team@cgiar.org",
+                            "name": "Data Science Team"
+                          },
                           "submitted_by": {
                             "email": "l.garcia@cgiar.org",
                             "name": "Luis García",
@@ -247,6 +262,11 @@
                       {
                         "type": "knowledge_product",
                         "data": {
+                          "created_date": "2025-10-01T10:15:00Z",
+                          "created_by": {
+                            "email": "global.research@cgiar.org",
+                            "name": "Global Research Coordinator"
+                          },
                           "submitted_by": {
                             "email": "g.khan@cgiar.org",
                             "name": "Gul Khan",
@@ -310,6 +330,11 @@
                       {
                         "type": "knowledge_product",
                         "data": {
+                          "created_date": "2025-10-10T08:45:00Z",
+                          "created_by": {
+                            "email": "test.creator@alliance.org",
+                            "name": "Test Creator"
+                          },
                           "submitted_by": {
                             "email": "min.user@alliance.org",
                             "name": "Min User",
@@ -388,6 +413,11 @@
                       {
                         "type": "knowledge_product",
                         "data": {
+                          "created_date": "2025-10-10T16:30:00Z",
+                          "created_by": {
+                            "email": "invalid.creator@alliance.org",
+                            "name": "Invalid Creator"
+                          },
                           "submitted_by": {
                             "email": "bad@alliance.org",
                             "name": "Bad User",
