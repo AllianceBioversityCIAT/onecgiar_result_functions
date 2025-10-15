@@ -19,8 +19,8 @@
                 "kpRegional": {
                   "summary": "Knowledge Product — Regional (scope_code=2, requires regions[])",
                   "value": {
-                    "tenant": "star",
-                    "op": "create",
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
                     "results": [
                       {
                         "type": "knowledge_product",
@@ -102,7 +102,7 @@
                 "kpNational": {
                   "summary": "Knowledge Product — National (scope_code=4, requires countries[≥1])",
                   "value": {
-                    "tenant": "star",
+                    "tenant": "prms.result-management.api",
                     "results": [
                       {
                         "type": "knowledge_product",
@@ -178,7 +178,7 @@
                 "kpSubnational": {
                   "summary": "Knowledge Product — Sub-national (scope_code=5, requires countries[≥1] and subnational_areas[≥1])",
                   "value": {
-                    "tenant": "star",
+                    "tenant": "prms.result-management.api",
                     "results": [
                       {
                         "type": "knowledge_product",
@@ -257,7 +257,7 @@
                 "kpGlobal": {
                   "summary": "Knowledge Product — Global (scope_code=1, should NOT send regions/countries/subnational_areas)",
                   "value": {
-                    "tenant": "star",
+                    "tenant": "prms.result-management.api",
                     "results": [
                       {
                         "type": "knowledge_product",
@@ -325,7 +325,7 @@
                 "kpMinimal": {
                   "summary": "Minimal valid example (required fields only)",
                   "value": {
-                    "tenant": "star",
+                    "tenant": "prms.result-management.api",
                     "results": [
                       {
                         "type": "knowledge_product",
@@ -393,8 +393,8 @@
                 "kpBatchTwo": {
                   "summary": "Batch with 2 results",
                   "value": {
-                    "tenant": "star",
-                    "op": "create",
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
                     "results": [
                       {
                         "$ref": "#/paths/~1ingest/post/requestBody/content/application~1json/examples/kpRegional/value/results/0"
@@ -408,7 +408,7 @@
                 "invalidExample": {
                   "summary": "Invalid example (validation fails)",
                   "value": {
-                    "tenant": "star",
+                    "tenant": "prms.result-management.api",
                     "results": [
                       {
                         "type": "knowledge_product",
@@ -480,11 +480,14 @@
         "type": "object",
         "required": ["results"],
         "properties": {
-          "tenant": { "type": "string", "example": "star" },
+          "tenant": {
+            "type": "string",
+            "example": "prms.result-management.api"
+          },
           "op": {
             "type": "string",
-            "enum": ["create", "update", "delete"],
-            "default": "create"
+            "enum": ["dataset.ingest.requested", "update", "delete"],
+            "default": "dataset.ingest.requested"
           },
           "results": {
             "type": "array",
