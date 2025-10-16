@@ -17,58 +17,45 @@ export async function buildDetailWithOffload(payload) {
   const sizeBytes = Buffer.byteLength(raw, "utf8");
   const idem = payload.idempotencyKey || sha(raw);
   const corr = payload.correlationId || crypto.randomUUID();
-  const shouldOffload = sizeBytes > MAX;
 
-  console.log("[fetcher] buildDetailWithOffload decision", {
-    sizeBytes,
-    maxInlineBytes: MAX,
-    shouldOffload,
-    hasBucket: !!BUCKET,
-    idem,
-  });
-
-  if (shouldOffload) {
-    if (!BUCKET) throw new Error("payload_too_large_and_no_bucket");
-    const key = `normalized/${Date.now()}-${idem}.json`;
-    try {
-      await s3.send(
-        new PutObjectCommand({
-          Bucket: BUCKET,
-          Key: key,
-          Body: raw,
-          ContentType: "application/json",
-        })
-      );
-      console.log("[fetcher] offloaded payload to S3", { bucket: BUCKET, key });
-      return {
-        detail: {
-          s3: { bucket: BUCKET, key },
-          idempotencyKey: idem,
-          correlationId: corr,
-          ts: Date.now(),
-          offloadBytes: sizeBytes,
-        },
-        offloaded: true,
-      };
-    } catch (err) {
-      console.error("[fetcher] error offloading to S3", {
-        message: err?.message,
-        bucket: BUCKET,
-      });
-      throw err;
-    }
+  if (!BUCKET) {
+    console.error("[fetcher] S3_BUCKET not configured, cannot offload");
+    throw new Error("s3_bucket_missing");
   }
 
-  console.log("[fetcher] inline payload (no offload)", { sizeBytes });
+  const key = `normalized/${Date.now()}-${idem}.json`;
+  console.log("[fetcher] forcing offload to S3", {
+    bucket: BUCKET,
+    key,
+    sizeBytes,
+  });
+  try {
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: BUCKET,
+        Key: key,
+        Body: raw,
+        ContentType: "application/json",
+      })
+    );
+  } catch (err) {
+    console.error("[fetcher] error offloading to S3 (forced)", {
+      message: err?.message,
+      bucket: BUCKET,
+    });
+    throw err;
+  }
+
   return {
     detail: {
-      payload,
+      s3: { bucket: BUCKET, key },
       idempotencyKey: idem,
       correlationId: corr,
       ts: Date.now(),
-      inlineBytes: sizeBytes,
+      offloadBytes: sizeBytes,
+      forcedOffload: true,
     },
-    offloaded: false,
+    offloaded: true,
   };
 }
 
