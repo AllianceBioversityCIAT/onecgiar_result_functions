@@ -69,6 +69,25 @@ export async function putEventsBatch(entries) {
   return results;
 }
 
+export async function putEvent(entry) {
+  const start = Date.now();
+  try {
+    const out = await eb.send(new PutEventsCommand({ Entries: [entry] }));
+    const e = out.Entries?.[0];
+    console.log("[fetcher] single event sent", {
+      eventId: e?.EventId,
+      failed: !!(e?.ErrorCode || e?.ErrorMessage),
+      errorCode: e?.ErrorCode,
+      errorMessage: e?.ErrorMessage,
+      tookMs: Date.now() - start,
+    });
+    return out;
+  } catch (err) {
+    console.error("[fetcher] single event error", { message: err?.message });
+    throw err;
+  }
+}
+
 const sha = (s) => crypto.createHash("sha256").update(s).digest("hex");
 const chunk = (arr, size) => {
   const out = [];
