@@ -2,7 +2,7 @@ import express from "express";
 
 import { normalizeCommon } from "./normalizer.mjs"; 
 import { validateByType } from "./validator/registry.js"; 
-import { buildDetailWithOffload, putEvent } from "./utils.js"; 
+import { buildDetailWithOffload, putEventsBatch } from "./utils.js"; 
 
 import openapi from "./docs/openapi.json" with { type: "json" };
 
@@ -76,11 +76,9 @@ app.post("/ingest", async (req, res) => {
     });
   }
 
+  const entries = [];
   const rejected = [];
-  const perResultStatus = [];
-  let acceptedCount = 0;
-  let failedCount = 0;
-  const eventIds = [];
+  const acceptedIndexes = [];
 
   for (let i = 0; i < list.length; i++) {
     const it = list[i] || {};
@@ -134,40 +132,16 @@ app.post("/ingest", async (req, res) => {
       detailSize: Buffer.byteLength(JSON.stringify(detail), 'utf8')
     });
 
-    const entry = {
+    entries.push({
       Source: `${tenant}`,
       DetailType: `${op}`,
       EventBusName: BUS,
       Detail: JSON.stringify(detail),
-    };
-
-    try {
-      const out = await putEvent(entry);
-      const e = out.Entries?.[0];
-      if (e?.EventId) {
-        eventIds.push(e.EventId);
-        perResultStatus.push({ index: i, eventId: e.EventId, ok: true });
-        acceptedCount++;
-      } else if (e?.ErrorCode || e?.ErrorMessage) {
-        failedCount++;
-        perResultStatus.push({
-          index: i,
-            ok: false,
-            code: e.ErrorCode,
-            message: e.ErrorMessage,
-        });
-      } else {
-        failedCount++;
-        perResultStatus.push({ index: i, ok: false, message: 'unknown_eventbridge_response' });
-      }
-    } catch (err) {
-      failedCount++;
-      perResultStatus.push({ index: i, ok: false, message: err?.message });
-      console.error('[ingest:item:eventError]', { index: i, error: err?.message });
-    }
+    });
+    acceptedIndexes.push(i);
   }
 
-  if (!acceptedCount) {
+  if (!entries.length) {
     console.warn('[ingest] all results rejected', { requestId, rejectedCount: rejected.length });
     return res.status(422).json({
       ok: false,
@@ -179,18 +153,58 @@ app.post("/ingest", async (req, res) => {
       requestId,
     });
   }
-  // Summary response after per-result sends
-  return res.status(202).json({
-    ok: failedCount === 0,
-    status: failedCount === 0 ? 'accepted' : 'partial_failure',
-    acceptedCount,
-    rejectedCount: rejected.length,
-    failedCount,
-    eventIds,
-    rejected,
-    perResultStatus,
-    requestId,
-  });
+  
+  try {
+    const outs = await putEventsBatch(entries);
+    console.log('[ingest] putEventsBatch completed', {
+      batches: outs.length,
+      totalEntries: entries.length,
+      rejectedCount: rejected.length
+    });
+
+    const eventIds = [];
+    let failedCount = 0;
+    const failed = [];
+
+    let accIdx = 0;
+    for (const out of outs) {
+      failedCount += out?.FailedEntryCount || 0;
+      const ents = out?.Entries || [];
+      for (let k = 0; k < ents.length; k++) {
+        const e = ents[k];
+        if (e?.EventId) eventIds.push(e.EventId);
+        if (e?.ErrorCode || e?.ErrorMessage) {
+          failed.push({
+            index: acceptedIndexes[accIdx + k],
+            code: e.ErrorCode,
+            message: e.ErrorMessage,
+          });
+        }
+      }
+      accIdx += ents.length;
+    }
+
+    return res.status(202).json({
+      ok: failedCount === 0,
+      status: failedCount === 0 ? "accepted" : "partial_failure",
+      acceptedCount: entries.length,
+      rejectedCount: rejected.length,
+      failedCount,
+      eventIds,
+      rejected,
+      failed,
+      requestId,
+    });
+  } catch (err) {
+    console.error('[ingest] eventbridge error', { message: err?.message, requestId });
+    return res.status(500).json({
+      ok: false,
+      error: "eventbridge_error",
+      message: err?.message,
+      rejected,
+      requestId,
+    });
+  }
 });
 
 export default app;
