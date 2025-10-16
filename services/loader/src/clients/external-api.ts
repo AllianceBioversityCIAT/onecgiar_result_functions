@@ -61,31 +61,36 @@ export class ExternalApiClient {
     }
   }
 
-  async enrichResult(result: ProcessedResult): Promise<ProcessedResult> {
+  /**
+   * Sends a result once and returns both the possibly enriched result (adding result_id/result_code)
+   * and the raw API response. On failure returns the original result and throws the error upward if desired.
+   */
+  async enrichResult(
+    result: ProcessedResult
+  ): Promise<{ enriched: ProcessedResult; apiResponse?: ExternalApiResponse }> {
     try {
       const apiResponse = await this.sendResult(result);
 
-      // Extraer id y result_code de la respuesta
       const externalResult = apiResponse.response?.results?.[0];
       if (externalResult) {
-        return {
+        const enriched: ProcessedResult = {
           ...result,
           result_id: externalResult.id,
           result_code: externalResult.result_code,
         };
+        return { enriched, apiResponse };
       }
 
       console.warn(
         `[ExternalApiClient] No result data in response for ${result.idempotencyKey}`
       );
-      return result;
+      return { enriched: result, apiResponse };
     } catch (error) {
       console.error(
         `[ExternalApiClient] Failed to enrich result ${result.idempotencyKey}:`,
         error
       );
-      // En caso de error, devolvemos el resultado sin enriquecer
-      return result;
+      return { enriched: result };
     }
   }
 }

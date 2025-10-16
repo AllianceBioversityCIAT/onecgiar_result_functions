@@ -30,20 +30,16 @@ export class KnowledgeProductProcessor implements ProcessorInterface {
 
       const enrichedResult = this.enrichWithFixedFields(result);
 
-      this.logger.info("Sending to external API", resultId);
-      const externallyEnrichedResult =
-        await this.externalApiClient.enrichResult(enrichedResult);
+      this.logger.info("Sending to external API (single call)", resultId);
+      const {
+        enriched: externallyEnrichedResult,
+        apiResponse: externalApiResponse,
+      } = await this.externalApiClient.enrichResult(enrichedResult);
 
-      let externalApiResponse;
-      try {
-        externalApiResponse = await this.externalApiClient.sendResult(
-          enrichedResult
-        );
-      } catch (error) {
+      if (!externalApiResponse) {
         this.logger.warn(
-          "External API call failed, continuing without enrichment",
-          resultId,
-          error
+          "External API did not return enrichment (using local enriched result)",
+          resultId
         );
       }
 
