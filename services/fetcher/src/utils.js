@@ -19,7 +19,7 @@ export async function buildDetailWithOffload(payload) {
 
   if (Buffer.byteLength(raw, "utf8") > MAX) {
     if (!BUCKET) throw new Error("payload_too_large_and_no_bucket");
-    const key = `ingest/${Date.now()}-${idem}.json`;
+    const key = `normalized/${Date.now()}-${idem}.json`;
     await s3.send(
       new PutObjectCommand({
         Bucket: BUCKET,
