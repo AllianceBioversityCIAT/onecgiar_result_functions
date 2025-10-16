@@ -110,8 +110,8 @@ app.post("/ingest", async (req, res) => {
     const { detail } = await buildDetailWithOffload(detailPayload);
 
     entries.push({
-      Source: `client.${tenant}`, 
-      DetailType: `${type}.${op}`, 
+      Source: `{tenant}`, 
+      DetailType: `${op}`, 
       EventBusName: BUS,
       Detail: JSON.stringify(detail),
     });
