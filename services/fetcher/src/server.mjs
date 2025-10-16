@@ -6,7 +6,7 @@ import { buildDetailWithOffload, putEventsBatch } from "./utils.js";
 
 import openapi from "./docs/openapi.json" with { type: "json" };
 
-const BUS = process.env.EVENT_BUS || "prms-ingestion-bus";
+const BUS = process.env.EVENT_BUS || "default";
 const DEFAULT_OP = (process.env.DEFAULT_OP || "create").toLowerCase();
 
 const app = express();
@@ -50,6 +50,14 @@ app.post("/ingest", async (req, res) => {
     req.headers["x-amzn-trace-id"] || req.headers["x-request-id"];
   const body = req.body || {};
 
+  console.log('[ingest] request received', {
+    requestId,
+    hasBody: !!body,
+    rawKeys: Object.keys(body || {}),
+    tenantRaw: body.tenant,
+    opRaw: body.op,
+  });
+
   const tenant = String(body.tenant || "unknown").toLowerCase();
   const opDefault = String(body.op || DEFAULT_OP).toLowerCase();
 
@@ -59,6 +67,7 @@ app.post("/ingest", async (req, res) => {
     ? [body.results]
     : [];
   if (!list.length) {
+    console.warn('[ingest] empty results list', { requestId });
     return res.status(400).json({
       ok: false,
       error: "results_missing",
@@ -77,12 +86,16 @@ app.post("/ingest", async (req, res) => {
     const op = String(it.op || opDefault).toLowerCase();
     const data = it.data;
 
+    console.log('[ingest:item:start]', { index: i, type, op, hasData: !!data });
+
     if (!type) {
       rejected.push({ index: i, reason: "type is required" });
+      console.warn('[ingest:item:reject]', { index: i, reason: 'type_required' });
       continue;
     }
     if (!data || typeof data !== "object") {
       rejected.push({ index: i, type, reason: "data is required" });
+      console.warn('[ingest:item:reject]', { index: i, type, reason: 'data_required' });
       continue;
     }
 
@@ -93,6 +106,7 @@ app.post("/ingest", async (req, res) => {
     const v = validateByType(type, normalized);
     if (!v.ok) {
       rejected.push({ index: i, type, errors: v.errors });
+      console.warn('[ingest:item:reject]', { index: i, type, errors: v.errors });
       continue;
     }
 
@@ -109,8 +123,17 @@ app.post("/ingest", async (req, res) => {
 
     const { detail } = await buildDetailWithOffload(detailPayload);
 
+    console.log('[ingest:item:detailBuilt]', {
+      index: i,
+      offloaded: !!detail.s3,
+      idempotencyKey: detail.idempotencyKey,
+      correlationId: detail.correlationId,
+      s3Key: detail.s3?.key,
+      detailSize: Buffer.byteLength(JSON.stringify(detail), 'utf8')
+    });
+
     entries.push({
-      Source: `{tenant}`, 
+      Source: `${tenant}`, 
       DetailType: `${op}`, 
       EventBusName: BUS,
       Detail: JSON.stringify(detail),
@@ -119,6 +142,7 @@ app.post("/ingest", async (req, res) => {
   }
 
   if (!entries.length) {
+    console.warn('[ingest] all results rejected', { requestId, rejectedCount: rejected.length });
     return res.status(422).json({
       ok: false,
       error: "validation_failed",
@@ -132,6 +156,11 @@ app.post("/ingest", async (req, res) => {
 
   try {
     const outs = await putEventsBatch(entries);
+    console.log('[ingest] putEventsBatch completed', {
+      batches: outs.length,
+      totalEntries: entries.length,
+      rejectedCount: rejected.length
+    });
 
     const eventIds = [];
     let failedCount = 0;
@@ -167,6 +196,7 @@ app.post("/ingest", async (req, res) => {
       requestId,
     });
   } catch (err) {
+    console.error('[ingest] eventbridge error', { message: err?.message, requestId });
     return res.status(500).json({
       ok: false,
       error: "eventbridge_error",
