@@ -2,7 +2,7 @@ import express from "express";
 
 import { normalizeCommon } from "./normalizer.mjs"; 
 import { validateByType } from "./validator/registry.js"; 
-import { buildDetailWithOffload, putEventsBatch } from "./utils.js"; 
+import { buildDetailWithOffload, putEventsBatch, offloadRequestBody } from "./utils.js"; 
 
 import openapi from "./docs/openapi.json" with { type: "json" };
 
@@ -86,63 +86,27 @@ app.post("/ingest", async (req, res) => {
     const op = String(it.op || opDefault).toLowerCase();
     const data = it.data;
 
-    console.log('[ingest:item:start]', { index: i, type, op, hasData: !!data });
-
     if (!type) {
       rejected.push({ index: i, reason: "type is required" });
-      console.warn('[ingest:item:reject]', { index: i, reason: 'type_required' });
       continue;
     }
     if (!data || typeof data !== "object") {
       rejected.push({ index: i, type, reason: "data is required" });
-      console.warn('[ingest:item:reject]', { index: i, type, reason: 'data_required' });
       continue;
     }
 
-    const normalized = normalizeCommon
-      ? normalizeCommon({ ...data })
-      : { ...data };
-
+    const normalized = normalizeCommon ? normalizeCommon({ ...data }) : { ...data };
     const v = validateByType(type, normalized);
     if (!v.ok) {
       rejected.push({ index: i, type, errors: v.errors });
-      console.warn('[ingest:item:reject]', { index: i, type, errors: v.errors });
       continue;
     }
-
-    const detailPayload = {
-      ...normalized,
-      tenant,
-      type,
-      op,
-      received_at: new Date().toISOString(),
-      idempotencyKey: `${tenant}:${type}:${op}:${
-        normalized.id ?? normalized.handle ?? "na"
-      }`,
-    };
-
-    const { detail } = await buildDetailWithOffload(detailPayload);
-
-    console.log('[ingest:item:detailBuilt]', {
-      index: i,
-      offloaded: !!detail.s3,
-      idempotencyKey: detail.idempotencyKey,
-      correlationId: detail.correlationId,
-      s3Key: detail.s3?.key,
-      detailSize: Buffer.byteLength(JSON.stringify(detail), 'utf8')
-    });
-
-    entries.push({
-      Source: `${tenant}`,
-      DetailType: `${op}`,
-      EventBusName: BUS,
-      Detail: JSON.stringify(detail),
-    });
+    list[i].data = normalized;
+    list[i]._meta = { type, op };
     acceptedIndexes.push(i);
   }
 
-  if (!entries.length) {
-    console.warn('[ingest] all results rejected', { requestId, rejectedCount: rejected.length });
+  if (!acceptedIndexes.length) {
     return res.status(422).json({
       ok: false,
       error: "validation_failed",
@@ -153,6 +117,51 @@ app.post("/ingest", async (req, res) => {
       requestId,
     });
   }
+
+  const ingestionEnvelope = {
+    tenant,
+    op: opDefault,
+    results: list,
+    received_at: new Date().toISOString(),
+    requestId,
+    rejected,
+    acceptedIndexes,
+  };
+
+  let pointer;
+  try {
+    pointer = await offloadRequestBody(ingestionEnvelope);
+  } catch (err) {
+    console.error('[ingest] failed full body offload', { message: err?.message });
+    return res.status(500).json({ ok: false, error: 'offload_failed', message: err?.message, requestId });
+  }
+
+  for (const idx of acceptedIndexes) {
+    const it = list[idx];
+    const type = it._meta.type;
+    const op = it._meta.op;
+    const normalized = it.data;
+    const idempotencyKey = `${tenant}:${type}:${op}:${normalized.id ?? normalized.handle ?? 'na'}`;
+    const detail = {
+      s3: pointer.s3,
+      correlationId: pointer.correlationId,
+      idempotencyKey,
+      tenant,
+      type,
+      op,
+      result_index: idx,
+      ts: Date.now(),
+      offloadBytes: pointer.offloadBytes,
+      fullBody: true,
+    };
+    entries.push({
+      Source: tenant,
+      DetailType: op,
+      EventBusName: BUS,
+      Detail: JSON.stringify(detail),
+    });
+  }
+
   
   try {
     const outs = await putEventsBatch(entries);
@@ -194,6 +203,8 @@ app.post("/ingest", async (req, res) => {
       rejected,
       failed,
       requestId,
+      offload: pointer?.s3,
+      correlationId: pointer?.correlationId,
     });
   } catch (err) {
     console.error('[ingest] eventbridge error', { message: err?.message, requestId });

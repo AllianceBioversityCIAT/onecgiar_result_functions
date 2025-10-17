@@ -59,6 +59,34 @@ export async function buildDetailWithOffload(payload) {
   };
 }
 
+export async function offloadRequestBody(body) {
+  if (!BUCKET) throw new Error("s3_bucket_missing");
+  const raw = JSON.stringify(body);
+  const sizeBytes = Buffer.byteLength(raw, "utf8");
+  const hash = sha(raw).slice(0, 32);
+  const corr = body.correlationId || crypto.randomUUID();
+  const key = `ingest-full/${Date.now()}-${hash}.json`;
+  console.log("[fetcher] offloading full body", {
+    bucket: BUCKET,
+    key,
+    sizeBytes,
+    resultsCount: Array.isArray(body.results) ? body.results.length : 0,
+  });
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: raw,
+      ContentType: "application/json",
+    })
+  );
+  return {
+    s3: { bucket: BUCKET, key },
+    correlationId: corr,
+    offloadBytes: sizeBytes,
+  };
+}
+
 export async function putEventsBatch(entries) {
   const chunks = chunk(entries, 10);
   const results = [];
