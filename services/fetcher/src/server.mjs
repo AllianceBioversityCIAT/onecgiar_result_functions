@@ -75,6 +75,17 @@ app.post("/ingest", async (req, res) => {
       requestId,
     });
   }
+  if (list.length > 100) {
+    console.warn('[ingest] batch too large', { requestId, count: list.length });
+    return res.status(413).json({
+      ok: false,
+      error: 'results_too_many',
+      message: `Maximum 100 results allowed per request. Received ${list.length}. Nothing processed.`,
+      limit: 100,
+      received: list.length,
+      requestId,
+    });
+  }
 
   const entries = [];
   const rejected = [];
