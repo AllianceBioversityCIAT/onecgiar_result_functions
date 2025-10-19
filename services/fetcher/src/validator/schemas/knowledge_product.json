@@ -14,7 +14,7 @@
           "properties": {
             "handle": {
               "type": "string",
-              "description": "Unique identifier or handle for the knowledge product (e.g. DOI or institutional handle)"
+              "description": "Unique identifier or handle for the knowledge product (e.g. institutional handle, repository handle, or other persistent ID)"
             },
             "knowledge_product_type": {
               "type": "string",
@@ -22,7 +22,7 @@
             },
             "metadataCG": {
               "type": "object",
-              "description": "Metadata describing accessibility, DOI, peer-review status, and publication dates.",
+              "description": "Metadata describing accessibility, peer-review status, and publication year. DOI is optional and if provided belongs at higher integration layers, not enforced here.",
               "properties": {
                 "source": { "type": "string" },
                 "accessibility": { "type": "boolean" },
@@ -30,7 +30,13 @@
                 "is_peer_reviewed": { "type": "boolean" },
                 "issue_year": { "type": "number" }
               },
-              "required": ["source", "accessibility", "is_isi", "is_peer_reviewed", "issue_year"]
+              "required": [
+                "source",
+                "accessibility",
+                "is_isi",
+                "is_peer_reviewed",
+                "issue_year"
+              ]
             },
             "licence": {
               "type": "string",

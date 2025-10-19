@@ -82,7 +82,6 @@
                             "metadataCG": {
                               "source": "CGSpace",
                               "accessibility": true,
-                              "doi": "10.1000/j.jas.2025.01.001",
                               "is_isi": true,
                               "is_peer_reviewed": true,
                               "issue_year": 2025
@@ -162,7 +161,6 @@
                             "metadataCG": {
                               "source": "CGSpace",
                               "accessibility": true,
-                              "doi": "10.1000/pb.2025.01",
                               "is_isi": false,
                               "is_peer_reviewed": false,
                               "issue_year": 2025
@@ -241,7 +239,6 @@
                             "metadataCG": {
                               "source": "CGSpace",
                               "accessibility": true,
-                              "doi": "10.1000/ds.2025.09",
                               "is_isi": false,
                               "is_peer_reviewed": false,
                               "issue_year": 2025
@@ -309,7 +306,6 @@
                             "metadataCG": {
                               "source": "CGSpace",
                               "accessibility": true,
-                              "doi": "10.1000/j.jas.2025.77",
                               "is_isi": true,
                               "is_peer_reviewed": true,
                               "issue_year": 2025
@@ -377,7 +373,6 @@
                             "metadataCG": {
                               "source": "CGSpace",
                               "accessibility": true,
-                              "doi": "10.1000/min.1",
                               "is_isi": false,
                               "is_peer_reviewed": false,
                               "issue_year": 2025
@@ -441,7 +436,6 @@
                             "metadataCG": {
                               "source": "CGSpace",
                               "accessibility": true,
-                              "doi": "10.1000/invalid.1",
                               "is_isi": false,
                               "is_peer_reviewed": false,
                               "issue_year": 2025
