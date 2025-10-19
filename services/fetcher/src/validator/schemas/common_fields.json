@@ -71,8 +71,19 @@
     },
 
     "lead_center": {
-      "type": "string",
-      "description": "Name or acronym of the main center responsible for the result."
+      "type": "object",
+      "description": "Main center responsible for the result. Must provide at least one of: name, acronym, institution_id.",
+      "anyOf": [
+        { "required": ["name"] },
+        { "required": ["acronym"] },
+        { "required": ["institution_id"] }
+      ],
+      "properties": {
+        "name": { "type": "string" },
+        "acronym": { "type": "string" },
+        "institution_id": { "type": "number" }
+      },
+      "additionalProperties": false
     },
 
     "title": { "type": "string", "maxWords": 30 },

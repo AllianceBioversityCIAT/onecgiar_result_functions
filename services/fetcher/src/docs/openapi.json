@@ -36,7 +36,10 @@
                             "comment": "Initial load from STAR",
                             "submitted_date": "2025-10-09T12:00:00Z"
                           },
-                          "lead_center": "Alliance of Bioversity International and CIAT",
+                          "lead_center": {
+                            "name": "Alliance of Bioversity International and CIAT",
+                            "acronym": "Alliance"
+                          },
                           "title": "Improved seed varieties adoption in drylands",
                           "description": "This knowledge product summarizes adoption barriers and enabling factors across regions to inform policy and practice for smallholders in drylands.",
                           "toc_mapping": [
@@ -116,7 +119,7 @@
                             "name": "María Lee",
                             "submitted_date": "2025-10-10T10:30:00Z"
                           },
-                          "lead_center": "CIAT",
+                          "lead_center": { "acronym": "CIAT" },
                           "title": "National varietal release guidelines",
                           "description": "Guidelines to streamline varietal release at national level.",
                           "toc_mapping": [
@@ -191,7 +194,7 @@
                             "name": "Luis García",
                             "submitted_date": "2025-10-10T11:15:00Z"
                           },
-                          "lead_center": "CIAT",
+                          "lead_center": { "acronym": "CIAT" },
                           "title": "County-level varietal adoption",
                           "description": "Dataset on varietal adoption at sub-national level.",
                           "toc_mapping": [
@@ -269,7 +272,7 @@
                             "name": "Gul Khan",
                             "submitted_date": "2025-10-10T14:20:00Z"
                           },
-                          "lead_center": "Alliance",
+                          "lead_center": { "acronym": "Alliance" },
                           "title": "Global meta-analysis on seed adoption",
                           "description": "A meta-analysis summarizing seed adoption globally.",
                           "toc_mapping": [
@@ -336,7 +339,7 @@
                             "name": "Min User",
                             "submitted_date": "2025-10-10T09:00:00Z"
                           },
-                          "lead_center": "CIAT",
+                          "lead_center": { "acronym": "CIAT" },
                           "title": "Minimal KP",
                           "description": "Short description.",
                           "toc_mapping": [
@@ -418,7 +421,7 @@
                             "name": "Bad User",
                             "submitted_date": "2025-10-10T16:45:00Z"
                           },
-                          "lead_center": "CIAT",
+                          "lead_center": { "acronym": "CIAT" },
                           "title": "Invalid KP",
                           "description": "Missing geo_focus and evidence, will fail.",
                           "toc_mapping": [
