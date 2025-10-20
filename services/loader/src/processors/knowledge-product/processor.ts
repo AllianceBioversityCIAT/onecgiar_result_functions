@@ -25,10 +25,28 @@ export class KnowledgeProductProcessor implements ProcessorInterface {
     try {
       this.logger.info("Starting knowledge product processing", resultId, {
         type: result.type,
-        tenant: result.tenant,
       });
 
-      const enrichedResult = this.enrichWithFixedFields(result);
+      const normalizedLeadCenter = (() => {
+        const lc = (result as any).lead_center;
+        if (!lc) return undefined;
+        if (typeof lc === "string") return lc;
+        if (typeof lc === "object") {
+          return (
+            lc.acronym ||
+            lc.name ||
+            (lc.institution_id ? `INST-${lc.institution_id}` : undefined)
+          );
+        }
+        return undefined;
+      })();
+
+      const resultForEnrichment = {
+        ...result,
+        lead_center: normalizedLeadCenter,
+      } as ResultData;
+
+      const enrichedResult = this.enrichWithFixedFields(resultForEnrichment);
 
       this.logger.info("Sending to external API (single call)", resultId);
       const {
@@ -46,8 +64,15 @@ export class KnowledgeProductProcessor implements ProcessorInterface {
       await this.openSearchClient.ensureIndex(result.type);
 
       this.logger.info("Indexing in OpenSearch", resultId);
+      const indexDoc = {
+        ...externallyEnrichedResult,
+        external_api_raw:
+          externalApiResponse?.response || externalApiResponse || null,
+        input_raw: result,
+      };
+
       const opensearchResponse = await this.openSearchClient.indexResult(
-        externallyEnrichedResult
+        indexDoc
       );
 
       this.logger.success(

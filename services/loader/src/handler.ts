@@ -40,6 +40,58 @@ export const handler = async (event: LambdaEvent) => {
       results = [rawData];
     }
 
+    const nowIso = new Date().toISOString();
+
+    const rootTenant = (rawData as any)?.tenant;
+    const rootOp = (rawData as any)?.op;
+
+    const crypto = await import("crypto");
+
+    results = results.map((r: any, idx: number) => {
+      if (!r || typeof r !== "object") {
+        return {
+          type: "unknown",
+          received_at: nowIso,
+          idempotencyKey: `invalid-${idx}`,
+          raw: r,
+        } as any;
+      }
+
+      const type = r.type || r.result_type || "knowledge_product";
+      const received_at = r.received_at || nowIso;
+
+      const handle = r.knowledge_product?.handle;
+      const naturalId = r.id || handle || r.idempotencyKey;
+      let idempotencyKey = naturalId;
+
+      if (!idempotencyKey) {
+        const base = JSON.stringify({
+          tenant: r.tenant || rootTenant || "",
+          type,
+          title: r.title,
+          created_date: r.created_date,
+          submitted_by: r.submitted_by?.email,
+        });
+        idempotencyKey = crypto
+          .createHash("sha256")
+          .update(base)
+          .digest("hex")
+          .slice(0, 20);
+      }
+
+      const tenant = r.tenant || rootTenant;
+      const op = r.op || rootOp;
+
+      return {
+        type,
+        received_at,
+        idempotencyKey,
+        ...(tenant ? { tenant } : {}),
+        ...(op ? { op } : {}),
+        ...r,
+      };
+    });
+
     if (!results.length) {
       logger.warn("No results to process");
       return {

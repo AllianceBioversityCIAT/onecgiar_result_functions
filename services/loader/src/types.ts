@@ -16,9 +16,9 @@ export interface LambdaEvent {
 }
 
 export interface ResultData {
-  tenant: string;
+  tenant?: string;
   type: string;
-  op: string;
+  op?: string;
   received_at: string;
   idempotencyKey: string;
   [key: string]: any;
