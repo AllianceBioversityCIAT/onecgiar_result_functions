@@ -21,10 +21,12 @@ export class ExternalApiClient {
     });
 
     try {
+      const base = this.baseUrl.replace(/\/+$/, "");
+      const url = `${base}/create`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
-      const response = await fetch(this.baseUrl, {
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -69,6 +71,7 @@ export class ExternalApiClient {
     result: ProcessedResult
   ): Promise<{ enriched: ProcessedResult; apiResponse?: ExternalApiResponse }> {
     try {
+      console.log(`[ExternalApiClient] Enriching result ${result}`);
       const apiResponse = await this.sendResult(result);
 
       const externalResult = apiResponse.response?.results?.[0];
