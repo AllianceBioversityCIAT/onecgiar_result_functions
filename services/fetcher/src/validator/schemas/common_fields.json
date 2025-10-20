@@ -86,9 +86,9 @@
       "additionalProperties": false
     },
 
-    "title": { "type": "string", "maxWords": 30 },
+  "title": { "type": "string" },
 
-    "description": { "type": "string", "maxWords": 150 },
+  "description": { "type": "string" },
 
     "toc_mapping": {
       "type": "array",
@@ -288,7 +288,7 @@
         "required": ["link", "description"],
         "properties": {
           "link": { "type": "string", "format": "uri" },
-          "description": { "type": "string", "maxWords": 50 }
+          "description": { "type": "string" }
         },
         "additionalProperties": false
       }
