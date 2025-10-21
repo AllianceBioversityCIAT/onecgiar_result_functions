@@ -32,14 +32,11 @@ export interface ProcessedResult extends ResultData {
 }
 
 export interface ExternalApiResponse {
-  response: {
-    results: Array<{
-      id: number;
-      result_code: number;
-    }>;
-  };
-  message: string;
-  status: number;
+  response?: any;
+  status?: number;
+  statusCode?: number;
+  message?: string;
+  [key: string]: any;
 }
 
 export interface ProcessingResult {

@@ -15,14 +15,15 @@ export class ExternalApiClient {
       throw new Error("External API URL not configured");
     }
 
-    console.log(`[ExternalApiClient] Sending result to ${this.baseUrl}`, {
+    const base = this.baseUrl.replace(/\/+$/, "");
+    const url = `${base}/create`;
+
+    console.log(`[ExternalApiClient] Sending result to ${url}`, {
       resultId: result.idempotencyKey,
       type: result.type,
     });
 
     try {
-      const base = this.baseUrl.replace(/\/+$/, "");
-      const url = `${base}/create`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
@@ -44,12 +45,29 @@ export class ExternalApiClient {
 
       const data = (await response.json()) as ExternalApiResponse;
 
+      const responsePayload = data?.response;
+      const resultsCount = (() => {
+        if (!responsePayload) {
+          return 0;
+        }
+
+        if (Array.isArray(responsePayload)) {
+          return responsePayload.length;
+        }
+
+        if (Array.isArray(responsePayload?.results)) {
+          return responsePayload.results.length;
+        }
+
+        return 1;
+      })();
+
       console.log(
         `[ExternalApiClient] Success response for ${result.idempotencyKey}`,
         {
-          status: data.status,
+          status: data.status ?? data.statusCode,
           message: data.message,
-          resultsCount: data.response?.results?.length || 0,
+          resultsCount,
         }
       );
 
@@ -71,23 +89,32 @@ export class ExternalApiClient {
     result: ProcessedResult
   ): Promise<{ enriched: ProcessedResult; apiResponse?: ExternalApiResponse }> {
     try {
-      console.log(`[ExternalApiClient] Enriching result ${result}`);
       const apiResponse = await this.sendResult(result);
+      const enriched: ProcessedResult = { ...result };
+      const primaryResult = this.extractPrimaryResult(apiResponse?.response);
 
-      const externalResult = apiResponse.response?.results?.[0];
-      if (externalResult) {
-        const enriched: ProcessedResult = {
-          ...result,
-          result_id: externalResult.id,
-          result_code: externalResult.result_code,
-        };
-        return { enriched, apiResponse };
+      if (primaryResult && typeof primaryResult === "object") {
+        const resultId = this.parseNumeric(
+          primaryResult.id ?? primaryResult.result_id
+        );
+        const resultCode = this.parseNumeric(
+          primaryResult.result_code ?? primaryResult.code
+        );
+
+        if (resultId !== undefined) {
+          enriched.result_id = resultId;
+        }
+
+        if (resultCode !== undefined) {
+          enriched.result_code = resultCode;
+        }
+      } else {
+        console.warn(
+          `[ExternalApiClient] No usable result data in response for ${result.idempotencyKey}`
+        );
       }
 
-      console.warn(
-        `[ExternalApiClient] No result data in response for ${result.idempotencyKey}`
-      );
-      return { enriched: result, apiResponse };
+      return { enriched, apiResponse };
     } catch (error) {
       console.error(
         `[ExternalApiClient] Failed to enrich result ${result.idempotencyKey}:`,
@@ -95,5 +122,48 @@ export class ExternalApiClient {
       );
       return { enriched: result };
     }
+  }
+
+  private extractPrimaryResult(payload: any): any {
+    if (!payload) {
+      return undefined;
+    }
+
+    if (Array.isArray(payload)) {
+      return payload[0];
+    }
+
+    if (Array.isArray(payload?.results)) {
+      return payload.results[0];
+    }
+
+    if (Array.isArray(payload?.data)) {
+      return payload.data[0];
+    }
+
+    if (payload?.results && typeof payload.results === "object") {
+      return payload.results;
+    }
+
+    return payload;
+  }
+
+  private parseNumeric(value: unknown): number | undefined {
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+
+    if (typeof value === "number" && !Number.isNaN(value)) {
+      return value;
+    }
+
+    if (typeof value === "string" && value.trim() !== "") {
+      const parsed = Number(value);
+      if (!Number.isNaN(parsed)) {
+        return parsed;
+      }
+    }
+
+    return undefined;
   }
 }

@@ -66,8 +66,7 @@ export class KnowledgeProductProcessor implements ProcessorInterface {
       this.logger.info("Indexing in OpenSearch", resultId);
       const indexDoc = {
         ...externallyEnrichedResult,
-        external_api_raw:
-          externalApiResponse?.response || externalApiResponse || null,
+        external_api_raw: externalApiResponse ?? null,
         input_raw: result,
       };
 
