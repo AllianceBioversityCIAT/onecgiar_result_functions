@@ -17,6 +17,18 @@ export const handler = async (event: LambdaEvent) => {
   try {
     const detail = event?.detail ?? {};
     let rawData: any;
+    const detailIndexRaw =
+      (detail as any)?.result_index ?? (detail as any)?.resultIndex;
+    const parsedDetailIndex =
+      typeof detailIndexRaw === "number"
+        ? detailIndexRaw
+        : typeof detailIndexRaw === "string"
+        ? Number.parseInt(detailIndexRaw, 10)
+        : undefined;
+    const hasSpecificIndex =
+      parsedDetailIndex !== undefined &&
+      Number.isInteger(parsedDetailIndex) &&
+      parsedDetailIndex >= 0;
 
     if (detail?.s3) {
       logger.info("Loading data from S3", undefined, {
@@ -31,9 +43,35 @@ export const handler = async (event: LambdaEvent) => {
     let results: ResultData[] = [];
 
     if (Array.isArray(rawData)) {
-      results = rawData;
+      if (hasSpecificIndex) {
+        results = rawData[parsedDetailIndex]
+          ? [rawData[parsedDetailIndex]]
+          : [];
+        if (!results.length) {
+          logger.warn("Detail index not found in raw array", undefined, {
+            requestedIndex: parsedDetailIndex,
+            available: rawData.length,
+          });
+          results = rawData;
+        }
+      } else {
+        results = rawData;
+      }
     } else if (rawData.results && Array.isArray(rawData.results)) {
-      results = rawData.results;
+      if (hasSpecificIndex) {
+        const candidate = rawData.results[parsedDetailIndex];
+        if (candidate !== undefined) {
+          results = [candidate];
+        } else {
+          logger.warn("Detail index not found in results array", undefined, {
+            requestedIndex: parsedDetailIndex,
+            available: rawData.results.length,
+          });
+          results = rawData.results;
+        }
+      } else {
+        results = rawData.results;
+      }
     } else if (rawData.data) {
       results = Array.isArray(rawData.data) ? rawData.data : [rawData.data];
     } else {
