@@ -18,7 +18,7 @@ export class ExternalApiClient {
     }
 
     const base = this.baseUrl.replace(/\/+$/, "");
-    const url = `${base}/create`;
+    const url = `https://jnrznsjb-3400.use.devtunnels.ms/api/bilateral/create`;
 
     console.log(`[ExternalApiClient] Sending result to ${url}`, {
       resultId: result.idempotencyKey,
