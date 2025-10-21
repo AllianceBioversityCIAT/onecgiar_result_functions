@@ -97,11 +97,15 @@ export class OpenSearchClient {
     const url = `${this.endpoint}${path}`;
 
     try {
+      console.log(`[OpenSearchClient] -> ${method} ${path}`, {
+        endpoint: this.endpoint,
+        url,
+      });
+
       const response = await fetch(url, {
         method,
         headers: this.getHeaders(),
         body: body ? JSON.stringify(body) : undefined,
-        // Ignorar certificados SSL auto-firmados en desarrollo
         ...(process.env.NODE_ENV !== "production" &&
           ({ rejectUnauthorized: false } as any)),
       });
