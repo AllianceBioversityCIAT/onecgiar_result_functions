@@ -11,6 +11,8 @@ export class ExternalApiClient {
   }
 
   async sendResult(result: ProcessedResult): Promise<ExternalApiResponse> {
+    console.log("[ExternalApiClient] Enriching result", result);
+
     if (!this.baseUrl) {
       throw new Error("External API URL not configured");
     }
