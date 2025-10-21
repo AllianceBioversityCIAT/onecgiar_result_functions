@@ -39,8 +39,18 @@ async function testOpenSearchConnection() {
         }
       }
     });
-    
+
     console.log('✅ Search completed. Found:', searchResponse.hits?.total?.value || 0, 'documents');
+
+    console.log('🌐 Searching via global alias...');
+    const aliasResponse = await client.search('test-prms', {
+      query: {
+        match: {
+          title: 'Test Knowledge Product'
+        }
+      }
+    });
+    console.log('✅ Alias search found:', aliasResponse.hits?.total?.value || 0, 'documents');
     
     console.log('🎉 All OpenSearch tests passed!');
     

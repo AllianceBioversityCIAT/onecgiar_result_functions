@@ -139,10 +139,11 @@ The `id` and `result_code` fields from the response are added to the result as:
 
 ### Indexes
 
-Results are stored in type-specific indexes:
+Results are stored in type-specific indexes and also exposed through a global alias:
 
 - `prms-results-knowledge-product`
 - `prms-results-[type]` (for future types)
+- Alias `prms-results` (points to every `prms-results-*` index for cross-type searches)
 
 ### Document Structure
 

@@ -44,6 +44,51 @@ export class OpenSearchClient {
     return headers;
   }
 
+  private async ensureAlias(indexName: string): Promise<void> {
+    const aliasName = this.indexPrefix;
+
+    try {
+      const existing = await this.makeRequest(
+        "GET",
+        `/_alias/${encodeURIComponent(aliasName)}`
+      );
+
+      if (existing?.[indexName]?.aliases?.[aliasName]) {
+        return;
+      }
+    } catch (error: any) {
+      if (!error?.message?.includes("404")) {
+        console.warn(
+          `[OpenSearchClient] Unable to verify alias ${aliasName} before ensuring`,
+          error
+        );
+      }
+    }
+
+    try {
+      await this.makeRequest("POST", "/_aliases", {
+        actions: [
+          {
+            add: {
+              index: indexName,
+              alias: aliasName,
+            },
+          },
+        ],
+      });
+
+      console.log(`[OpenSearchClient] Alias ensured`, {
+        alias: aliasName,
+        index: indexName,
+      });
+    } catch (error) {
+      console.error(
+        `[OpenSearchClient] Failed to ensure alias ${aliasName} for ${indexName}:`,
+        error
+      );
+    }
+  }
+
   private async makeRequest(
     method: string,
     path: string,
@@ -68,7 +113,23 @@ export class OpenSearchClient {
         );
       }
 
-      return await response.json();
+      const contentLength = response.headers.get("content-length");
+      const contentType = response.headers.get("content-type") || "";
+
+      if (
+        method === "HEAD" ||
+        response.status === 204 ||
+        contentLength === "0" ||
+        (!contentLength && !contentType)
+      ) {
+        return {};
+      }
+
+      if (contentType.includes("application/json")) {
+        return await response.json();
+      }
+
+      return await response.text();
     } catch (error) {
       console.error(
         `[OpenSearchClient] Request failed: ${method} ${url}`,
@@ -108,7 +169,6 @@ export class OpenSearchClient {
     });
 
     try {
-      // Preparar el documento para indexar
       const document = {
         ...result,
         indexed_at: new Date().toISOString(),
@@ -216,6 +276,7 @@ export class OpenSearchClient {
       try {
         await this.makeRequest("HEAD", `/${indexName}`);
         // Si no lanza error, el índice existe
+        await this.ensureAlias(indexName);
         return;
       } catch (error: any) {
         // Si es 404, el índice no existe, continuar para crearlo
@@ -265,6 +326,7 @@ export class OpenSearchClient {
       await this.makeRequest("PUT", `/${indexName}`, indexConfig);
 
       console.log(`[OpenSearchClient] Index ${indexName} created successfully`);
+      await this.ensureAlias(indexName);
     } catch (error) {
       console.error(
         `[OpenSearchClient] Error ensuring index ${indexName}:`,
