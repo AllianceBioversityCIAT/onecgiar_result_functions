@@ -7,10 +7,12 @@ export class OpenSearchClient {
   private indexPrefix: string;
 
   constructor(endpoint?: string, indexPrefix = "prms-results") {
-    this.endpoint =
+    const baseEndpoint =
       endpoint ||
       (process as any).env.OPENSEARCH_ENDPOINT ||
       "https://localhost:9200";
+
+    this.endpoint = baseEndpoint.replace(/\/+$/, "");
     this.indexPrefix = indexPrefix;
 
     if (
@@ -25,7 +27,6 @@ export class OpenSearchClient {
   }
 
   private getIndexName(resultType: string): string {
-    // Crear índice específico por tipo: prms-results-knowledge-product, etc.
     return `${this.indexPrefix}-${resultType.replace(/_/g, "-")}`;
   }
 
