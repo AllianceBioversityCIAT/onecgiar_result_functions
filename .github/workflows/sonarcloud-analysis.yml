@@ -1,4 +1,4 @@
-name: SonarCloud Analysis - PRMS Result Ingestion Ecosystem
+name: SonarCloud Analysis - PRMS Result Ingestion Ecosystem.
 
 on:
   push:
