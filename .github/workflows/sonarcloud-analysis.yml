@@ -40,11 +40,11 @@ jobs:
       # 3) (Optional) Configure AWS if you need variables/secrets for build
       #    Comment this block out if not needed.
       - name: Configure AWS credentials
-        if: ${{ AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY }}
+        if: ${{ secrets.AWS_ACCESS_KEY_ID && secrets.AWS_SECRET_ACCESS_KEY }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
       # 4) (Optional) Load .env from Secrets Manager per service
