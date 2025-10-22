@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "type": "module",
     "scripts": {
-        "build": "npx esbuild --config=esbuild.config.mjs",
+        "build": "node build.mjs",
         "zip": "cd dist && zip -qr ../dist.zip ."
     },
     "dependencies": {
