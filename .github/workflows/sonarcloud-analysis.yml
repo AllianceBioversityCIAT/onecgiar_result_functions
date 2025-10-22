@@ -13,7 +13,7 @@ permissions:
 env:
   # Adjust these values to your organization/project in SonarCloud
   SONAR_ORG: alliancebioversityciat
-  SONAR_PROJECT_KEY: AllianceBioversityCIAT_onecgiar_result_functions_ingestion
+  SONAR_PROJECT_KEY: AllianceBioversityCIAT_onecgiar_result_fetcher
   # Ecosystem ingestion service directories
   SERVICES: |
     services/ingestor
