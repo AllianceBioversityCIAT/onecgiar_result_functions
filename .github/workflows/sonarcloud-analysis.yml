@@ -2,9 +2,9 @@ name: SonarCloud Analysis - PRMS Result Ingestion Ecosystem.
 
 on:
   push:
-    branches: [dev, test, main, dev-events-components]
+    branches: [dev, test, main]
   pull_request:
-    branches: [dev, test, main, dev-events-components]
+    branches: [dev, test, main]
 
 permissions:
   contents: read
