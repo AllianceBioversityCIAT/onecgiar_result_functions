@@ -5,5 +5,5 @@ export default {
   format: "esm",
   target: "node20",
   outfile: "dist/index.mjs",
-  packages: "external"
+  packages: "bundle" // genera un único archivo standalone
 };
