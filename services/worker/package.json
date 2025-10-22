@@ -1,0 +1,17 @@
+{
+    "name": "@prms/result-management-worker",
+    "version": "1.0.0",
+    "type": "module",
+    "scripts": {
+        "build": "node build.mjs",
+        "zip": "cd dist && zip -qr ../dist.zip ."
+    },
+    "dependencies": {
+        "@aws-sdk/client-s3": "^3.654.0"
+    },
+    "devDependencies": {
+        "esbuild": "^0.24.0",
+        "typescript": "^5.6.3",
+        "@types/node": "^20.11.0"
+    }
+}
