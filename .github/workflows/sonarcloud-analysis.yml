@@ -57,6 +57,8 @@ jobs:
             ["services/ingestor"]="dev/app/lambdas/prms/result-management/ingestor"
             ["services/splitter"]="dev/app/lambdas/prms/result-management/splitter"
             ["services/worker"]="dev/app/lambdas/prms/result-management/worker"
+            ["services/loader-s3"]="dev/app/lambdas/prms/loader"
+            ["services/normalizer"]="dev/app/lambdas/prms/normalizer"
           )
           for SVC in $SERVICES; do
             SID="${SECRET_IDS[$SVC]:-}"
