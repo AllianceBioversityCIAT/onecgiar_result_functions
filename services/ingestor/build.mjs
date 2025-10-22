@@ -4,8 +4,9 @@ await build({
   entryPoints: ['src/index.mts'],
   bundle: true,
   platform: 'node',
-  format: 'esm',
-  target: 'node20',
-  outfile: 'dist/index.mjs',
-  packages: 'bundle'
+  format: 'cjs',
+  target: 'node22',
+  outfile: 'dist/index.js',
+  packages: 'bundle',
+  sourcemap: false
 });
