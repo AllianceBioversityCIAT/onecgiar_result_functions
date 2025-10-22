@@ -1,4 +1,4 @@
-name: Trigger Jenkins Job
+name: Trigger Jenkins Job - ingestion-ecosystem
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
       - name: Get branch name and build Jenkins URL
         run: |
           BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          JENKINS_URL="https://automation.prms.cgiar.org/job/clarisa-result-management-loader/build"
+          JENKINS_URL="https://automation.prms.cgiar.org/job/clarisa-result-management-ingestion-ecosystem/build"
           echo "Jenkins job URL for the branch $BRANCH_NAME is: $JENKINS_URL"
           echo "JENKINS_URL=${JENKINS_URL}" >> $GITHUB_ENV
 
