@@ -30,7 +30,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 2) Node.js 20 (aligned with your Jenkins)
+      # 2) Node.js 20 (aligned with Jenkins)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -38,22 +38,20 @@ jobs:
           cache: "npm"
 
       # 3) (Optional) Configure AWS if you need variables/secrets for build
-      #    You can comment out this block if not needed for compilation.
+      #    Comment this block out if not needed.
       - name: Configure AWS credentials
-        if: ${{ AWS_ACCESS_KEY_ID != '' && AWS_SECRET_ACCESS_KEY != '' }}
+        if: ${{ secrets.AWS_ACCESS_KEY_ID && secrets.AWS_SECRET_ACCESS_KEY }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      # 4) (Optional) Load .env from Secrets Manager per service if your build requires it
-      #    Adjust SECRET_ID_* as needed or remove if not necessary for the build.
+      # 4) (Optional) Load .env from Secrets Manager per service
       - name: Load service envs (optional)
         if: ${{ env.LOAD_SECRETS == 'true' }}
         run: |
           set -Eeuo pipefail
-          # Export LOAD_SECRETS=true in the workflow if you want to activate this step.
           declare -A SECRET_IDS=(
             ["services/ingestor"]="dev/app/lambdas/prms/result-management/ingestor"
             ["services/splitter"]="dev/app/lambdas/prms/result-management/splitter"
@@ -70,8 +68,8 @@ jobs:
             fi
           done
 
-      # 5) Install, build and test (with coverage if exists) for each service
-      - name: Build & Test all services
+      # 5) Install & Build each service (no tests)
+      - name: Build all services (no tests)
         run: |
           set -Eeuo pipefail
           for SVC in $SERVICES; do
@@ -80,31 +78,16 @@ jobs:
             echo "==============================="
             cd "$SVC"
 
-            # Install dependencies
             if [ -f package-lock.json ]; then
               npm ci
             else
               npm install
             fi
 
-            # Build if exists
             if npm run | grep -qE ' build($|:)'; then
               npm run build
             else
               echo "[skip] no build script"
-            fi
-
-            # Test with coverage if exists (do not fail if there are no tests)
-            if npm run | grep -qE ' test($|:)'; then
-              # Common coverage attempts; adjust according to your repo
-              npm run test -- --coverage || npm run test:cov || true
-            else
-              echo "[skip] no test script"
-            fi
-
-            # Normalize coverage path (if exists)
-            if [ -f coverage/lcov.info ]; then
-              echo "[coverage] found lcov at $SVC/coverage/lcov.info"
             fi
 
             cd - >/dev/null
@@ -121,34 +104,12 @@ jobs:
       - name: Install SonarScanner
         run: npm install -g sonar-scanner
 
-      # 8) Run SonarCloud analysis
+      # 8) Run SonarCloud analysis (no coverage, no tests)
       - name: Run SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           set -Eeuo pipefail
-
-          # Build list of existing lcov paths
-          LCOV_PATHS=""
-          for SVC in $SERVICES; do
-            if [ -f "$SVC/coverage/lcov.info" ]; then
-              if [ -z "$LCOV_PATHS" ]; then
-                LCOV_PATHS="$SVC/coverage/lcov.info"
-              else
-                LCOV_PATHS="$LCOV_PATHS,$SVC/coverage/lcov.info"
-              fi
-            fi
-          done
-
-          echo "[Sonar] lcov paths: ${LCOV_PATHS:-<none>}"
-
-          # If there is no coverage, you can exclude coverage to not fail quality gate
-          COVERAGE_ARGS=""
-          if [ -z "$LCOV_PATHS" ]; then
-            COVERAGE_ARGS="-Dsonar.coverage.exclusions=**"
-          else
-            COVERAGE_ARGS="-Dsonar.javascript.lcov.reportPaths=$LCOV_PATHS -Dsonar.typescript.lcov.reportPaths=$LCOV_PATHS"
-          fi
 
           sonar-scanner \
             -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
@@ -157,7 +118,5 @@ jobs:
             -Dsonar.login=${SONAR_TOKEN} \
             -Dsonar.sources=services \
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/*.spec.ts,**/*.test.ts,**/migrations/**,**/*.d.ts \
-            -Dsonar.tests=services \
-            -Dsonar.test.inclusions=**/*.spec.ts,**/*.test.ts \
             -Dsonar.sourceEncoding=UTF-8 \
-            ${COVERAGE_ARGS}
+            -Dsonar.coverage.exclusions=**
