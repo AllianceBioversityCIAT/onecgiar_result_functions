@@ -20,6 +20,14 @@
   ],
 
   "properties": {
+    "result_id": {
+      "description": "Identifier of the result in the source system (optional).",
+      "oneOf": [
+        { "type": "number" },
+        { "type": "string" }
+      ]
+    },
+
     "created_date": {
       "type": "string",
       "format": "date-time",

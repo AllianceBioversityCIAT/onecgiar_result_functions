@@ -75,6 +75,7 @@ app.post("/ingest", async (req, res) => {
       requestId,
     });
   }
+
   if (list.length > 100) {
     console.warn('[ingest] batch too large', { requestId, count: list.length });
     return res.status(413).json({
@@ -152,7 +153,12 @@ app.post("/ingest", async (req, res) => {
     const type = it._meta.type;
     const op = it._meta.op;
     const normalized = it.data;
-    const idempotencyKey = `${tenant}:${type}:${op}:${normalized.id ?? normalized.handle ?? 'na'}`;
+    const resultId =
+      normalized?.result_id !== undefined
+        ? normalized.result_id
+        : normalized?.id;
+    const uniqueId = resultId ?? normalized?.handle ?? "na";
+    const idempotencyKey = `${tenant}:${type}:${op}:${uniqueId}`;
     const detail = {
       s3: pointer.s3,
       correlationId: pointer.correlationId,
@@ -164,6 +170,7 @@ app.post("/ingest", async (req, res) => {
       ts: Date.now(),
       offloadBytes: pointer.offloadBytes,
       fullBody: true,
+      ...(resultId !== undefined ? { result_id: resultId } : {}),
     };
     entries.push({
       Source: tenant,

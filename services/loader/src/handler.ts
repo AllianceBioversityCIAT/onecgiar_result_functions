@@ -99,8 +99,9 @@ export const handler = async (event: LambdaEvent) => {
       const received_at = r.received_at || nowIso;
 
       const handle = r.knowledge_product?.handle;
-      const naturalId = r.id || handle || r.idempotencyKey;
-      let idempotencyKey = naturalId;
+      const naturalId =
+        r.result_id ?? r.id ?? handle ?? r.idempotencyKey ?? null;
+      let idempotencyKey = naturalId ? String(naturalId) : undefined;
 
       if (!idempotencyKey) {
         const base = JSON.stringify({
