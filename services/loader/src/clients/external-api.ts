@@ -25,6 +25,12 @@ export class ExternalApiClient {
       type: result.type,
     });
 
+    const { type, idempotencyKey, ...dataFields } = result;
+    const payload = {
+      type,
+      data: dataFields,
+    };
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
@@ -35,7 +41,7 @@ export class ExternalApiClient {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify(result),
+        body: JSON.stringify(payload),
         signal: controller.signal,
       });
 
@@ -46,6 +52,11 @@ export class ExternalApiClient {
       }
 
       const data = (await response.json()) as ExternalApiResponse;
+
+      console.log(
+        `[ExternalApiClient] Full API response for ${result.idempotencyKey}:`,
+        JSON.stringify(data, null, 2)
+      );
 
       const responsePayload = data?.response;
       const resultsCount = (() => {
