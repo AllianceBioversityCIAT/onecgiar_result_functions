@@ -31,6 +31,11 @@ export class ExternalApiClient {
       data: dataFields,
     };
 
+    console.log(
+      `[ExternalApiClient] Payload being sent to ${url}:`,
+      JSON.stringify(payload, null, 2)
+    );
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
