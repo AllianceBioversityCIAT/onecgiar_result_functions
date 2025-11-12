@@ -1,12 +1,15 @@
 import ajv from "./ajv.js";
 import common from "./schemas/common_fields.json" with { type: "json" };
 import kp from "./schemas/knowledge_product.json" with { type: "json" };
+import cs from "./schemas/capacity_sharing.json" with { type: "json" };
 
 ajv.addSchema(common);
 
 const validators = {
   knowledge_product: ajv.compile(kp),
   kp: ajv.compile(kp),
+  capacity_sharing: ajv.compile(cs),
+  cs: ajv.compile(cs),
 };
 
 export function validateByType(type, data) {

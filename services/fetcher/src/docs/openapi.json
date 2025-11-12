@@ -403,6 +403,93 @@
                     ]
                   }
                 },
+                "csExample": {
+                  "summary": "Capacity Sharing — Example with all fields",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "capacity_sharing",
+                        "data": {
+                          "created_date": "2025-11-01T10:00:00Z",
+                          "created_by": {
+                            "email": "training.team@cgiar.org",
+                            "name": "Training Coordinator"
+                          },
+                          "submitted_by": {
+                            "email": "j.smith@cgiar.org",
+                            "name": "Jane Smith",
+                            "comment": "Capacity building workshop",
+                            "submitted_date": "2025-11-02T14:30:00Z"
+                          },
+                          "lead_center": {
+                            "institution_id": 115,
+                            "acronym": "CIFOR"
+                          },
+                          "title": "Climate-Smart Agriculture Training Program",
+                          "description": "A comprehensive training program on climate-smart agricultural practices delivered to farmers and extension agents.",
+                          "toc_mapping": [
+                            {
+                              "science_program_id": "SP03",
+                              "aow_compose_code": "SP03-AOW02",
+                              "result_title": "Capacity building workshop",
+                              "result_indicator_description": "Number of people trained in climate-smart practices",
+                              "result_indicator_type_name": "Number of people trained"
+                            }
+                          ],
+                          "geo_focus": {
+                            "scope_code": 4,
+                            "scope_label": "National",
+                            "countries": [
+                              {
+                                "id": 404,
+                                "name": "Kenya",
+                                "iso_alpha_3": "KEN",
+                                "iso_alpha_2": "KE"
+                              }
+                            ]
+                          },
+                          "contributing_center": [
+                            {
+                              "institution_id": 1279,
+                              "acronym": "ICARDA"
+                            }
+                          ],
+                          "contributing_partners": [
+                            { "institution_id": 10, "acronym": "FAO" }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://example.org/training-report",
+                              "description": "Training program evaluation report"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            { "grant_title": "Climate Training Initiative" }
+                          ],
+                          "number_people_trained": {
+                            "women": 150,
+                            "men": 120,
+                            "non_binary": 5,
+                            "unknown": 10
+                          },
+                          "length_training": {
+                            "short_term": true,
+                            "long_term": true,
+                            "phd": true,
+                            "master": true
+                          },
+                          "delivery_method": {
+                            "virtual_online": true,
+                            "in_person": true,
+                            "blended": false
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
                 "invalidExample": {
                   "summary": "Invalid example (validation fails)",
                   "value": {
