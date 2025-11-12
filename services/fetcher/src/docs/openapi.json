@@ -490,6 +490,140 @@
                     ]
                   }
                 },
+                "idExample": {
+                  "summary": "Innovation Development — Example with all fields",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "innovation_development",
+                        "data": {
+                          "created_date": "2025-11-03T09:00:00Z",
+                          "created_by": {
+                            "email": "innovation.team@cgiar.org",
+                            "name": "Innovation Lead"
+                          },
+                          "submitted_by": {
+                            "email": "a.johnson@cgiar.org",
+                            "name": "Alice Johnson",
+                            "comment": "New technological innovation",
+                            "submitted_date": "2025-11-04T11:00:00Z"
+                          },
+                          "lead_center": {
+                            "institution_id": 115,
+                            "acronym": "CIFOR"
+                          },
+                          "title": "AI-Powered Crop Monitoring System",
+                          "description": "Development of an innovative AI system for real-time crop monitoring and yield prediction.",
+                          "toc_mapping": [
+                            {
+                              "science_program_id": "SP04",
+                              "aow_compose_code": "SP04-AOW03",
+                              "result_title": "Technological innovation development",
+                              "result_indicator_description": "Innovations developed and tested",
+                              "result_indicator_type_name": "Number of innovations"
+                            }
+                          ],
+                          "geo_focus": {
+                            "scope_code": 4,
+                            "scope_label": "National",
+                            "countries": [
+                              {
+                                "id": 840,
+                                "name": "United States",
+                                "iso_alpha_3": "USA",
+                                "iso_alpha_2": "US"
+                              }
+                            ]
+                          },
+                          "contributing_center": [
+                            {
+                              "institution_id": 1279,
+                              "acronym": "ICARDA"
+                            }
+                          ],
+                          "contributing_partners": [
+                            { "institution_id": 5, "acronym": "MIT" }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://example.org/innovation-patent",
+                              "description": "Patent application for the AI monitoring system"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            { "grant_title": "Tech Innovation Fund" }
+                          ],
+                          "innovation_typology": {
+                            "code": 12,
+                            "name": "Technological innovation"
+                          },
+                          "innovation_developers": "John Doe; Marie Curie; Nikola Tesla",
+                          "innovation_readiness_level": 14
+                        }
+                      }
+                    ]
+                  }
+                },
+                "ooExample": {
+                  "summary": "Other Output — Example with common fields only",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "other_output",
+                        "data": {
+                          "created_date": "2025-11-05T08:00:00Z",
+                          "created_by": {
+                            "email": "general.team@cgiar.org",
+                            "name": "General Contributor"
+                          },
+                          "submitted_by": {
+                            "email": "b.brown@cgiar.org",
+                            "name": "Bob Brown",
+                            "comment": "Miscellaneous output",
+                            "submitted_date": "2025-11-06T10:00:00Z"
+                          },
+                          "lead_center": {
+                            "acronym": "CIAT"
+                          },
+                          "title": "Miscellaneous Research Output",
+                          "description": "A general research output that doesn't fit other categories.",
+                          "toc_mapping": [
+                            {
+                              "science_program_id": "SP05",
+                              "aow_compose_code": "SP05-AOW04",
+                              "result_title": "General output",
+                              "result_indicator_description": "Outputs produced",
+                              "result_indicator_type_name": "Number of outputs"
+                            }
+                          ],
+                          "geo_focus": {
+                            "scope_code": 1,
+                            "scope_label": "Global"
+                          },
+                          "contributing_center": [
+                            { "institution_id": 115, "acronym": "CIFOR" }
+                          ],
+                          "contributing_partners": [
+                            { "institution_id": 2, "acronym": "CGIAR" }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://example.org/general-output",
+                              "description": "Link to the output"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            { "grant_title": "General Fund" }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
                 "invalidExample": {
                   "summary": "Invalid example (validation fails)",
                   "value": {

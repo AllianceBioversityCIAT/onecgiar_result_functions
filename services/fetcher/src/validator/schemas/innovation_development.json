@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Innovation Development Result",
+  "description": "Schema for innovation development results",
+  "allOf": [
+    { "$ref": "common_fields.json" },
+    {
+      "type": "object",
+      "properties": {
+        "innovation_typology": {
+          "type": "object",
+          "properties": {
+            "code": { "type": "integer" },
+            "name": { "type": "string" }
+          },
+          "additionalProperties": false,
+          "anyOf": [
+            { "required": ["code"] },
+            { "required": ["name"] }
+          ]
+        },
+        "innovation_developers": {
+          "type": "string"
+        },
+        "innovation_readiness_level": {
+          "type": "integer"
+        }
+      },
+      "required": ["innovation_typology", "innovation_readiness_level"]
+    }
+  ]
+}

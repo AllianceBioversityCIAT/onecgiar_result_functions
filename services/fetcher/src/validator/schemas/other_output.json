@@ -1,0 +1,6 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Other Output Result",
+  "description": "Schema for other output results",
+  "allOf": [{ "$ref": "common_fields.json" }]
+}
