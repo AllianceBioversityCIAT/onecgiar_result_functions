@@ -28,38 +28,12 @@
               ]
             },
             "length_training": {
-              "type": "object",
-              "properties": {
-                "short_term": { "type": "boolean" },
-                "long_term": { "type": "boolean" },
-                "phd": { "type": "boolean" },
-                "master": { "type": "boolean" }
-              },
-              "additionalProperties": false,
-              "anyOf": [
-                { "required": ["short_term"] },
-                { "required": ["long_term"] }
-              ],
-              "if": {
-                "properties": { "long_term": { "const": true } }
-              },
-              "then": {
-                "anyOf": [{ "required": ["phd"] }, { "required": ["master"] }]
-              }
+              "type": "string",
+              "enum": ["PhD", "Master", "Short-term", "Long-term"]
             },
             "delivery_method": {
-              "type": "object",
-              "properties": {
-                "virtual_online": { "type": "boolean" },
-                "in_person": { "type": "boolean" },
-                "blended": { "type": "boolean" }
-              },
-              "additionalProperties": false,
-              "anyOf": [
-                { "required": ["virtual_online"] },
-                { "required": ["in_person"] },
-                { "required": ["blended"] }
-              ]
+              "type": "string",
+              "enum": ["Virtual / Online", "In person", "Blended (in-person and virtual)"]
             }
           },
           "required": [

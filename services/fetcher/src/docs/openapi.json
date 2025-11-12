@@ -475,17 +475,8 @@
                               "non_binary": 5,
                               "unknown": 10
                             },
-                            "length_training": {
-                              "short_term": true,
-                              "long_term": true,
-                              "phd": true,
-                              "master": true
-                            },
-                            "delivery_method": {
-                              "virtual_online": true,
-                              "in_person": true,
-                              "blended": false
-                            }
+                            "length_training": "Short-term",
+                            "delivery_method": "In person"
                           }
                         }
                       }
