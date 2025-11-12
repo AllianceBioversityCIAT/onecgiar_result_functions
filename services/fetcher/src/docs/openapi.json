@@ -468,22 +468,24 @@
                           "contributing_bilateral_projects": [
                             { "grant_title": "Climate Training Initiative" }
                           ],
-                          "number_people_trained": {
-                            "women": 150,
-                            "men": 120,
-                            "non_binary": 5,
-                            "unknown": 10
-                          },
-                          "length_training": {
-                            "short_term": true,
-                            "long_term": true,
-                            "phd": true,
-                            "master": true
-                          },
-                          "delivery_method": {
-                            "virtual_online": true,
-                            "in_person": true,
-                            "blended": false
+                          "capacity_sharing": {
+                            "number_people_trained": {
+                              "women": 150,
+                              "men": 120,
+                              "non_binary": 5,
+                              "unknown": 10
+                            },
+                            "length_training": {
+                              "short_term": true,
+                              "long_term": true,
+                              "phd": true,
+                              "master": true
+                            },
+                            "delivery_method": {
+                              "virtual_online": true,
+                              "in_person": true,
+                              "blended": false
+                            }
                           }
                         }
                       }
@@ -555,12 +557,14 @@
                           "contributing_bilateral_projects": [
                             { "grant_title": "Tech Innovation Fund" }
                           ],
-                          "innovation_typology": {
-                            "code": 12,
-                            "name": "Technological innovation"
-                          },
-                          "innovation_developers": "John Doe; Marie Curie; Nikola Tesla",
-                          "innovation_readiness_level": 14
+                          "innovation_development": {
+                            "innovation_typology": {
+                              "code": 12,
+                              "name": "Technological innovation"
+                            },
+                            "innovation_developers": "John Doe; Marie Curie; Nikola Tesla",
+                            "innovation_readiness_level": 14
+                          }
                         }
                       }
                     ]
