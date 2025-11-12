@@ -99,11 +99,13 @@ export class CapacitySharingProcessor implements ProcessorInterface {
   }
 
   private enrichWithFixedFields(result: ResultData): ProcessedResult {
-    return {
-      ...result,
+    const enriched = { ...result };
+    enriched.data = {
+      ...(enriched.data || {}),
       result_type_id: 7, // Assuming ID for capacity sharing
       result_level_id: 4,
     };
+    return enriched as ProcessedResult;
   }
 
   /**

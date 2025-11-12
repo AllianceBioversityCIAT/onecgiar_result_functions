@@ -25,10 +25,9 @@ export class ExternalApiClient {
       type: result.type,
     });
 
-    const { type, idempotencyKey, ...dataFields } = result;
     const payload = {
-      type,
-      data: dataFields,
+      type: result.type,
+      data: result.data,
     };
 
     console.log(

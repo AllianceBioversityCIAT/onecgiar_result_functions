@@ -99,11 +99,13 @@ export class OtherOutputProcessor implements ProcessorInterface {
   }
 
   private enrichWithFixedFields(result: ResultData): ProcessedResult {
-    return {
-      ...result,
-      result_type_id: 4,
+    const enriched = { ...result };
+    enriched.data = {
+      ...(enriched.data || {}),
+      result_type_id: 9,
       result_level_id: 4,
     };
+    return enriched as ProcessedResult;
   }
 
   /**

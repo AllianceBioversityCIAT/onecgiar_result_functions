@@ -25,8 +25,11 @@ export interface ResultData {
 }
 
 export interface ProcessedResult extends ResultData {
-  result_type_id: number;
-  result_level_id: number;
+  data: {
+    result_type_id: number;
+    result_level_id: number;
+    [key: string]: any;
+  };
   result_id?: number;
   result_code?: number;
 }

@@ -107,11 +107,13 @@ export class InnovationDevelopmentProcessor implements ProcessorInterface {
   }
 
   private enrichWithFixedFields(result: ResultData): ProcessedResult {
-    return {
-      ...result,
-      result_type_id: 7,
+    const enriched = { ...result };
+    enriched.data = {
+      ...(enriched.data || {}),
+      result_type_id: 8,
       result_level_id: 4,
     };
+    return enriched as ProcessedResult;
   }
 
   /**
