@@ -3,6 +3,9 @@ export interface DisplayResult {
   resultCode: string;
   title: string;
   leadCenter: string;
-  submittedBy: string;
-  createdBy: string;
+  indicatorType: string;
+  indicatorLevel: string;
+  createdName: string;
+  submitterName: string;
+  uploadDate: string;
 }

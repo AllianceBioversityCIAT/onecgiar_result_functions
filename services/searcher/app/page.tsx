@@ -19,16 +19,6 @@ interface Result {
     result_level_id?: number;
     [key: string]: any;
   };
-  input_raw?: {
-    data?: {
-      submitted_by?: {
-        name?: string;
-      };
-      created_by?: {
-        name?: string;
-      };
-    };
-  };
   external_api_raw?: {
     response?: {
       result_code?: string;
@@ -52,6 +42,10 @@ export default function Home() {
   const [creatorFilter, setCreatorFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_ROWS_PER_PAGE);
+  const [sortField, setSortField] = useState<
+    "id" | "resultCode" | "uploadDate"
+  >("id");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
     fetchResults();
@@ -71,22 +65,37 @@ export default function Home() {
   };
 
   const displayResults: DisplayResult[] = useMemo(() => {
+    const buildName = (person?: any) => {
+      if (!person) return "N/A";
+      const fullName = [person.first_name, person.last_name]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      return fullName || person.name || person.email || "N/A";
+    };
+
     return results.map((result) => {
       const response = result.external_api_raw?.response ?? {};
       const leadCenter =
         response.result_center_array?.find(
           (center: any) => center?.is_leading_result
         )?.clarisa_center_object?.clarisa_institution?.acronym || "N/A";
-      const submittedBy = result.input_raw?.data?.submitted_by?.name || "N/A";
-      const createdBy = result.input_raw?.data?.created_by?.name || "N/A";
+      const indicatorType = response.obj_result_type?.name || "N/A";
+      const indicatorLevel = response.obj_result_level?.name || "N/A";
+      const createdName = buildName(response.obj_created);
+      const submitterName = buildName(response.obj_external_submitter);
+      const uploadDate = response.external_submitted_date || "N/A";
 
       return {
         id: String(response.id || result.id || "N/A"),
         resultCode: String(response.result_code || "N/A"),
         title: String(response.title || "N/A"),
         leadCenter,
-        submittedBy,
-        createdBy,
+        indicatorType,
+        indicatorLevel,
+        createdName,
+        submitterName,
+        uploadDate,
       };
     });
   }, [results]);
@@ -119,10 +128,10 @@ export default function Home() {
         ? item.leadCenter.toLowerCase().includes(centerQuery)
         : true;
       const submitterMatches = submitterQuery
-        ? item.submittedBy.toLowerCase().includes(submitterQuery)
+        ? item.submitterName.toLowerCase().includes(submitterQuery)
         : true;
       const creatorMatches = creatorQuery
-        ? item.createdBy.toLowerCase().includes(creatorQuery)
+        ? item.createdName.toLowerCase().includes(creatorQuery)
         : true;
 
       return (
@@ -141,6 +150,41 @@ export default function Home() {
     submitterFilter,
     creatorFilter,
   ]);
+
+  const sortedResults = useMemo(() => {
+    const sorted = [...filteredResults];
+
+    sorted.sort((a, b) => {
+      const direction = sortDirection === "asc" ? 1 : -1;
+
+      const parseNumber = (value: string) => {
+        const num = Number(value);
+        return Number.isNaN(num) ? null : num;
+      };
+
+      if (sortField === "uploadDate") {
+        const aTime =
+          a.uploadDate && a.uploadDate !== "N/A" ? Date.parse(a.uploadDate) : 0;
+        const bTime =
+          b.uploadDate && b.uploadDate !== "N/A" ? Date.parse(b.uploadDate) : 0;
+        return (aTime - bTime) * direction;
+      }
+
+      const aValue = sortField === "id" ? a.id : a.resultCode;
+      const bValue = sortField === "id" ? b.id : b.resultCode;
+
+      const aNum = parseNumber(aValue);
+      const bNum = parseNumber(bValue);
+
+      if (aNum !== null && bNum !== null) {
+        return (aNum - bNum) * direction;
+      }
+
+      return aValue.localeCompare(bValue) * direction;
+    });
+
+    return sorted;
+  }, [filteredResults, sortDirection, sortField]);
 
   const stats = useMemo(
     () => [
@@ -205,6 +249,15 @@ export default function Home() {
     }
   };
 
+  const handleSortChange = (field: "id" | "resultCode" | "uploadDate") => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
   useEffect(() => {
     setCurrentPage(1);
   }, [
@@ -214,6 +267,8 @@ export default function Home() {
     submitterFilter,
     creatorFilter,
     rowsPerPage,
+    sortField,
+    sortDirection,
   ]);
 
   const totalPages = Math.max(
@@ -226,7 +281,7 @@ export default function Home() {
   }, [totalPages]);
 
   const startIndex = (currentPage - 1) * rowsPerPage;
-  const paginatedResults = filteredResults.slice(
+  const paginatedResults = sortedResults.slice(
     startIndex,
     startIndex + rowsPerPage
   );
@@ -240,7 +295,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50 pt-24 sm:pt-28">
       <PageHeader onRefresh={fetchResults} />
-      <main className="mx-auto max-w-6xl space-y-8 px-4 py-10">
+      <main className="mx-auto w-full max-w-7xl space-y-8 py-12">
         <HeroSection lastIndexed={lastIndexed} />
         <StatsGrid stats={stats} />
         <FilterPanel
@@ -258,6 +313,9 @@ export default function Home() {
           filteredCount={filteredResults.length}
           currentPage={currentPage}
           totalPages={totalPages}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onSortChange={handleSortChange}
           onPrevious={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
           onNext={() =>
             setCurrentPage((prev) => Math.min(prev + 1, totalPages))

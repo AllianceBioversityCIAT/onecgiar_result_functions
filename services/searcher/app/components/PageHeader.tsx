@@ -7,7 +7,7 @@ interface PageHeaderProps {
 export function PageHeader({ onRefresh }: PageHeaderProps) {
   return (
     <header className="fixed inset-x-0 top-0 z-40 bg-slate-900/95 text-white shadow backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-4 py-4">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-6 py-4">
         <div>
           <p className="text-xs uppercase tracking-[0.35em] text-slate-300">Observability</p>
           <h1 className="text-xl font-semibold">Result Management API</h1>
