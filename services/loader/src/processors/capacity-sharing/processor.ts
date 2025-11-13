@@ -102,7 +102,7 @@ export class CapacitySharingProcessor implements ProcessorInterface {
     const enriched = { ...result };
     enriched.data = {
       ...(enriched.data || {}),
-      result_type_id: 7, // Assuming ID for capacity sharing
+      result_type_id: 3,
       result_level_id: 4,
     };
     return enriched as ProcessedResult;

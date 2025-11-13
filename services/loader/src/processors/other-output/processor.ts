@@ -102,7 +102,7 @@ export class OtherOutputProcessor implements ProcessorInterface {
     const enriched = { ...result };
     enriched.data = {
       ...(enriched.data || {}),
-      result_type_id: 9,
+      result_type_id: 8,
       result_level_id: 4,
     };
     return enriched as ProcessedResult;

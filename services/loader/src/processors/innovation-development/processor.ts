@@ -110,7 +110,7 @@ export class InnovationDevelopmentProcessor implements ProcessorInterface {
     const enriched = { ...result };
     enriched.data = {
       ...(enriched.data || {}),
-      result_type_id: 8,
+      result_type_id: 7,
       result_level_id: 4,
     };
     return enriched as ProcessedResult;
