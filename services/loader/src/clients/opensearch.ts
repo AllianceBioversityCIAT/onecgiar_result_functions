@@ -6,7 +6,7 @@ export class OpenSearchClient {
   private auth?: { username: string; password: string };
   private indexPrefix: string;
 
-  constructor(endpoint?: string, indexPrefix = "prms-results") {
+  constructor(endpoint?: string, indexPrefix = "prms-results-management-api") {
     const baseEndpoint =
       endpoint ||
       (process as any).env.OPENSEARCH_ENDPOINT ||
@@ -26,8 +26,8 @@ export class OpenSearchClient {
     }
   }
 
-  private getIndexName(resultType: string): string {
-    return `${this.indexPrefix}-${resultType.replace(/_/g, "-")}`;
+  private getIndexName(_resultType: string): string {
+    return this.indexPrefix;
   }
 
   private getHeaders(): Record<string, string> {
