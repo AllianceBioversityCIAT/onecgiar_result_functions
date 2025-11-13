@@ -4,7 +4,6 @@ export interface DisplayResult {
   title: string;
   leadCenter: string;
   indicatorType: string;
-  indicatorLevel: string;
   createdName: string;
   submitterName: string;
   uploadDate: string;

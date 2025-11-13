@@ -81,7 +81,6 @@ export default function Home() {
           (center: any) => center?.is_leading_result
         )?.clarisa_center_object?.clarisa_institution?.acronym || "N/A";
       const indicatorType = response.obj_result_type?.name || "N/A";
-      const indicatorLevel = response.obj_result_level?.name || "N/A";
       const createdName = buildName(response.obj_created);
       const submitterName = buildName(response.obj_external_submitter);
       const uploadDate = response.external_submitted_date || "N/A";
@@ -92,7 +91,6 @@ export default function Home() {
         title: String(response.title || "N/A"),
         leadCenter,
         indicatorType,
-        indicatorLevel,
         createdName,
         submitterName,
         uploadDate,
@@ -295,7 +293,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50 pt-24 sm:pt-28">
       <PageHeader onRefresh={fetchResults} />
-      <main className="mx-auto w-full max-w-7xl space-y-8 py-12">
+      <main className="mx-auto w-full max-w-480 space-y-8 px-10 py-12">
         <HeroSection lastIndexed={lastIndexed} />
         <StatsGrid stats={stats} />
         <FilterPanel

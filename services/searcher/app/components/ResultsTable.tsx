@@ -85,7 +85,6 @@ export function ResultsTable({
               <th className="px-6 py-3">Title</th>
               <th className="px-6 py-3">Lead center</th>
               <th className="px-6 py-3">Indicator type</th>
-              <th className="px-6 py-3">Indicator level</th>
               <th className="px-6 py-3">
                 {renderSortButton("Upload date", "uploadDate")}
               </th>
@@ -116,7 +115,6 @@ export function ResultsTable({
                   <td className="px-6 py-4">{item.title}</td>
                   <td className="px-6 py-4">{item.leadCenter}</td>
                   <td className="px-6 py-4">{item.indicatorType}</td>
-                  <td className="px-6 py-4">{item.indicatorLevel}</td>
                   <td className="px-6 py-4">{formatUploadDate(item.uploadDate)}</td>
                   <td className="px-6 py-4">{item.createdName}</td>
                   <td className="px-6 py-4">{item.submitterName}</td>
