@@ -66,7 +66,7 @@ npm run build
 
 - **Fixed Fields**: `result_type_id: 6`, `result_level_id: 4`
 - **Processor**: `KnowledgeProductProcessor`
-- **OpenSearch Index**: `prms-results-knowledge-product`
+- **OpenSearch Index**: `prms-results-management-api`
 
 ### Extensibility
 
@@ -139,11 +139,10 @@ The `id` and `result_code` fields from the response are added to the result as:
 
 ### Indexes
 
-Results are stored in type-specific indexes and also exposed through a global alias:
+All processed results are stored in a single OpenSearch index so they can be queried together:
 
-- `prms-results-knowledge-product`
-- `prms-results-[type]` (for future types)
-- Alias `prms-results` (points to every `prms-results-*` index for cross-type searches)
+- Primary index: `prms-results-management-api`
+- Alias (for backwards compatibility): `prms-results-management-api`
 
 ### Document Structure
 
