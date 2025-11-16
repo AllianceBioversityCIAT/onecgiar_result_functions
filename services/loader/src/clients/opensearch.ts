@@ -34,6 +34,18 @@ export class OpenSearchClient {
     return `${this.indexPrefix}-management-api`;
   }
 
+  private async indexExists(name: string): Promise<boolean> {
+    try {
+      await this.makeRequest("HEAD", `/${encodeURIComponent(name)}`);
+      return true;
+    } catch (error: any) {
+      if (error?.message?.includes("404")) {
+        return false;
+      }
+      throw error;
+    }
+  }
+
   private getHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -65,6 +77,14 @@ export class OpenSearchClient {
         return;
       }
     } catch (error: any) {
+      if (error?.message?.includes("404")) {
+        const aliasNameIsIndex = await this.indexExists(aliasName);
+        if (aliasNameIsIndex) {
+          const message = `Index with name '${aliasName}' exists but should be an alias. Please delete or rename the index manually.`;
+          console.error(`[OpenSearchClient] ${message}`);
+          throw new Error(message);
+        }
+      }
       if (!error?.message?.includes("404")) {
         console.warn(
           `[OpenSearchClient] Unable to verify alias ${aliasName} before ensuring`,
@@ -291,17 +311,26 @@ export class OpenSearchClient {
 
     try {
       try {
-        await this.makeRequest("HEAD", `/${aliasName}`);
-
-        const info = await this.makeRequest("GET", `/${aliasName}`);
-        if (info && !info[aliasName]?.aliases) {
-          throw new Error(
-            `Index with name '${aliasName}' exists but should be an alias. Please delete the index manually.`
-          );
+        const info = await this.makeRequest(
+          "GET",
+          `/_alias/${encodeURIComponent(aliasName)}`
+        );
+        if (info?.[aliasName]?.aliases) {
+          console.log(`[OpenSearchClient] Global alias ${aliasName} exists`);
         }
       } catch (error: any) {
-        if (error.message?.includes("should be an alias")) {
-          throw error;
+        if (error?.message?.includes("404")) {
+          const aliasNameIsIndex = await this.indexExists(aliasName);
+          if (aliasNameIsIndex) {
+            throw new Error(
+              `Index with name '${aliasName}' exists but should be an alias. Please delete or rename the index manually.`
+            );
+          }
+        } else {
+          console.warn(
+            `[OpenSearchClient] Unable to verify global alias ${aliasName} before ensuring index`,
+            error
+          );
         }
       }
 
