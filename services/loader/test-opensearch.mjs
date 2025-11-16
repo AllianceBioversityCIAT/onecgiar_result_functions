@@ -30,19 +30,29 @@ async function testOpenSearchConnection() {
     const indexResponse = await client.indexResult(testResult);
     console.log('✅ Document indexed successfully:', indexResponse.result);
     
-    // Test 3: Buscar documento
-    console.log('🔍 Searching for test document...');
-    const searchResponse = await client.search('test-prms-knowledge-product', {
+    // Test 3: Buscar documento usando alias global
+    console.log('🔍 Searching for test document via global alias...');
+    const searchResponse = await client.searchAll({
       query: {
         match: {
           title: 'Test Knowledge Product'
         }
       }
     });
-
-    console.log('✅ Search completed. Found:', searchResponse.hits?.total?.value || 0, 'documents');
-
-    console.log('🌐 Searching via global alias...');
+    
+    console.log('✅ Search completed via alias. Found:', searchResponse.hits?.total?.value || 0, 'documents');
+    
+    // Test 4: Buscar documento usando índice físico específico
+    console.log('🔍 Searching for test document via physical index...');
+    const physicalSearchResponse = await client.searchByType('knowledge_product', {
+      query: {
+        match: {
+          title: 'Test Knowledge Product'
+        }
+      }
+    });
+    
+    console.log('✅ Search completed via physical index. Found:', physicalSearchResponse.hits?.total?.value || 0, 'documents');    console.log('🌐 Searching via global alias...');
     const aliasResponse = await client.search('test-prms', {
       query: {
         match: {
