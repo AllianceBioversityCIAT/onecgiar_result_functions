@@ -3,6 +3,7 @@ import common from "./schemas/common_fields.json" with { type: "json" };
 import kp from "./schemas/knowledge_product.json" with { type: "json" };
 import cs from "./schemas/capacity_sharing.json" with { type: "json" };
 import id from "./schemas/innovation_development.json" with { type: "json" };
+import iu from "./schemas/innovation_use.json" with { type: "json" };
 import oo from "./schemas/other_output.json" with { type: "json" };
 
 ajv.addSchema(common);
@@ -14,6 +15,8 @@ const validators = {
   cs: ajv.compile(cs),
   innovation_development: ajv.compile(id),
   id: ajv.compile(id),
+  innovation_use: ajv.compile(iu),
+  iu: ajv.compile(iu),
   other_output: ajv.compile(oo),
   oo: ajv.compile(oo),
 };

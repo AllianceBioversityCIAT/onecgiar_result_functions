@@ -561,6 +561,161 @@
                     ]
                   }
                 },
+                "iuExample": {
+                  "summary": "Innovation Use — Example with actors (innov_use_to_be_determined: false)",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "innovation_use",
+                        "data": {
+                          "created_date": "2025-11-18T19:00:00Z",
+                          "created_by": {
+                            "email": "innovation.team@cgiar.org",
+                            "name": "Innovation Analyst"
+                          },
+                          "submitted_by": {
+                            "email": "c.martinez@cgiar.org",
+                            "name": "Carlos Martinez",
+                            "comment": "Innovation use tracking",
+                            "submitted_date": "2025-11-18T20:00:00Z"
+                          },
+                          "lead_center": {
+                            "acronym": "CIAT"
+                          },
+                          "title": "Adoption of Climate-Resilient Seed Varieties",
+                          "description": "Tracking the use and adoption of climate-resilient seed varieties among different actor types.",
+                          "toc_mapping": [
+                            {
+                              "science_program_id": "SP06",
+                              "aow_compose_code": "SP06-AOW01",
+                              "result_title": "Innovation adoption tracking",
+                              "result_indicator_description": "Number of actors using innovations",
+                              "result_indicator_type_name": "Number of users"
+                            }
+                          ],
+                          "geo_focus": {
+                            "scope_code": 2,
+                            "scope_label": "Regional",
+                            "regions": [
+                              { "um49code": 145, "name": "Sub-Saharan Africa" }
+                            ]
+                          },
+                          "contributing_center": [
+                            { "institution_id": 1279, "acronym": "ICARDA" }
+                          ],
+                          "contributing_partners": [
+                            { "institution_id": 1, "acronym": "WUR" }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://example.org/adoption-study",
+                              "description": "Adoption study report"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            { "grant_title": "Seed Adoption Initiative" }
+                          ],
+                          "innovation_use": {
+                            "current_innovation_use_numbers": {
+                              "innov_use_to_be_determined": false,
+                              "actors": [
+                                {
+                                  "result_actors_id": "777",
+                                  "actor_type_id": "1",
+                                  "sex_and_age_disaggregation": true,
+                                  "how_many": "3"
+                                },
+                                {
+                                  "result_actors_id": "778",
+                                  "actor_type_id": "4",
+                                  "sex_and_age_disaggregation": false,
+                                  "how_many": 7,
+                                  "women": "3",
+                                  "women_youth": "1",
+                                  "men": "4",
+                                  "men_youth": "0"
+                                },
+                                {
+                                  "actor_type_id": "5",
+                                  "other_actor_type": "Community cooperatives",
+                                  "sex_and_age_disaggregation": false,
+                                  "women": 6,
+                                  "men": 8,
+                                  "how_many": 14,
+                                  "previousWomen": 4
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "iuTBD": {
+                  "summary": "Innovation Use — To Be Determined (innov_use_to_be_determined: true)",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "innovation_use",
+                        "data": {
+                          "created_date": "2025-11-18T19:00:00Z",
+                          "created_by": {
+                            "email": "research.team@cgiar.org",
+                            "name": "Research Coordinator"
+                          },
+                          "submitted_by": {
+                            "email": "d.kim@cgiar.org",
+                            "name": "Diana Kim",
+                            "submitted_date": "2025-11-18T20:00:00Z"
+                          },
+                          "lead_center": {
+                            "acronym": "ICARDA"
+                          },
+                          "title": "Early Stage Innovation Deployment",
+                          "description": "Innovation use numbers to be determined in future assessments.",
+                          "toc_mapping": [
+                            {
+                              "science_program_id": "SP08",
+                              "aow_compose_code": "SP08-AOW02",
+                              "result_title": "Innovation deployment",
+                              "result_indicator_description": "Innovations deployed",
+                              "result_indicator_type_name": "Number of innovations"
+                            }
+                          ],
+                          "geo_focus": {
+                            "scope_code": 1,
+                            "scope_label": "Global"
+                          },
+                          "contributing_center": [
+                            { "institution_id": 115, "acronym": "CIFOR" }
+                          ],
+                          "contributing_partners": [
+                            { "institution_id": 10, "acronym": "FAO" }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://example.org/innovation-plan",
+                              "description": "Innovation deployment plan"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            { "grant_title": "Innovation Scaling Fund" }
+                          ],
+                          "innovation_use": {
+                            "current_innovation_use_numbers": {
+                              "innov_use_to_be_determined": true
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
                 "ooExample": {
                   "summary": "Other Output — Example with common fields only",
                   "value": {
