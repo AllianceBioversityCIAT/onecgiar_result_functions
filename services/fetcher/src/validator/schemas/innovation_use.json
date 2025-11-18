@@ -100,6 +100,46 @@
                       }
                     ]
                   }
+                },
+                "organization": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "institution_types_id": {
+                        "oneOf": [{ "type": "string" }, { "type": "integer" }]
+                      },
+                      "institution_sub_type_id": {
+                        "oneOf": [
+                          { "type": "string" },
+                          { "type": "integer" },
+                          { "type": "null" }
+                        ]
+                      },
+                      "other_institution": { "type": ["string", "null"] },
+                      "how_many": {
+                        "oneOf": [
+                          { "type": "string" },
+                          { "type": "integer" },
+                          { "type": "null" }
+                        ]
+                      },
+                      "hide": { "type": "boolean" }
+                    },
+                    "required": ["institution_types_id"],
+                    "allOf": [
+                      {
+                        "if": {
+                          "properties": {
+                            "institution_types_id": { "enum": ["78", 78] }
+                          }
+                        },
+                        "then": {
+                          "required": ["other_institution"]
+                        }
+                      }
+                    ]
+                  }
                 }
               },
               "required": ["innov_use_to_be_determined"],

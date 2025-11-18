@@ -646,6 +646,42 @@
                                   "how_many": 14,
                                   "previousWomen": 4
                                 }
+                              ],
+                              "organization": [
+                                {
+                                  "how_many": 1,
+                                  "institution_types_id": 39,
+                                  "institution_sub_type_id": 39,
+                                  "other_institution": null,
+                                  "hide": false
+                                },
+                                {
+                                  "institution_types_id": 76,
+                                  "institution_sub_type_id": null,
+                                  "other_institution": null,
+                                  "hide": false,
+                                  "how_many": 2
+                                {
+                                  "institution_types_id": 75,
+                                  "institution_sub_type_id": null,
+                                  "other_institution": null,
+                                  "hide": false,
+                                  "how_many": 3
+                                },
+                                {
+                                  "institution_types_id": 77,
+                                  "institution_sub_type_id": null,
+                                  "other_institution": null,
+                                  "hide": false,
+                                  "how_many": 4
+                                },
+                                {
+                                  "institution_types_id": 78,
+                                  "other_institution": "Test other org",
+                                  "institution_sub_type_id": null,
+                                  "hide": false,
+                                  "how_many": 5
+                                }
                               ]
                             }
                           }
