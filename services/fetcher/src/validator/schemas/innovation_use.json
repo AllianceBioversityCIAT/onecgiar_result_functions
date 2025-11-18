@@ -149,6 +149,23 @@
                       }
                     ]
                   }
+                },
+                "measures": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "unit_of_measure": { "type": "string" },
+                      "quantity": {
+                        "oneOf": [
+                          { "type": "string" },
+                          { "type": "integer" },
+                          { "type": "number" }
+                        ]
+                      }
+                    },
+                    "anyOf": [{ "required": ["unit_of_measure"] }]
+                  }
                 }
               },
               "required": ["innov_use_to_be_determined"],
