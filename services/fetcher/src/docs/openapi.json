@@ -562,7 +562,7 @@
                   }
                 },
                 "iuExample": {
-                  "summary": "Innovation Use — Example with actors (innov_use_to_be_determined: false)",
+                  "summary": "Innovation Use — Example with actors and organizations (search by ID)",
                   "value": {
                     "tenant": "prms.result-management.api",
                     "op": "dataset.ingest.requested",
@@ -661,6 +661,7 @@
                                   "other_institution": null,
                                   "hide": false,
                                   "how_many": 2
+                                },
                                 {
                                   "institution_types_id": 75,
                                   "institution_sub_type_id": null,
@@ -681,6 +682,112 @@
                                   "institution_sub_type_id": null,
                                   "hide": false,
                                   "how_many": 5
+                                }
+                              ],
+                              "measures": [
+                                {
+                                  "unit_of_measure": "# of Innovations",
+                                  "quantity": 2
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "iuByName": {
+                  "summary": "Innovation Use — Search by actor/institution names instead of IDs",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "innovation_use",
+                        "data": {
+                          "created_date": "2025-11-18T20:00:00Z",
+                          "created_by": {
+                            "email": "research.team@cgiar.org",
+                            "name": "Research Coordinator"
+                          },
+                          "submitted_by": {
+                            "email": "e.rodriguez@cgiar.org",
+                            "name": "Elena Rodriguez",
+                            "submitted_date": "2025-11-18T20:30:00Z"
+                          },
+                          "lead_center": {
+                            "acronym": "ICARDA"
+                          },
+                          "title": "Innovation Use Tracking by Name",
+                          "description": "Example using actor and institution names for flexible search.",
+                          "toc_mapping": [
+                            {
+                              "science_program_id": "SP07",
+                              "aow_compose_code": "SP07-AOW01",
+                              "result_title": "Innovation use by name",
+                              "result_indicator_description": "Actors and organizations by name",
+                              "result_indicator_type_name": "Number of users"
+                            }
+                          ],
+                          "geo_focus": {
+                            "scope_code": 1,
+                            "scope_label": "Global"
+                          },
+                          "contributing_center": [
+                            { "institution_id": 115, "acronym": "CIFOR" }
+                          ],
+                          "contributing_partners": [
+                            { "institution_id": 10, "acronym": "FAO" }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://example.org/tracking-study",
+                              "description": "Innovation tracking report"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            { "grant_title": "Innovation Monitoring Fund" }
+                          ],
+                          "innovation_use": {
+                            "current_innovation_use_numbers": {
+                              "innov_use_to_be_determined": false,
+                              "actors": [
+                                {
+                                  "actor_type_name": "Farmers/ (agro)pastoralist/ herders/ fishers",
+                                  "sex_and_age_disaggregation": true,
+                                  "how_many": 150
+                                },
+                                {
+                                  "actor_type_name": "Policy actors (public or private)",
+                                  "sex_and_age_disaggregation": false,
+                                  "how_many": 25,
+                                  "women": 12,
+                                  "men": 13
+                                }
+                              ],
+                              "organization": [
+                                {
+                                  "institution_types_name": "Research Center",
+                                  "institution_sub_type_name": "International Research Center",
+                                  "how_many": 5,
+                                  "hide": false
+                                },
+                                {
+                                  "institution_types_name": "University",
+                                  "how_many": 8,
+                                  "hide": false
+                                }
+                              ],
+                              "measures": [
+                                {
+                                  "unit_of_measure_id": 12,
+                                  "unit_of_measure": "# of Innovations",
+                                  "quantity": 3
+                                },
+                                {
+                                  "unit_of_measure": "Hectares",
+                                  "quantity": 1500.5
                                 }
                               ]
                             }
