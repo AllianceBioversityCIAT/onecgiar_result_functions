@@ -29,6 +29,7 @@
                       "actor_type_id": {
                         "oneOf": [{ "type": "string" }, { "type": "integer" }]
                       },
+                      "actor_type_name": { "type": "string" },
                       "other_actor_type": { "type": ["string", "null"] },
                       "sex_and_age_disaggregation": {
                         "type": ["boolean", "null"]
@@ -76,7 +77,10 @@
                         ]
                       }
                     },
-                    "required": ["actor_type_id"],
+                    "anyOf": [
+                      { "required": ["actor_type_id"] },
+                      { "required": ["actor_type_name"] }
+                    ],
                     "allOf": [
                       {
                         "if": {
@@ -109,6 +113,7 @@
                       "institution_types_id": {
                         "oneOf": [{ "type": "string" }, { "type": "integer" }]
                       },
+                      "institution_types_name": { "type": "string" },
                       "institution_sub_type_id": {
                         "oneOf": [
                           { "type": "string" },
@@ -116,6 +121,7 @@
                           { "type": "null" }
                         ]
                       },
+                      "institution_sub_type_name": { "type": "string" },
                       "other_institution": { "type": ["string", "null"] },
                       "how_many": {
                         "oneOf": [
@@ -126,7 +132,10 @@
                       },
                       "hide": { "type": "boolean" }
                     },
-                    "required": ["institution_types_id"],
+                    "anyOf": [
+                      { "required": ["institution_types_id"] },
+                      { "required": ["institution_types_name"] }
+                    ],
                     "allOf": [
                       {
                         "if": {
