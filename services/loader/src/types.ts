@@ -46,6 +46,8 @@ export interface ProcessingResult {
   success: boolean;
   result?: ProcessedResult;
   error?: string;
+  externalSuccess?: boolean;
+  externalError?: string;
   externalApiResponse?: ExternalApiResponse;
   opensearchResponse?: any;
 }

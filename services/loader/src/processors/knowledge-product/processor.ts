@@ -52,7 +52,21 @@ export class KnowledgeProductProcessor implements ProcessorInterface {
       const {
         enriched: externallyEnrichedResult,
         apiResponse: externalApiResponse,
+        success: externalSuccess = true,
+        error: externalError,
       } = await this.externalApiClient.enrichResult(enrichedResult);
+
+      if (!externalSuccess) {
+        const message =
+          externalError || "External API failed; skipping OpenSearch indexing";
+        this.logger.error(message, resultId);
+        return {
+          success: false,
+          error: message,
+          externalSuccess,
+          externalError: externalError,
+        };
+      }
 
       if (!externalApiResponse) {
         this.logger.warn(
