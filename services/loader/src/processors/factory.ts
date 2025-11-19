@@ -2,7 +2,10 @@ import { ProcessorInterface } from "../types.js";
 import { KnowledgeProductProcessor } from "./knowledge-product/processor.js";
 import { CapacitySharingProcessor } from "./capacity-sharing/processor.js";
 import { InnovationDevelopmentProcessor } from "./innovation-development/processor.js";
+import { InnovationUseProcessor } from "./innovation-use/processor.js";
 import { OtherOutputProcessor } from "./other-output/processor.js";
+import { OtherOutcomeProcessor } from "./other-outcome/processor.js";
+import { PolicyChangeProcessor } from "./policy-change/processor.js";
 import { Logger } from "../utils/logger.js";
 
 export class ProcessorFactory {
@@ -28,9 +31,21 @@ export class ProcessorFactory {
       case "id":
         return new InnovationDevelopmentProcessor(this.logger);
 
+      case "innovationuse":
+      case "iu":
+        return new InnovationUseProcessor(this.logger);
+
       case "otheroutput":
       case "oo":
         return new OtherOutputProcessor(this.logger);
+
+      case "otheroutcome":
+      case "oc":
+        return new OtherOutcomeProcessor(this.logger);
+
+      case "policychange":
+      case "pc":
+        return new PolicyChangeProcessor(this.logger);
 
       default:
         throw new Error(`No processor found for result type: ${resultType}`);
@@ -45,8 +60,14 @@ export class ProcessorFactory {
       "cs",
       "innovation_development",
       "id",
+      "innovation_use",
+      "iu",
       "other_output",
-      "oop",
+      "oo",
+      "other_outcome",
+      "oc",
+      "policy_change",
+      "pc",
     ];
   }
 
