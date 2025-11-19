@@ -5,6 +5,8 @@ import cs from "./schemas/capacity_sharing.json" with { type: "json" };
 import id from "./schemas/innovation_development.json" with { type: "json" };
 import iu from "./schemas/innovation_use.json" with { type: "json" };
 import oo from "./schemas/other_output.json" with { type: "json" };
+import oc from "./schemas/other_outcome.json" with { type: "json" };
+import pc from "./schemas/policy_change.json" with { type: "json" };
 
 ajv.addSchema(common);
 
@@ -19,6 +21,10 @@ const validators = {
   iu: ajv.compile(iu),
   other_output: ajv.compile(oo),
   oo: ajv.compile(oo),
+  other_outcome: ajv.compile(oc),
+  oc: ajv.compile(oc),
+  policy_change: ajv.compile(pc),
+  pc: ajv.compile(pc),
 };
 
 export function validateByType(type, data) {

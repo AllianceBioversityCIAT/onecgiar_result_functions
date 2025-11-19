@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "PRMS Normalizer API",
-    "version": "1.1.0",
-    "description": "Validates, normalizes and publishes results to EventBridge."
+    "version": "1.2.0",
+    "description": "Validates, normalizes and publishes results to EventBridge. Supports: Knowledge Products, Capacity Sharing, Innovation Development, Innovation Use, Other Output, Other Outcome, and Policy Change."
   },
   "servers": [{ "url": "/" }],
   "paths": {
@@ -859,6 +859,175 @@
                     ]
                   }
                 },
+                "pcBudgetAllocation": {
+                  "summary": "Policy Change — Budget Allocation (policy_type id=1, requires status_amount & amount)",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "policy_change",
+                        "data": {
+                          "created_date": "2025-11-19T14:00:00Z",
+                          "created_by": {
+                            "email": "policy.team@cgiar.org",
+                            "name": "Policy Research Lead"
+                          },
+                          "submitted_by": {
+                            "email": "j.submitter@cgiar.org",
+                            "name": "Jane Submitter",
+                            "comment": "Budget allocation policy change",
+                            "submitted_date": "2025-11-19T14:05:00Z"
+                          },
+                          "lead_center": {
+                            "acronym": "CIAT",
+                            "name": "International Center for Tropical Agriculture"
+                          },
+                          "title": "New Agricultural Policy Implementation in Kenya",
+                          "description": "Policy change focused on sustainable agriculture practices with significant budget allocation for rural development programs.",
+                          "toc_mapping": [
+                            {
+                              "science_program_id": "SP12",
+                              "aow_compose_code": "SP12-AOW01",
+                              "result_title": "Policy Change Result",
+                              "result_indicator_description": "Number of policy changes",
+                              "result_indicator_type_name": "# Of Policy Changes"
+                            }
+                          ],
+                          "geo_focus": {
+                            "scope_code": 4,
+                            "scope_label": "National",
+                            "countries": [
+                              {
+                                "iso_alpha_3": "KEN",
+                                "name": "Kenya"
+                              }
+                            ]
+                          },
+                          "contributing_center": [
+                            {
+                              "institution_id": 1279,
+                              "acronym": "ICARDA"
+                            }
+                          ],
+                          "contributing_partners": [
+                            {
+                              "institution_id": 123,
+                              "acronym": "WUR",
+                              "name": "Wageningen University"
+                            }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://example.org/policy-document",
+                              "description": "Official policy document"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            {
+                              "grant_title": "Kenya Agriculture Innovation Project"
+                            }
+                          ],
+                          "policy_change": {
+                            "policy_type": {
+                              "id": 1,
+                              "name": "Budget allocation",
+                              "status_amount": {
+                                "id": 1,
+                                "name": "Approved"
+                              },
+                              "amount": 5000000
+                            },
+                            "policy_stage": {
+                              "id": 3,
+                              "name": "Implementation"
+                            },
+                            "implementing_organization": [
+                              {
+                                "institutions_id": 456,
+                                "institutions_acronym": "MOA",
+                                "institutions_name": "Ministry of Agriculture Kenya"
+                              },
+                              {
+                                "institutions_name": "Kenya Agricultural Research Institute"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "pcRegulatory": {
+                  "summary": "Policy Change — Regulatory (policy_type id≠1, no status_amount/amount)",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "policy_change",
+                        "data": {
+                          "created_date": "2025-11-19T14:00:00Z",
+                          "created_by": {
+                            "email": "creator@cgiar.org",
+                            "name": "John Creator"
+                          },
+                          "submitted_by": {
+                            "email": "submitter@cgiar.org",
+                            "name": "Jane Submitter",
+                            "submitted_date": "2025-11-19T14:05:00Z"
+                          },
+                          "lead_center": {
+                            "acronym": "CIAT"
+                          },
+                          "title": "Regulatory Framework for Seed Distribution",
+                          "description": "Policy change for improved seed certification and distribution across the region.",
+                          "toc_mapping": [
+                            {
+                              "science_program_id": "SP12",
+                              "aow_compose_code": "SP12-AOW01",
+                              "result_title": "Policy Change Result",
+                              "result_indicator_description": "Number of policy changes",
+                              "result_indicator_type_name": "# Of Policy Changes"
+                            }
+                          ],
+                          "geo_focus": {
+                            "scope_label": "Regional",
+                            "regions": [
+                              {
+                                "um49code": 14,
+                                "name": "Eastern Africa"
+                              }
+                            ]
+                          },
+                          "contributing_center": [],
+                          "contributing_partners": [],
+                          "evidence": [
+                            {
+                              "link": "https://example.org/regulatory-framework",
+                              "description": "Regulatory framework document"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [],
+                          "policy_change": {
+                            "policy_type": {
+                              "id": 2,
+                              "name": "Regulatory change"
+                            },
+                            "policy_stage": {
+                              "name": "Approved"
+                            },
+                            "implementing_organization": [
+                              {
+                                "institutions_acronym": "EAC"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
                 "ooExample": {
                   "summary": "Other Output — Example with common fields only",
                   "value": {
@@ -911,6 +1080,64 @@
                           ],
                           "contributing_bilateral_projects": [
                             { "grant_title": "General Fund" }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                "ocExample": {
+                  "summary": "Other Outcome — Example with common fields only",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "other_outcome",
+                        "data": {
+                          "created_date": "2025-11-19T14:00:00Z",
+                          "created_by": {
+                            "email": "outcome.team@cgiar.org",
+                            "name": "Outcome Contributor"
+                          },
+                          "submitted_by": {
+                            "email": "s.green@cgiar.org",
+                            "name": "Sarah Green",
+                            "comment": "Other outcome result",
+                            "submitted_date": "2025-11-19T14:15:00Z"
+                          },
+                          "lead_center": {
+                            "acronym": "ICARDA"
+                          },
+                          "title": "Miscellaneous Research Outcome",
+                          "description": "A general research outcome that doesn't fit into other specific categories.",
+                          "toc_mapping": [
+                            {
+                              "science_program_id": "SP10",
+                              "aow_compose_code": "SP10-AOW03",
+                              "result_title": "General outcome",
+                              "result_indicator_description": "Outcomes achieved",
+                              "result_indicator_type_name": "Number of outcomes"
+                            }
+                          ],
+                          "geo_focus": {
+                            "scope_code": 1,
+                            "scope_label": "Global"
+                          },
+                          "contributing_center": [
+                            { "institution_id": 1279, "acronym": "ICARDA" }
+                          ],
+                          "contributing_partners": [
+                            { "institution_id": 10, "acronym": "FAO" }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://example.org/outcome-report",
+                              "description": "Link to the outcome report"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            { "grant_title": "Outcome Research Fund" }
                           ]
                         }
                       }
@@ -1006,7 +1233,19 @@
               "type": "object",
               "required": ["type", "data"],
               "properties": {
-                "type": { "type": "string", "example": "knowledge_product" },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "knowledge_product",
+                    "capacity_sharing",
+                    "innovation_development",
+                    "innovation_use",
+                    "other_output",
+                    "other_outcome",
+                    "policy_change"
+                  ],
+                  "example": "knowledge_product"
+                },
                 "op": {
                   "type": "string",
                   "enum": ["create", "update", "delete"]

@@ -1,0 +1,7 @@
+{
+  "$id": "https://prms/schemas/other_outcome.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Other Outcome Result",
+  "description": "Schema for other outcome results",
+  "allOf": [{ "$ref": "https://prms/schemas/common_fields.json" }]
+}
