@@ -24,7 +24,13 @@
               "type": "string"
             },
             "innovation_readiness_level": {
-              "type": "integer"
+              "type": "object",
+              "properties": {
+                "level": { "type": "integer" },
+                "name": { "type": "string" }
+              },
+              "additionalProperties": false,
+              "anyOf": [{ "required": ["level"] }, { "required": ["name"] }]
             }
           },
           "required": ["innovation_typology", "innovation_readiness_level"]

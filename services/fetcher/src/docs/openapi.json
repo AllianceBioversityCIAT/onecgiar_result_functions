@@ -554,7 +554,10 @@
                               "name": "Technological innovation"
                             },
                             "innovation_developers": "John Doe; Marie Curie; Nikola Tesla",
-                            "innovation_readiness_level": 14
+                            "innovation_readiness_level": {
+                              "id": 14,
+                              "name": "Phase 3 - Available for uptake"
+                            }
                           }
                         }
                       }
