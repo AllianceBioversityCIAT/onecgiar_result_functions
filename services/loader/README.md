@@ -568,8 +568,6 @@ Recommended CloudWatch Alarms:
 - Result type ID reference table
 - Extended examples for all types
 
-See `CHANGELOG_NEW_TYPES.md` for detailed changes.
-
 ---
 
 **Version**: 1.2.0  
