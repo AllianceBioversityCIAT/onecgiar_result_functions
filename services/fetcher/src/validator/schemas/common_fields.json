@@ -22,10 +22,7 @@
   "properties": {
     "result_id": {
       "description": "Identifier of the result in the source system (optional).",
-      "oneOf": [
-        { "type": "number" },
-        { "type": "string" }
-      ]
+      "oneOf": [{ "type": "number" }, { "type": "string" }]
     },
 
     "created_date": {
@@ -94,31 +91,28 @@
       "additionalProperties": false
     },
 
-  "title": { "type": "string" },
+    "title": { "type": "string" },
 
-  "description": { "type": "string" },
+    "description": { "type": "string" },
 
     "toc_mapping": {
-      "type": "array",
-      "description": "Array of TOC mappings, can map to multiple Science Programs",
-      "items": {
-        "type": "object",
-        "required": [
-          "science_program_id",
-          "aow_compose_code",
-          "result_title",
-          "result_indicator_description",
-          "result_indicator_type_name"
-        ],
-        "properties": {
-          "science_program_id": { "type": "string" },
-          "aow_compose_code": { "type": "string" },
-          "result_title": { "type": "string" },
-          "result_indicator_description": { "type": "string" },
-          "result_indicator_type_name": { "type": "string" }
-        }
+      "type": "object",
+      "description": "TOC mapping to a single Science Program",
+      "required": [
+        "science_program_id",
+        "aow_compose_code",
+        "result_title",
+        "result_indicator_description",
+        "result_indicator_type_name"
+      ],
+      "properties": {
+        "science_program_id": { "type": "string" },
+        "aow_compose_code": { "type": "string" },
+        "result_title": { "type": "string" },
+        "result_indicator_description": { "type": "string" },
+        "result_indicator_type_name": { "type": "string" }
       },
-      "minItems": 1
+      "additionalProperties": false
     },
 
     "geo_focus": {

@@ -5,7 +5,11 @@
     "version": "1.2.0",
     "description": "Validates, normalizes and publishes results to EventBridge. Supports: Knowledge Products, Capacity Sharing, Innovation Development, Innovation Use, Other Output, Other Outcome, and Policy Change."
   },
-  "servers": [{ "url": "/" }],
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
   "paths": {
     "/ingest": {
       "post": {
@@ -14,7 +18,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/IngestRequest" },
+              "schema": {
+                "$ref": "#/components/schemas/IngestRequest"
+              },
               "examples": {
                 "kpRegional": {
                   "summary": "Knowledge Product — Regional (scope_code=2, requires regions[])",
@@ -42,20 +48,21 @@
                           },
                           "title": "Improved seed varieties adoption in drylands",
                           "description": "This knowledge product summarizes adoption barriers and enabling factors across regions to inform policy and practice for smallholders in drylands.",
-                          "toc_mapping": [
-                            {
-                              "science_program_id": "SP12",
-                              "aow_compose_code": "SP12-AOW01",
-                              "result_title": "Adoption of improved seed varieties",
-                              "result_indicator_description": "Share of farmers adopting improved seeds",
-                              "result_indicator_type_name": "# Of Knowledge Products"
-                            }
-                          ],
+                          "toc_mapping": {
+                            "science_program_id": "SP12",
+                            "aow_compose_code": "SP12-AOW01",
+                            "result_title": "Adoption of improved seed varieties",
+                            "result_indicator_description": "Share of farmers adopting improved seeds",
+                            "result_indicator_type_name": "# Of Knowledge Products"
+                          },
                           "geo_focus": {
                             "scope_code": 2,
                             "scope_label": "Regional",
                             "regions": [
-                              { "um49code": 145, "name": "Sub-Saharan Africa" }
+                              {
+                                "um49code": 145,
+                                "name": "Sub-Saharan Africa"
+                              }
                             ]
                           },
                           "contributing_center": [
@@ -63,11 +70,20 @@
                               "institution_id": 1279,
                               "acronym": "ICARDA"
                             },
-                            { "institution_id": 115, "acronym": "CIFOR" }
+                            {
+                              "institution_id": 115,
+                              "acronym": "CIFOR"
+                            }
                           ],
                           "contributing_partners": [
-                            { "institution_id": 1, "acronym": "WUR" },
-                            { "institution_id": 7, "acronym": "NARO" }
+                            {
+                              "institution_id": 1,
+                              "acronym": "WUR"
+                            },
+                            {
+                              "institution_id": 7,
+                              "acronym": "NARO"
+                            }
                           ],
                           "evidence": [
                             {
@@ -76,8 +92,12 @@
                             }
                           ],
                           "contributing_bilateral_projects": [
-                            { "grant_title": "Seed Innovation Window" },
-                            { "grant_title": "Climate-Resilient Varieties" }
+                            {
+                              "grant_title": "Seed Innovation Window"
+                            },
+                            {
+                              "grant_title": "Climate-Resilient Varieties"
+                            }
                           ],
                           "knowledge_product": {
                             "handle": "hdl:20.500.12345/abc-2025",
@@ -119,18 +139,18 @@
                             "name": "María Lee",
                             "submitted_date": "2025-10-10T10:30:00Z"
                           },
-                          "lead_center": { "acronym": "CIAT" },
+                          "lead_center": {
+                            "acronym": "CIAT"
+                          },
                           "title": "National varietal release guidelines",
                           "description": "Guidelines to streamline varietal release at national level.",
-                          "toc_mapping": [
-                            {
-                              "science_program_id": "SP05",
-                              "aow_compose_code": "SP05-AOW02",
-                              "result_title": "National policy brief",
-                              "result_indicator_description": "Policy briefs produced",
-                              "result_indicator_type_name": "# Of Knowledge Products"
-                            }
-                          ],
+                          "toc_mapping": {
+                            "science_program_id": "SP05",
+                            "aow_compose_code": "SP05-AOW02",
+                            "result_title": "National policy brief",
+                            "result_indicator_description": "Policy briefs produced",
+                            "result_indicator_type_name": "# Of Knowledge Products"
+                          },
                           "geo_focus": {
                             "scope_code": 4,
                             "scope_label": "National",
@@ -144,10 +164,16 @@
                             ]
                           },
                           "contributing_center": [
-                            { "institution_id": 115, "acronym": "CIFOR" }
+                            {
+                              "institution_id": 115,
+                              "acronym": "CIFOR"
+                            }
                           ],
                           "contributing_partners": [
-                            { "institution_id": 22, "acronym": "MADR" }
+                            {
+                              "institution_id": 22,
+                              "acronym": "MADR"
+                            }
                           ],
                           "evidence": [
                             {
@@ -156,7 +182,9 @@
                             }
                           ],
                           "contributing_bilateral_projects": [
-                            { "grant_title": "AgPolicy 2025" }
+                            {
+                              "grant_title": "AgPolicy 2025"
+                            }
                           ],
                           "knowledge_product": {
                             "handle": "hdl:20.500.12345/pb-2025-01",
@@ -194,18 +222,18 @@
                             "name": "Luis García",
                             "submitted_date": "2025-10-10T11:15:00Z"
                           },
-                          "lead_center": { "acronym": "CIAT" },
+                          "lead_center": {
+                            "acronym": "CIAT"
+                          },
                           "title": "County-level varietal adoption",
                           "description": "Dataset on varietal adoption at sub-national level.",
-                          "toc_mapping": [
-                            {
-                              "science_program_id": "SP07",
-                              "aow_compose_code": "SP07-AOW01",
-                              "result_title": "Sub-national dataset",
-                              "result_indicator_description": "Datasets published",
-                              "result_indicator_type_name": "# Of Knowledge Products"
-                            }
-                          ],
+                          "toc_mapping": {
+                            "science_program_id": "SP07",
+                            "aow_compose_code": "SP07-AOW01",
+                            "result_title": "Sub-national dataset",
+                            "result_indicator_description": "Datasets published",
+                            "result_indicator_type_name": "# Of Knowledge Products"
+                          },
                           "geo_focus": {
                             "scope_code": 5,
                             "scope_label": "Sub-national",
@@ -218,14 +246,23 @@
                               }
                             ],
                             "subnational_areas": [
-                              { "id": 1, "name": "Nairobi County" }
+                              {
+                                "id": 1,
+                                "name": "Nairobi County"
+                              }
                             ]
                           },
                           "contributing_center": [
-                            { "institution_id": 115, "acronym": "CIFOR" }
+                            {
+                              "institution_id": 115,
+                              "acronym": "CIFOR"
+                            }
                           ],
                           "contributing_partners": [
-                            { "institution_id": 501, "acronym": "NEMA" }
+                            {
+                              "institution_id": 501,
+                              "acronym": "NEMA"
+                            }
                           ],
                           "evidence": [
                             {
@@ -234,7 +271,9 @@
                             }
                           ],
                           "contributing_bilateral_projects": [
-                            { "grant_title": "County Seed Data" }
+                            {
+                              "grant_title": "County Seed Data"
+                            }
                           ],
                           "knowledge_product": {
                             "handle": "hdl:20.500.12345/kedata-2025",
@@ -272,27 +311,33 @@
                             "name": "Gul Khan",
                             "submitted_date": "2025-10-10T14:20:00Z"
                           },
-                          "lead_center": { "acronym": "Alliance" },
+                          "lead_center": {
+                            "acronym": "Alliance"
+                          },
                           "title": "Global meta-analysis on seed adoption",
                           "description": "A meta-analysis summarizing seed adoption globally.",
-                          "toc_mapping": [
-                            {
-                              "science_program_id": "SP01",
-                              "aow_compose_code": "SP01-AOW01",
-                              "result_title": "Global meta-analysis",
-                              "result_indicator_description": "Meta-analyses completed",
-                              "result_indicator_type_name": "# Of Knowledge Products"
-                            }
-                          ],
+                          "toc_mapping": {
+                            "science_program_id": "SP01",
+                            "aow_compose_code": "SP01-AOW01",
+                            "result_title": "Global meta-analysis",
+                            "result_indicator_description": "Meta-analyses completed",
+                            "result_indicator_type_name": "# Of Knowledge Products"
+                          },
                           "geo_focus": {
                             "scope_code": 1,
                             "scope_label": "Global"
                           },
                           "contributing_center": [
-                            { "institution_id": 1279, "acronym": "ICARDA" }
+                            {
+                              "institution_id": 1279,
+                              "acronym": "ICARDA"
+                            }
                           ],
                           "contributing_partners": [
-                            { "institution_id": 10, "acronym": "FAO" }
+                            {
+                              "institution_id": 10,
+                              "acronym": "FAO"
+                            }
                           ],
                           "evidence": [
                             {
@@ -301,7 +346,9 @@
                             }
                           ],
                           "contributing_bilateral_projects": [
-                            { "grant_title": "Global Evidence 2025" }
+                            {
+                              "grant_title": "Global Evidence 2025"
+                            }
                           ],
                           "knowledge_product": {
                             "handle": "hdl:20.500.12345/global-2025",
@@ -339,27 +386,33 @@
                             "name": "Min User",
                             "submitted_date": "2025-10-10T09:00:00Z"
                           },
-                          "lead_center": { "acronym": "CIAT" },
+                          "lead_center": {
+                            "acronym": "CIAT"
+                          },
                           "title": "Minimal KP",
                           "description": "Short description.",
-                          "toc_mapping": [
-                            {
-                              "science_program_id": "SP02",
-                              "aow_compose_code": "SP02-AOW01",
-                              "result_title": "Minimal",
-                              "result_indicator_description": "n/a",
-                              "result_indicator_type_name": "# Of Knowledge Products"
-                            }
-                          ],
+                          "toc_mapping": {
+                            "science_program_id": "SP02",
+                            "aow_compose_code": "SP02-AOW01",
+                            "result_title": "Minimal",
+                            "result_indicator_description": "n/a",
+                            "result_indicator_type_name": "# Of Knowledge Products"
+                          },
                           "geo_focus": {
                             "scope_code": 1,
                             "scope_label": "Global"
                           },
                           "contributing_center": [
-                            { "institution_id": 115, "acronym": "CIFOR" }
+                            {
+                              "institution_id": 115,
+                              "acronym": "CIFOR"
+                            }
                           ],
                           "contributing_partners": [
-                            { "institution_id": 2, "acronym": "CGIAR" }
+                            {
+                              "institution_id": 2,
+                              "acronym": "CGIAR"
+                            }
                           ],
                           "evidence": [
                             {
@@ -368,7 +421,9 @@
                             }
                           ],
                           "contributing_bilateral_projects": [
-                            { "grant_title": "MIN-001" }
+                            {
+                              "grant_title": "MIN-001"
+                            }
                           ],
                           "knowledge_product": {
                             "handle": "hdl:20.500.12345/min",
@@ -429,15 +484,13 @@
                           },
                           "title": "Climate-Smart Agriculture Training Program",
                           "description": "A comprehensive training program on climate-smart agricultural practices delivered to farmers and extension agents.",
-                          "toc_mapping": [
-                            {
-                              "science_program_id": "SP03",
-                              "aow_compose_code": "SP03-AOW02",
-                              "result_title": "Capacity building workshop",
-                              "result_indicator_description": "Number of people trained in climate-smart practices",
-                              "result_indicator_type_name": "Number of people trained"
-                            }
-                          ],
+                          "toc_mapping": {
+                            "science_program_id": "SP03",
+                            "aow_compose_code": "SP03-AOW02",
+                            "result_title": "Capacity building workshop",
+                            "result_indicator_description": "Number of people trained in climate-smart practices",
+                            "result_indicator_type_name": "Number of people trained"
+                          },
                           "geo_focus": {
                             "scope_code": 4,
                             "scope_label": "National",
@@ -457,7 +510,10 @@
                             }
                           ],
                           "contributing_partners": [
-                            { "institution_id": 10, "acronym": "FAO" }
+                            {
+                              "institution_id": 10,
+                              "acronym": "FAO"
+                            }
                           ],
                           "evidence": [
                             {
@@ -466,7 +522,9 @@
                             }
                           ],
                           "contributing_bilateral_projects": [
-                            { "grant_title": "Climate Training Initiative" }
+                            {
+                              "grant_title": "Climate Training Initiative"
+                            }
                           ],
                           "capacity_sharing": {
                             "number_people_trained": {
@@ -509,15 +567,13 @@
                           },
                           "title": "AI-Powered Crop Monitoring System",
                           "description": "Development of an innovative AI system for real-time crop monitoring and yield prediction.",
-                          "toc_mapping": [
-                            {
-                              "science_program_id": "SP04",
-                              "aow_compose_code": "SP04-AOW03",
-                              "result_title": "Technological innovation development",
-                              "result_indicator_description": "Innovations developed and tested",
-                              "result_indicator_type_name": "Number of innovations"
-                            }
-                          ],
+                          "toc_mapping": {
+                            "science_program_id": "SP04",
+                            "aow_compose_code": "SP04-AOW03",
+                            "result_title": "Technological innovation development",
+                            "result_indicator_description": "Innovations developed and tested",
+                            "result_indicator_type_name": "Number of innovations"
+                          },
                           "geo_focus": {
                             "scope_code": 4,
                             "scope_label": "National",
@@ -537,7 +593,10 @@
                             }
                           ],
                           "contributing_partners": [
-                            { "institution_id": 5, "acronym": "MIT" }
+                            {
+                              "institution_id": 5,
+                              "acronym": "MIT"
+                            }
                           ],
                           "evidence": [
                             {
@@ -546,7 +605,9 @@
                             }
                           ],
                           "contributing_bilateral_projects": [
-                            { "grant_title": "Tech Innovation Fund" }
+                            {
+                              "grant_title": "Tech Innovation Fund"
+                            }
                           ],
                           "innovation_development": {
                             "innovation_typology": {
@@ -589,27 +650,34 @@
                           },
                           "title": "Adoption of Climate-Resilient Seed Varieties",
                           "description": "Tracking the use and adoption of climate-resilient seed varieties among different actor types.",
-                          "toc_mapping": [
-                            {
-                              "science_program_id": "SP06",
-                              "aow_compose_code": "SP06-AOW01",
-                              "result_title": "Innovation adoption tracking",
-                              "result_indicator_description": "Number of actors using innovations",
-                              "result_indicator_type_name": "Number of users"
-                            }
-                          ],
+                          "toc_mapping": {
+                            "science_program_id": "SP06",
+                            "aow_compose_code": "SP06-AOW01",
+                            "result_title": "Innovation adoption tracking",
+                            "result_indicator_description": "Number of actors using innovations",
+                            "result_indicator_type_name": "Number of users"
+                          },
                           "geo_focus": {
                             "scope_code": 2,
                             "scope_label": "Regional",
                             "regions": [
-                              { "um49code": 145, "name": "Sub-Saharan Africa" }
+                              {
+                                "um49code": 145,
+                                "name": "Sub-Saharan Africa"
+                              }
                             ]
                           },
                           "contributing_center": [
-                            { "institution_id": 1279, "acronym": "ICARDA" }
+                            {
+                              "institution_id": 1279,
+                              "acronym": "ICARDA"
+                            }
                           ],
                           "contributing_partners": [
-                            { "institution_id": 1, "acronym": "WUR" }
+                            {
+                              "institution_id": 1,
+                              "acronym": "WUR"
+                            }
                           ],
                           "evidence": [
                             {
@@ -618,7 +686,9 @@
                             }
                           ],
                           "contributing_bilateral_projects": [
-                            { "grant_title": "Seed Adoption Initiative" }
+                            {
+                              "grant_title": "Seed Adoption Initiative"
+                            }
                           ],
                           "innovation_use": {
                             "current_innovation_use_numbers": {
@@ -724,24 +794,28 @@
                           },
                           "title": "Innovation Use Tracking by Name",
                           "description": "Example using actor and institution names for flexible search.",
-                          "toc_mapping": [
-                            {
-                              "science_program_id": "SP07",
-                              "aow_compose_code": "SP07-AOW01",
-                              "result_title": "Innovation use by name",
-                              "result_indicator_description": "Actors and organizations by name",
-                              "result_indicator_type_name": "Number of users"
-                            }
-                          ],
+                          "toc_mapping": {
+                            "science_program_id": "SP07",
+                            "aow_compose_code": "SP07-AOW01",
+                            "result_title": "Innovation use by name",
+                            "result_indicator_description": "Actors and organizations by name",
+                            "result_indicator_type_name": "Number of users"
+                          },
                           "geo_focus": {
                             "scope_code": 1,
                             "scope_label": "Global"
                           },
                           "contributing_center": [
-                            { "institution_id": 115, "acronym": "CIFOR" }
+                            {
+                              "institution_id": 115,
+                              "acronym": "CIFOR"
+                            }
                           ],
                           "contributing_partners": [
-                            { "institution_id": 10, "acronym": "FAO" }
+                            {
+                              "institution_id": 10,
+                              "acronym": "FAO"
+                            }
                           ],
                           "evidence": [
                             {
@@ -750,7 +824,9 @@
                             }
                           ],
                           "contributing_bilateral_projects": [
-                            { "grant_title": "Innovation Monitoring Fund" }
+                            {
+                              "grant_title": "Innovation Monitoring Fund"
+                            }
                           ],
                           "innovation_use": {
                             "current_innovation_use_numbers": {
@@ -824,24 +900,28 @@
                           },
                           "title": "Early Stage Innovation Deployment",
                           "description": "Innovation use numbers to be determined in future assessments.",
-                          "toc_mapping": [
-                            {
-                              "science_program_id": "SP08",
-                              "aow_compose_code": "SP08-AOW02",
-                              "result_title": "Innovation deployment",
-                              "result_indicator_description": "Innovations deployed",
-                              "result_indicator_type_name": "Number of innovations"
-                            }
-                          ],
+                          "toc_mapping": {
+                            "science_program_id": "SP08",
+                            "aow_compose_code": "SP08-AOW02",
+                            "result_title": "Innovation deployment",
+                            "result_indicator_description": "Innovations deployed",
+                            "result_indicator_type_name": "Number of innovations"
+                          },
                           "geo_focus": {
                             "scope_code": 1,
                             "scope_label": "Global"
                           },
                           "contributing_center": [
-                            { "institution_id": 115, "acronym": "CIFOR" }
+                            {
+                              "institution_id": 115,
+                              "acronym": "CIFOR"
+                            }
                           ],
                           "contributing_partners": [
-                            { "institution_id": 10, "acronym": "FAO" }
+                            {
+                              "institution_id": 10,
+                              "acronym": "FAO"
+                            }
                           ],
                           "evidence": [
                             {
@@ -850,7 +930,9 @@
                             }
                           ],
                           "contributing_bilateral_projects": [
-                            { "grant_title": "Innovation Scaling Fund" }
+                            {
+                              "grant_title": "Innovation Scaling Fund"
+                            }
                           ],
                           "innovation_use": {
                             "current_innovation_use_numbers": {
@@ -888,15 +970,13 @@
                           },
                           "title": "New Agricultural Policy Implementation in Kenya",
                           "description": "Policy change focused on sustainable agriculture practices with significant budget allocation for rural development programs.",
-                          "toc_mapping": [
-                            {
-                              "science_program_id": "SP12",
-                              "aow_compose_code": "SP12-AOW01",
-                              "result_title": "Policy Change Result",
-                              "result_indicator_description": "Number of policy changes",
-                              "result_indicator_type_name": "# Of Policy Changes"
-                            }
-                          ],
+                          "toc_mapping": {
+                            "science_program_id": "SP12",
+                            "aow_compose_code": "SP12-AOW01",
+                            "result_title": "Policy Change Result",
+                            "result_indicator_description": "Number of policy changes",
+                            "result_indicator_type_name": "# Of Policy Changes"
+                          },
                           "geo_focus": {
                             "scope_code": 4,
                             "scope_label": "National",
@@ -985,15 +1065,13 @@
                           },
                           "title": "Regulatory Framework for Seed Distribution",
                           "description": "Policy change for improved seed certification and distribution across the region.",
-                          "toc_mapping": [
-                            {
-                              "science_program_id": "SP12",
-                              "aow_compose_code": "SP12-AOW01",
-                              "result_title": "Policy Change Result",
-                              "result_indicator_description": "Number of policy changes",
-                              "result_indicator_type_name": "# Of Policy Changes"
-                            }
-                          ],
+                          "toc_mapping": {
+                            "science_program_id": "SP12",
+                            "aow_compose_code": "SP12-AOW01",
+                            "result_title": "Policy Change Result",
+                            "result_indicator_description": "Number of policy changes",
+                            "result_indicator_type_name": "# Of Policy Changes"
+                          },
                           "geo_focus": {
                             "scope_label": "Regional",
                             "regions": [
@@ -1056,24 +1134,28 @@
                           },
                           "title": "Miscellaneous Research Output",
                           "description": "A general research output that doesn't fit other categories.",
-                          "toc_mapping": [
-                            {
-                              "science_program_id": "SP05",
-                              "aow_compose_code": "SP05-AOW04",
-                              "result_title": "General output",
-                              "result_indicator_description": "Outputs produced",
-                              "result_indicator_type_name": "Number of outputs"
-                            }
-                          ],
+                          "toc_mapping": {
+                            "science_program_id": "SP05",
+                            "aow_compose_code": "SP05-AOW04",
+                            "result_title": "General output",
+                            "result_indicator_description": "Outputs produced",
+                            "result_indicator_type_name": "Number of outputs"
+                          },
                           "geo_focus": {
                             "scope_code": 1,
                             "scope_label": "Global"
                           },
                           "contributing_center": [
-                            { "institution_id": 115, "acronym": "CIFOR" }
+                            {
+                              "institution_id": 115,
+                              "acronym": "CIFOR"
+                            }
                           ],
                           "contributing_partners": [
-                            { "institution_id": 2, "acronym": "CGIAR" }
+                            {
+                              "institution_id": 2,
+                              "acronym": "CGIAR"
+                            }
                           ],
                           "evidence": [
                             {
@@ -1082,7 +1164,9 @@
                             }
                           ],
                           "contributing_bilateral_projects": [
-                            { "grant_title": "General Fund" }
+                            {
+                              "grant_title": "General Fund"
+                            }
                           ]
                         }
                       }
@@ -1114,24 +1198,28 @@
                           },
                           "title": "Miscellaneous Research Outcome",
                           "description": "A general research outcome that doesn't fit into other specific categories.",
-                          "toc_mapping": [
-                            {
-                              "science_program_id": "SP10",
-                              "aow_compose_code": "SP10-AOW03",
-                              "result_title": "General outcome",
-                              "result_indicator_description": "Outcomes achieved",
-                              "result_indicator_type_name": "Number of outcomes"
-                            }
-                          ],
+                          "toc_mapping": {
+                            "science_program_id": "SP10",
+                            "aow_compose_code": "SP10-AOW03",
+                            "result_title": "General outcome",
+                            "result_indicator_description": "Outcomes achieved",
+                            "result_indicator_type_name": "Number of outcomes"
+                          },
                           "geo_focus": {
                             "scope_code": 1,
                             "scope_label": "Global"
                           },
                           "contributing_center": [
-                            { "institution_id": 1279, "acronym": "ICARDA" }
+                            {
+                              "institution_id": 1279,
+                              "acronym": "ICARDA"
+                            }
                           ],
                           "contributing_partners": [
-                            { "institution_id": 10, "acronym": "FAO" }
+                            {
+                              "institution_id": 10,
+                              "acronym": "FAO"
+                            }
                           ],
                           "evidence": [
                             {
@@ -1140,7 +1228,9 @@
                             }
                           ],
                           "contributing_bilateral_projects": [
-                            { "grant_title": "Outcome Research Fund" }
+                            {
+                              "grant_title": "Outcome Research Fund"
+                            }
                           ]
                         }
                       }
@@ -1165,18 +1255,18 @@
                             "name": "Bad User",
                             "submitted_date": "2025-10-10T16:45:00Z"
                           },
-                          "lead_center": { "acronym": "CIAT" },
+                          "lead_center": {
+                            "acronym": "CIAT"
+                          },
                           "title": "Invalid KP",
                           "description": "Missing geo_focus and evidence, will fail.",
-                          "toc_mapping": [
-                            {
-                              "science_program_id": "SP99",
-                              "aow_compose_code": "SP99-AOW01",
-                              "result_title": "Invalid",
-                              "result_indicator_description": "n/a",
-                              "result_indicator_type_name": "# Of Knowledge Products"
-                            }
-                          ],
+                          "toc_mapping": {
+                            "science_program_id": "SP99",
+                            "aow_compose_code": "SP99-AOW01",
+                            "result_title": "Invalid",
+                            "result_indicator_description": "n/a",
+                            "result_indicator_type_name": "# Of Knowledge Products"
+                          },
                           "knowledge_product": {
                             "handle": "hdl:20.500.12345/invalid",
                             "knowledge_product_type": "Other",
@@ -1199,10 +1289,18 @@
           }
         },
         "responses": {
-          "202": { "description": "Accepted and published to EventBridge" },
-          "400": { "description": "Bad Request (missing wrapper fields)" },
-          "422": { "description": "Validation failed for all items" },
-          "500": { "description": "Internal error (EventBridge/S3)" }
+          "202": {
+            "description": "Accepted and published to EventBridge"
+          },
+          "400": {
+            "description": "Bad Request (missing wrapper fields)"
+          },
+          "422": {
+            "description": "Validation failed for all items"
+          },
+          "500": {
+            "description": "Internal error (EventBridge/S3)"
+          }
         }
       }
     },
@@ -1210,7 +1308,9 @@
       "get": {
         "summary": "Healthcheck",
         "responses": {
-          "200": { "description": "Service OK" }
+          "200": {
+            "description": "Service OK"
+          }
         }
       }
     }
@@ -1253,7 +1353,9 @@
                   "type": "string",
                   "enum": ["create", "update", "delete"]
                 },
-                "data": { "type": "object" }
+                "data": {
+                  "type": "object"
+                }
               }
             }
           }

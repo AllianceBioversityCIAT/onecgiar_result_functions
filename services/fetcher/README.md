@@ -308,18 +308,17 @@ All result types share these common required fields:
 }
 ```
 
+
 ### TOC Mapping
 ```json
 {
-  "toc_mapping": [
-    {
-      "science_program_id": "SP12",
-      "aow_compose_code": "SP12-AOW01",
-      "result_title": "Result title",
-      "result_indicator_description": "Description of the indicator",
-      "result_indicator_type_name": "# Of Knowledge Products"
-    }
-  ]
+  "toc_mapping": {
+    "science_program_id": "SP12",
+    "aow_compose_code": "SP12-AOW01",
+    "result_title": "Result title",
+    "result_indicator_description": "Description of the indicator",
+    "result_indicator_type_name": "# Of Knowledge Products"
+  }
 }
 ```
 
@@ -452,15 +451,13 @@ The system supports 5 geographic scope levels:
         "lead_center": { "acronym": "CIAT" },
         "title": "Research title",
         "description": "Research description",
-        "toc_mapping": [
-          {
-            "science_program_id": "SP12",
-            "aow_compose_code": "SP12-AOW01",
-            "result_title": "Result title",
-            "result_indicator_description": "Indicator description",
-            "result_indicator_type_name": "# Of Knowledge Products"
-          }
-        ],
+        "toc_mapping": {
+          "science_program_id": "SP12",
+          "aow_compose_code": "SP12-AOW01",
+          "result_title": "Result title",
+          "result_indicator_description": "Indicator description",
+          "result_indicator_type_name": "# Of Knowledge Products"
+        },
         "geo_focus": {
           "scope_code": 2,
           "scope_label": "Regional",
@@ -615,13 +612,13 @@ curl -X POST https://your-api-url/ingest \
           "lead_center": { "acronym": "CIAT" },
           "title": "Test Result",
           "description": "Test description",
-          "toc_mapping": [{
+          "toc_mapping": {
             "science_program_id": "SP01",
             "aow_compose_code": "SP01-AOW01",
             "result_title": "Test",
             "result_indicator_description": "Test",
             "result_indicator_type_name": "# Of Knowledge Products"
-          }],
+          },
           "geo_focus": {
             "scope_code": 1,
             "scope_label": "Global"
