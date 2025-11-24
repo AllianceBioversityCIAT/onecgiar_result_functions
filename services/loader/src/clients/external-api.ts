@@ -51,8 +51,19 @@ export class ExternalApiClient {
 
       clearTimeout(timeoutId);
 
+      console.log(
+        `[ExternalApiClient] Response status for ${result.idempotencyKey}:`,
+        response.status,
+        response.statusText
+      );
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorBody = await response.text();
+        console.error(
+          `[ExternalApiClient] Error response body for ${result.idempotencyKey}:`,
+          errorBody
+        );
+        throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorBody}`);
       }
 
       const data = (await response.json()) as ExternalApiResponse;
@@ -90,6 +101,11 @@ export class ExternalApiClient {
 
       return data;
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error(
+          `[ExternalApiClient] Timeout (${this.timeout}ms) sending result ${result.idempotencyKey}`
+        );
+      }
       console.error(
         `[ExternalApiClient] Error sending result ${result.idempotencyKey}:`,
         error
