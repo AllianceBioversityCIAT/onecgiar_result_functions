@@ -170,19 +170,14 @@ export const handler = async (event: any) => {
           500
         )}`;
         log("error", `❌ ${errorMsg}`);
-        const error = new Error(errorMsg);
-
-        // Save error to S3
-        await saveErrorToS3(bucket, key, messageId, payload, error);
-
-        throw error;
+        throw new Error(errorMsg);
       }
 
       log("info", `✅ PRMS OK for ${key} (message ${messageId})`);
     } catch (err: any) {
       log("error", `🛑 Error processing ${messageId}:`, err?.message || err);
 
-      // Save error to S3 if we have the necessary data
+      // Save error to S3 only once (here in the catch block)
       if (key && payload) {
         await saveErrorToS3(bucket, key, messageId, payload, err);
       }
