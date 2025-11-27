@@ -358,6 +358,7 @@ export class OpenSearchClient {
             result_id: { type: "integer" },
             result_code: { type: "integer" },
             idempotencyKey: { type: "keyword" },
+            jobId: { type: "keyword" },
             received_at: { type: "date" },
             indexed_at: { type: "date" },
             has_external_id: { type: "boolean" },
