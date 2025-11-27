@@ -62,10 +62,11 @@ async function getChunkFromEvent(
 }
 
 // Wraps a single object (already normalized) in the envelope required by PRMS
-function buildEnvelope(singleObject: any) {
+function buildEnvelope(singleObject: any, jobId: string) {
   return {
     tenant: TENANT,
     op: OP,
+    jobId,
     results: [singleObject],
   };
 }
@@ -145,7 +146,8 @@ export const handler = async (event: any) => {
       const chunkData = await getChunkFromEvent(record);
       key = chunkData.key;
       bucket = chunkData.bucket;
-      payload = buildEnvelope(chunkData.chunk);
+      const jobId = extractJobId(key);
+      payload = buildEnvelope(chunkData.chunk, jobId);
 
       const preview = JSON.stringify(payload);
       log(
