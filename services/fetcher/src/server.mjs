@@ -56,10 +56,12 @@ app.post("/ingest", async (req, res) => {
     rawKeys: Object.keys(body || {}),
     tenantRaw: body.tenant,
     opRaw: body.op,
+    jobIdRaw: body.jobId,
   });
 
   const tenant = String(body.tenant || "unknown").toLowerCase();
   const opDefault = String(body.op || DEFAULT_OP).toLowerCase();
+  const jobId = body.jobId ? String(body.jobId) : undefined;
 
   const list = Array.isArray(body.results)
     ? body.results
@@ -147,6 +149,7 @@ app.post("/ingest", async (req, res) => {
   const ingestionEnvelope = {
     tenant,
     op: opDefault,
+    ...(jobId ? { jobId } : {}),
     results: list,
     received_at: new Date().toISOString(),
     requestId,
@@ -201,6 +204,7 @@ app.post("/ingest", async (req, res) => {
       ts: Date.now(),
       offloadBytes: pointer.offloadBytes,
       fullBody: true,
+      ...(jobId ? { jobId } : {}),
       ...(resultId !== undefined ? { result_id: resultId } : {}),
     };
     entries.push({
