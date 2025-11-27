@@ -82,6 +82,7 @@ export const handler = async (event: LambdaEvent) => {
 
     const rootTenant = (rawData as any)?.tenant;
     const rootOp = (rawData as any)?.op;
+    const detailIdempotencyKey = detail?.idempotencyKey;
 
     const crypto = await import("crypto");
 
@@ -98,10 +99,13 @@ export const handler = async (event: LambdaEvent) => {
       const type = r.type || r.result_type || "knowledge_product";
       const received_at = r.received_at || nowIso;
 
-      const handle = r.knowledge_product?.handle;
-      const naturalId =
-        r.result_id ?? r.id ?? handle ?? r.idempotencyKey ?? null;
-      let idempotencyKey = naturalId ? String(naturalId) : undefined;
+      let idempotencyKey = detailIdempotencyKey || r.idempotencyKey;
+
+      if (!idempotencyKey) {
+        const handle = r.knowledge_product?.handle;
+        const naturalId = r.result_id ?? r.id ?? handle ?? null;
+        idempotencyKey = naturalId ? String(naturalId) : undefined;
+      }
 
       if (!idempotencyKey) {
         const base = JSON.stringify({
