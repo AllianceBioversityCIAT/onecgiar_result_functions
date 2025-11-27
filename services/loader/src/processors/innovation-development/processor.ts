@@ -52,7 +52,21 @@ export class InnovationDevelopmentProcessor implements ProcessorInterface {
       const {
         enriched: externallyEnrichedResult,
         apiResponse: externalApiResponse,
+        success: externalSuccess = true,
+        error: externalError,
       } = await this.externalApiClient.enrichResult(enrichedResult);
+
+      if (!externalSuccess) {
+        const message =
+          externalError || "External API failed; skipping OpenSearch indexing";
+        this.logger.error(message, resultId);
+        return {
+          success: false,
+          error: message,
+          externalSuccess,
+          externalError: externalError,
+        };
+      }
 
       if (!externalApiResponse) {
         this.logger.warn(
@@ -64,15 +78,24 @@ export class InnovationDevelopmentProcessor implements ProcessorInterface {
       await this.openSearchClient.ensureIndex(result.type);
 
       this.logger.info("Indexing in OpenSearch", resultId);
-      const indexDoc = {
-        ...externallyEnrichedResult,
-        external_api_raw: externalApiResponse ?? null,
-        input_raw: result,
-      };
+      const indexDoc = externalApiResponse?.response ?? null;
 
-      const opensearchResponse = await this.openSearchClient.indexResult(
-        indexDoc
-      );
+      if (!indexDoc) {
+        this.logger.warn("No response data to index in OpenSearch", resultId);
+        return {
+          success: true,
+          result: externallyEnrichedResult,
+          externalApiResponse,
+          opensearchResponse: null,
+        };
+      }
+
+      const opensearchResponse = await this.openSearchClient.indexResult({
+        ...indexDoc,
+        type: result.type,
+        idempotencyKey: result.idempotencyKey,
+        received_at: result.received_at,
+      });
 
       this.logger.success(
         "Innovation development processed successfully",
@@ -110,7 +133,7 @@ export class InnovationDevelopmentProcessor implements ProcessorInterface {
     const enriched = { ...result };
     enriched.data = {
       ...(enriched.data || {}),
-      result_type_id: 8,
+      result_type_id: 7,
       result_level_id: 4,
     };
     return enriched as ProcessedResult;

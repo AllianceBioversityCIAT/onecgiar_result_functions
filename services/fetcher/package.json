@@ -8,7 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "rm -rf dist && npx esbuild src/lambda.mjs --bundle --platform=node --target=node20 --format=cjs --outfile=dist/lambda.cjs",
+    "build": "rm -rf dist && npx esbuild src/lambda.mjs --bundle --platform=node --target=node20 --format=cjs --outfile=dist/lambda.cjs --keep-names --log-level=info",
     "zip": "npm run build && (cd dist && zip -qr ../normalizer.zip .) && echo 'ZIP listo: normalizer.zip'"
   },
   "dependencies": {

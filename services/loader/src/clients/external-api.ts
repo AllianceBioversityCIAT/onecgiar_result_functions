@@ -51,8 +51,19 @@ export class ExternalApiClient {
 
       clearTimeout(timeoutId);
 
+      console.log(
+        `[ExternalApiClient] Response status for ${result.idempotencyKey}:`,
+        response.status,
+        response.statusText
+      );
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorBody = await response.text();
+        console.error(
+          `[ExternalApiClient] Error response body for ${result.idempotencyKey}:`,
+          errorBody
+        );
+        throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorBody}`);
       }
 
       const data = (await response.json()) as ExternalApiResponse;
@@ -90,6 +101,11 @@ export class ExternalApiClient {
 
       return data;
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error(
+          `[ExternalApiClient] Timeout (${this.timeout}ms) sending result ${result.idempotencyKey}`
+        );
+      }
       console.error(
         `[ExternalApiClient] Error sending result ${result.idempotencyKey}:`,
         error
@@ -102,9 +118,12 @@ export class ExternalApiClient {
    * Sends a result once and returns both the possibly enriched result (adding result_id/result_code)
    * and the raw API response. On failure returns the original result and throws the error upward if desired.
    */
-  async enrichResult(
-    result: ProcessedResult
-  ): Promise<{ enriched: ProcessedResult; apiResponse?: ExternalApiResponse }> {
+  async enrichResult(result: ProcessedResult): Promise<{
+    enriched: ProcessedResult;
+    apiResponse?: ExternalApiResponse;
+    success: boolean;
+    error?: string;
+  }> {
     try {
       const apiResponse = await this.sendResult(result);
       const enriched: ProcessedResult = { ...result };
@@ -131,13 +150,15 @@ export class ExternalApiClient {
         );
       }
 
-      return { enriched, apiResponse };
+      return { enriched, apiResponse, success: true };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       console.error(
         `[ExternalApiClient] Failed to enrich result ${result.idempotencyKey}:`,
         error
       );
-      return { enriched: result };
+      return { enriched: result, success: false, error: errorMessage };
     }
   }
 

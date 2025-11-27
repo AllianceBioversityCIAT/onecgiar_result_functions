@@ -11,22 +11,19 @@ import { DisplayResult } from "@/app/types/results";
 interface Result {
   id: string;
   indexed_at?: string;
-  data?: {
-    title?: string;
-    description?: string;
-    created_date?: string;
-    result_type_id?: number;
-    result_level_id?: number;
-    [key: string]: any;
+  title?: string;
+  description?: string;
+  result_code?: string;
+  result_type_id?: number;
+  result_level_id?: number;
+  result_center_array?: Array<Record<string, any>>;
+  obj_result_type?: {
+    name?: string;
   };
-  external_api_raw?: {
-    response?: {
-      result_code?: string;
-      title?: string;
-      result_center_array?: Array<Record<string, any>>;
-      [key: string]: any;
-    };
-  };
+  obj_created?: any;
+  obj_external_submitter?: any;
+  external_submitted_date?: string;
+  [key: string]: any;
 }
 
 const DEFAULT_ROWS_PER_PAGE = 10;
@@ -75,20 +72,19 @@ export default function Home() {
     };
 
     return results.map((result) => {
-      const response = result.external_api_raw?.response ?? {};
       const leadCenter =
-        response.result_center_array?.find(
+        result.result_center_array?.find(
           (center: any) => center?.is_leading_result
         )?.clarisa_center_object?.clarisa_institution?.acronym || "N/A";
-      const indicatorType = response.obj_result_type?.name || "N/A";
-      const createdName = buildName(response.obj_created);
-      const submitterName = buildName(response.obj_external_submitter);
-      const uploadDate = response.external_submitted_date || "N/A";
+      const indicatorType = result.obj_result_type?.name || "N/A";
+      const createdName = buildName(result.obj_created);
+      const submitterName = buildName(result.obj_external_submitter);
+      const uploadDate = result.external_submitted_date || "N/A";
 
       return {
-        id: String(response.id || result.id || "N/A"),
-        resultCode: String(response.result_code || "N/A"),
-        title: String(response.title || "N/A"),
+        id: String(result.id || "N/A"),
+        resultCode: String(result.result_code || "N/A"),
+        title: String(result.title || "N/A"),
         leadCenter,
         indicatorType,
         createdName,

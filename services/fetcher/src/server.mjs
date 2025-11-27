@@ -107,7 +107,21 @@ app.post("/ingest", async (req, res) => {
       continue;
     }
 
-    const normalized = normalizeCommon ? normalizeCommon({ ...data }) : { ...data };
+    let normalized;
+    try {
+      normalized = normalizeCommon ? normalizeCommon({ ...data }) : { ...data };
+    } catch (normErr) {
+      console.error('[ingest] normalizeCommon failed', {
+        index: i,
+        type,
+        error: normErr?.message,
+        stack: normErr?.stack,
+        requestId
+      });
+      rejected.push({ index: i, type, reason: `normalization_error: ${normErr?.message}` });
+      continue;
+    }
+
     const v = validateByType(type, normalized);
     if (!v.ok) {
       rejected.push({ index: i, type, errors: v.errors });

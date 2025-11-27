@@ -6,7 +6,7 @@ export class OpenSearchClient {
   private auth?: { username: string; password: string };
   private indexPrefix: string;
 
-  constructor(endpoint?: string, indexPrefix = "prms-results-management-api") {
+  constructor(endpoint?: string, indexPrefix = "prms-results") {
     const baseEndpoint =
       endpoint ||
       (process as any).env.OPENSEARCH_ENDPOINT ||
@@ -26,8 +26,24 @@ export class OpenSearchClient {
     }
   }
 
-  private getIndexName(_resultType: string): string {
-    return this.indexPrefix;
+  private getIndexName(resultType: string): string {
+    return `${this.indexPrefix}-${resultType}`;
+  }
+
+  private getGlobalAlias(): string {
+    return `${this.indexPrefix}-management-api`;
+  }
+
+  private async indexExists(name: string): Promise<boolean> {
+    try {
+      await this.makeRequest("HEAD", `/${encodeURIComponent(name)}`);
+      return true;
+    } catch (error: any) {
+      if (error?.message?.includes("404")) {
+        return false;
+      }
+      throw error;
+    }
   }
 
   private getHeaders(): Record<string, string> {
@@ -46,7 +62,7 @@ export class OpenSearchClient {
   }
 
   private async ensureAlias(indexName: string): Promise<void> {
-    const aliasName = this.indexPrefix;
+    const aliasName = this.getGlobalAlias();
 
     try {
       const existing = await this.makeRequest(
@@ -55,9 +71,20 @@ export class OpenSearchClient {
       );
 
       if (existing?.[indexName]?.aliases?.[aliasName]) {
+        console.log(
+          `[OpenSearchClient] Index ${indexName} already in alias ${aliasName}`
+        );
         return;
       }
     } catch (error: any) {
+      if (error?.message?.includes("404")) {
+        const aliasNameIsIndex = await this.indexExists(aliasName);
+        if (aliasNameIsIndex) {
+          const message = `Index with name '${aliasName}' exists but should be an alias. Please delete or rename the index manually.`;
+          console.error(`[OpenSearchClient] ${message}`);
+          throw new Error(message);
+        }
+      }
       if (!error?.message?.includes("404")) {
         console.warn(
           `[OpenSearchClient] Unable to verify alias ${aliasName} before ensuring`,
@@ -78,13 +105,12 @@ export class OpenSearchClient {
         ],
       });
 
-      console.log(`[OpenSearchClient] Alias ensured`, {
-        alias: aliasName,
-        index: indexName,
-      });
+      console.log(
+        `[OpenSearchClient] Added index ${indexName} to alias ${aliasName}`
+      );
     } catch (error) {
       console.error(
-        `[OpenSearchClient] Failed to ensure alias ${aliasName} for ${indexName}:`,
+        `[OpenSearchClient] Failed to add index ${indexName} to alias ${aliasName}:`,
         error
       );
     }
@@ -149,7 +175,6 @@ export class OpenSearchClient {
     let documentId = result.result_id || result.idempotencyKey;
 
     if (!documentId) {
-      // Fallback: build hash from title + received_at
       try {
         const crypto = await import("crypto");
         const base = `${result.type}|${result.title}|${result.received_at}`;
@@ -214,12 +239,14 @@ export class OpenSearchClient {
 
     try {
       const body = [];
+      const indexTypes = new Set<string>();
 
       for (const result of results) {
         const indexName = this.getIndexName(result.type);
         const documentId = result.result_id || result.idempotencyKey;
 
-        // Index action
+        indexTypes.add(result.type);
+
         body.push(
           JSON.stringify({
             index: {
@@ -229,7 +256,6 @@ export class OpenSearchClient {
           })
         );
 
-        // Document
         body.push(
           JSON.stringify({
             ...result,
@@ -240,7 +266,10 @@ export class OpenSearchClient {
         );
       }
 
-      // El bulk API requiere newlines al final
+      for (const resultType of indexTypes) {
+        await this.ensureIndex(resultType);
+      }
+
       const bulkBody = body.join("\n") + "\n";
 
       const response = await this.makeRequest(
@@ -249,7 +278,6 @@ export class OpenSearchClient {
         bulkBody
       );
 
-      // Contar errores
       const errors = (response.items || []).filter(
         (item: any) =>
           item.index?.error || item.create?.error || item.update?.error
@@ -262,7 +290,11 @@ export class OpenSearchClient {
         );
       } else {
         console.log(
-          `[OpenSearchClient] Bulk index completed successfully for ${results.length} results`
+          `[OpenSearchClient] Bulk index completed successfully for ${
+            results.length
+          } results across indices: ${Array.from(indexTypes)
+            .map((t) => this.getIndexName(t))
+            .join(", ")}`
         );
       }
 
@@ -275,22 +307,45 @@ export class OpenSearchClient {
 
   async ensureIndex(resultType: string): Promise<void> {
     const indexName = this.getIndexName(resultType);
+    const aliasName = this.getGlobalAlias();
 
     try {
-      // Verificar si el índice existe
+      try {
+        const info = await this.makeRequest(
+          "GET",
+          `/_alias/${encodeURIComponent(aliasName)}`
+        );
+        if (info?.[aliasName]?.aliases) {
+          console.log(`[OpenSearchClient] Global alias ${aliasName} exists`);
+        }
+      } catch (error: any) {
+        if (error?.message?.includes("404")) {
+          const aliasNameIsIndex = await this.indexExists(aliasName);
+          if (aliasNameIsIndex) {
+            throw new Error(
+              `Index with name '${aliasName}' exists but should be an alias. Please delete or rename the index manually.`
+            );
+          }
+        } else {
+          console.warn(
+            `[OpenSearchClient] Unable to verify global alias ${aliasName} before ensuring index`,
+            error
+          );
+        }
+      }
+
       try {
         await this.makeRequest("HEAD", `/${indexName}`);
-        // Si no lanza error, el índice existe
+        console.log(`[OpenSearchClient] Index ${indexName} already exists`);
         await this.ensureAlias(indexName);
         return;
       } catch (error: any) {
-        // Si es 404, el índice no existe, continuar para crearlo
         if (!error.message?.includes("404")) {
           throw error;
         }
       }
 
-      console.log(`[OpenSearchClient] Creating index ${indexName}`);
+      console.log(`[OpenSearchClient] Creating physical index ${indexName}`);
 
       const indexConfig = {
         mappings: {
@@ -304,15 +359,10 @@ export class OpenSearchClient {
             received_at: { type: "date" },
             indexed_at: { type: "date" },
             has_external_id: { type: "boolean" },
-            // Campos específicos para knowledge products
+
             title: { type: "text", analyzer: "standard" },
             description: { type: "text", analyzer: "standard" },
-            lead_center: { type: "keyword" },
-            // Raw external API full JSON
-            external_api_raw: { type: "object" },
-            // Original input before enrichment
-            input_raw: { type: "object" },
-            // Campos anidados para búsquedas más complejas
+
             submitted_by: {
               type: "object",
               properties: {
@@ -324,40 +374,72 @@ export class OpenSearchClient {
         },
         settings: {
           number_of_shards: 1,
-          number_of_replicas: 0, // Para desarrollo, en producción usar 1
+          number_of_replicas: 0,
         },
       };
 
       await this.makeRequest("PUT", `/${indexName}`, indexConfig);
 
-      console.log(`[OpenSearchClient] Index ${indexName} created successfully`);
+      console.log(
+        `[OpenSearchClient] Physical index ${indexName} created successfully`
+      );
       await this.ensureAlias(indexName);
     } catch (error) {
       console.error(
         `[OpenSearchClient] Error ensuring index ${indexName}:`,
         error
       );
-      // No lanzamos el error para evitar que falle el procesamiento
+
+      if (
+        error instanceof Error &&
+        error.message.includes("should be an alias")
+      ) {
+        throw error;
+      }
     }
   }
 
-  // Método para buscar documentos (útil para debugging)
-  async search(indexName: string, query: any): Promise<any> {
+  async search(query: any, useAlias = true): Promise<any> {
+    const searchTarget = useAlias ? this.getGlobalAlias() : undefined;
+    if (!searchTarget && useAlias) {
+      throw new Error("Global alias not configured for search");
+    }
+
     try {
-      return await this.makeRequest("POST", `/${indexName}/_search`, query);
+      const target = searchTarget || "_all";
+      return await this.makeRequest("POST", `/${target}/_search`, query);
     } catch (error) {
-      console.error(`[OpenSearchClient] Search failed in ${indexName}:`, error);
+      console.error(
+        `[OpenSearchClient] Search failed in ${searchTarget || "_all"}:`,
+        error
+      );
       throw error;
     }
   }
 
-  // Método para obtener un documento específico
   async getDocument(resultType: string, documentId: string): Promise<any> {
     const indexName = this.getIndexName(resultType);
     try {
-      return await this.makeRequest("GET", `/${indexName}/_doc/${documentId}`);
+      return await this.makeRequest(
+        "GET",
+        `/${indexName}/_doc/${encodeURIComponent(documentId)}`
+      );
     } catch (error) {
       console.error(`[OpenSearchClient] Get document failed:`, error);
+      throw error;
+    }
+  }
+
+  async searchAll(query: any): Promise<any> {
+    return this.search(query, true);
+  }
+
+  async searchByType(resultType: string, query: any): Promise<any> {
+    const indexName = this.getIndexName(resultType);
+    try {
+      return await this.makeRequest("POST", `/${indexName}/_search`, query);
+    } catch (error) {
+      console.error(`[OpenSearchClient] Search failed in ${indexName}:`, error);
       throw error;
     }
   }

@@ -1,4 +1,8 @@
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  GetObjectCommand,
+  PutObjectCommand,
+} from "@aws-sdk/client-s3";
 import { Readable } from "node:stream";
 
 const s3 = new S3Client({});
@@ -80,15 +84,68 @@ async function fetchWithTimeout(
   }
 }
 
+// Extract jobId from S3 key (e.g., "chunks/833a2c20-0372-4501-a5b8-93b721b38285/part-00001.json" -> "833a2c20-0372-4501-a5b8-93b721b38285")
+function extractJobId(key: string): string {
+  const match = key.match(/chunks\/([^\/]+)\//);
+  return match ? match[1] : "unknown-job";
+}
+
+// Save error details to S3
+async function saveErrorToS3(
+  bucket: string,
+  key: string,
+  messageId: string,
+  payload: any,
+  error: any
+) {
+  try {
+    const jobId = extractJobId(key);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const errorKey = `errors/${jobId}/${timestamp}-${messageId}.json`;
+
+    const errorData = {
+      timestamp: new Date().toISOString(),
+      jobId,
+      messageId,
+      originalKey: key,
+      error: {
+        message: error?.message || String(error),
+        stack: error?.stack,
+        name: error?.name,
+      },
+      payload,
+    };
+
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: errorKey,
+        Body: JSON.stringify(errorData, null, 2),
+        ContentType: "application/json",
+      })
+    );
+
+    log("info", `💾 Error saved to S3: ${errorKey}`);
+  } catch (saveErr: any) {
+    log("error", `❌ Failed to save error to S3:`, saveErr?.message || saveErr);
+  }
+}
+
 export const handler = async (event: any) => {
   const failures: Array<{ itemIdentifier: string }> = [];
   log("info", `🚀 SQS batch received: ${event.Records?.length || 0} messages`);
 
   for (const record of event.Records ?? []) {
     const messageId = record.messageId;
+    let key = "";
+    let bucket = BUCKET;
+    let payload: any = null;
+
     try {
-      const { chunk, key } = await getChunkFromEvent(record);
-      const payload = buildEnvelope(chunk);
+      const chunkData = await getChunkFromEvent(record);
+      key = chunkData.key;
+      bucket = chunkData.bucket;
+      payload = buildEnvelope(chunkData.chunk);
 
       const preview = JSON.stringify(payload);
       log(
@@ -108,13 +165,23 @@ export const handler = async (event: any) => {
 
       if (!res.ok) {
         const txt = await res.text();
-        log("error", `❌ PRMS ${res.status}: ${txt.substring(0, 500)}`);
-        throw new Error(`PRMS responded ${res.status}`);
+        const errorMsg = `PRMS responded ${res.status}: ${txt.substring(
+          0,
+          500
+        )}`;
+        log("error", `❌ ${errorMsg}`);
+        throw new Error(errorMsg);
       }
 
       log("info", `✅ PRMS OK for ${key} (message ${messageId})`);
     } catch (err: any) {
       log("error", `🛑 Error processing ${messageId}:`, err?.message || err);
+
+      // Save error to S3 only once (here in the catch block)
+      if (key && payload) {
+        await saveErrorToS3(bucket, key, messageId, payload, err);
+      }
+
       failures.push({ itemIdentifier: messageId });
     }
   }

@@ -1,0 +1,188 @@
+{
+  "$id": "https://prms/schemas/innovation_use.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Innovation Use Result",
+  "description": "Schema for innovation use results",
+  "allOf": [
+    { "$ref": "https://prms/schemas/common_fields.json" },
+    {
+      "type": "object",
+      "properties": {
+        "innovation_use": {
+          "type": "object",
+          "properties": {
+            "current_innovation_use_numbers": {
+              "type": "object",
+              "properties": {
+                "innov_use_to_be_determined": {
+                  "type": "boolean",
+                  "description": "If true, no actors data is required"
+                },
+                "actors": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "result_actors_id": {
+                        "oneOf": [{ "type": "string" }, { "type": "integer" }]
+                      },
+                      "actor_type_id": {
+                        "oneOf": [{ "type": "string" }, { "type": "integer" }]
+                      },
+                      "actor_type_name": { "type": "string" },
+                      "other_actor_type": { "type": ["string", "null"] },
+                      "sex_and_age_disaggregation": {
+                        "type": ["boolean", "null"]
+                      },
+                      "how_many": {
+                        "oneOf": [
+                          { "type": "string" },
+                          { "type": "integer" },
+                          { "type": "null" }
+                        ]
+                      },
+                      "women": {
+                        "oneOf": [
+                          { "type": "string" },
+                          { "type": "integer" },
+                          { "type": "null" }
+                        ]
+                      },
+                      "women_youth": {
+                        "oneOf": [
+                          { "type": "string" },
+                          { "type": "integer" },
+                          { "type": "null" }
+                        ]
+                      },
+                      "men": {
+                        "oneOf": [
+                          { "type": "string" },
+                          { "type": "integer" },
+                          { "type": "null" }
+                        ]
+                      },
+                      "men_youth": {
+                        "oneOf": [
+                          { "type": "string" },
+                          { "type": "integer" },
+                          { "type": "null" }
+                        ]
+                      },
+                      "previousWomen": {
+                        "oneOf": [
+                          { "type": "string" },
+                          { "type": "integer" },
+                          { "type": "null" }
+                        ]
+                      }
+                    },
+                    "anyOf": [
+                      { "required": ["actor_type_id"] },
+                      { "required": ["actor_type_name"] }
+                    ],
+                    "allOf": [
+                      {
+                        "if": {
+                          "properties": {
+                            "sex_and_age_disaggregation": { "const": true }
+                          }
+                        },
+                        "then": {
+                          "required": ["how_many"]
+                        }
+                      },
+                      {
+                        "if": {
+                          "properties": {
+                            "actor_type_id": { "enum": ["5", 5] }
+                          }
+                        },
+                        "then": {
+                          "required": ["other_actor_type"]
+                        }
+                      }
+                    ]
+                  }
+                },
+                "organization": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "institution_types_id": {
+                        "oneOf": [{ "type": "string" }, { "type": "integer" }]
+                      },
+                      "institution_types_name": { "type": "string" },
+                      "institution_sub_type_id": {
+                        "oneOf": [
+                          { "type": "string" },
+                          { "type": "integer" },
+                          { "type": "null" }
+                        ]
+                      },
+                      "institution_sub_type_name": { "type": "string" },
+                      "other_institution": { "type": ["string", "null"] },
+                      "how_many": {
+                        "oneOf": [
+                          { "type": "string" },
+                          { "type": "integer" },
+                          { "type": "null" }
+                        ]
+                      },
+                      "hide": { "type": "boolean" }
+                    },
+                    "anyOf": [
+                      { "required": ["institution_types_id"] },
+                      { "required": ["institution_types_name"] }
+                    ],
+                    "allOf": [
+                      {
+                        "if": {
+                          "properties": {
+                            "institution_types_id": { "enum": ["78", 78] }
+                          }
+                        },
+                        "then": {
+                          "required": ["other_institution"]
+                        }
+                      }
+                    ]
+                  }
+                },
+                "measures": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "unit_of_measure": { "type": "string" },
+                      "quantity": {
+                        "oneOf": [
+                          { "type": "string" },
+                          { "type": "integer" },
+                          { "type": "number" }
+                        ]
+                      }
+                    },
+                    "anyOf": [{ "required": ["unit_of_measure"] }]
+                  }
+                }
+              },
+              "required": ["innov_use_to_be_determined"],
+              "if": {
+                "properties": {
+                  "innov_use_to_be_determined": { "const": false }
+                }
+              },
+              "then": {
+                "required": ["actors"]
+              }
+            }
+          },
+          "required": ["current_innovation_use_numbers"]
+        }
+      },
+      "required": ["innovation_use"]
+    }
+  ]
+}
