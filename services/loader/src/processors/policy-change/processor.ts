@@ -78,15 +78,24 @@ export class PolicyChangeProcessor implements ProcessorInterface {
       await this.openSearchClient.ensureIndex(result.type);
 
       this.logger.info("Indexing in OpenSearch", resultId);
-      const indexDoc = {
-        ...externallyEnrichedResult,
-        external_api_raw: externalApiResponse ?? null,
-        input_raw: result,
-      };
+      const indexDoc = externalApiResponse?.response ?? null;
 
-      const opensearchResponse = await this.openSearchClient.indexResult(
-        indexDoc
-      );
+      if (!indexDoc) {
+        this.logger.warn("No response data to index in OpenSearch", resultId);
+        return {
+          success: true,
+          result: externallyEnrichedResult,
+          externalApiResponse,
+          opensearchResponse: null,
+        };
+      }
+
+      const opensearchResponse = await this.openSearchClient.indexResult({
+        ...indexDoc,
+        type: result.type,
+        idempotencyKey: result.idempotencyKey,
+        received_at: result.received_at,
+      });
 
       this.logger.success("Policy change processed successfully", resultId, {
         hasExternalId: !!externallyEnrichedResult.result_id,

@@ -362,11 +362,6 @@ export class OpenSearchClient {
 
             title: { type: "text", analyzer: "standard" },
             description: { type: "text", analyzer: "standard" },
-            lead_center: { type: "keyword" },
-
-            external_api_raw: { type: "object" },
-
-            input_raw: { type: "object" },
 
             submitted_by: {
               type: "object",
