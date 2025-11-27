@@ -94,8 +94,12 @@ export class S3Utils {
       }
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const resultId = result?.idempotencyKey || result?.result_id || "unknown";
-      const errorKey = `errors/${jobId}/${timestamp}-${resultId}.json`;
+      const shortId = result?.idempotencyKey
+        ? result.idempotencyKey.substring(0, 8)
+        : result?.result_id
+        ? String(result.result_id)
+        : Math.random().toString(36).substring(2, 10);
+      const errorKey = `errors/${jobId}/${timestamp}-${shortId}.json`;
 
       // Use my-bulk-pipeline bucket for errors
       const errorBucket =
