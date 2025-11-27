@@ -172,7 +172,7 @@ export class OpenSearchClient {
 
   async indexResult(result: any): Promise<any> {
     const indexName = this.getIndexName(result.type);
-    let documentId = result.result_id || result.idempotencyKey;
+    let documentId = result.idempotencyKey || result.result_id || result.id;
 
     if (!documentId) {
       try {
@@ -196,6 +196,7 @@ export class OpenSearchClient {
       type: result.type,
       hasResultId: !!result.result_id,
       hasResultCode: !!result.result_code,
+      hasId: !!result.id,
     });
 
     try {
@@ -243,7 +244,7 @@ export class OpenSearchClient {
 
       for (const result of results) {
         const indexName = this.getIndexName(result.type);
-        const documentId = result.result_id || result.idempotencyKey;
+        const documentId = result.idempotencyKey || result.result_id || result.id;
 
         indexTypes.add(result.type);
 
