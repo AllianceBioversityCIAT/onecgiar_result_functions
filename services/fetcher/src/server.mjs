@@ -171,7 +171,24 @@ app.post("/ingest", async (req, res) => {
       normalized?.result_id !== undefined
         ? normalized.result_id
         : normalized?.id;
-    const uniqueId = resultId ?? normalized?.handle ?? "na";
+    
+    let uniqueId = resultId ?? normalized?.handle;
+    
+    if (!uniqueId) {
+      const crypto = await import('crypto');
+      const contentHash = crypto
+        .createHash('sha256')
+        .update(JSON.stringify(normalized))
+        .digest('hex')
+        .slice(0, 16);
+      uniqueId = `auto-${contentHash}`;
+      console.log('[ingest] Generated unique ID from content hash', { 
+        type, 
+        uniqueId, 
+        title: normalized?.title?.slice(0, 50) 
+      });
+    }
+    
     const idempotencyKey = `${tenant}:${type}:${op}:${uniqueId}`;
     const detail = {
       s3: pointer.s3,
