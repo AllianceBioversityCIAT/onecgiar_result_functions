@@ -81,6 +81,62 @@ export class S3Utils {
     });
   }
 
+  async saveErrorToS3(
+    jobId: string,
+    result: any,
+    error: any,
+    context?: Record<string, any>
+  ): Promise<string | null> {
+    try {
+      if (!jobId || jobId === "unknown-job") {
+        console.warn(`[S3Utils] Skipping error save - invalid jobId: ${jobId}`);
+        return null;
+      }
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const resultId = result?.idempotencyKey || result?.result_id || "unknown";
+      const errorKey = `errors/${jobId}/${timestamp}-${resultId}.json`;
+
+      // Use my-bulk-pipeline bucket for errors
+      const errorBucket =
+        (process as any).env.ERROR_BUCKET || "my-bulk-pipeline";
+
+      const errorData = {
+        timestamp: new Date().toISOString(),
+        jobId,
+        resultId: result?.idempotencyKey,
+        resultType: result?.type,
+        error: {
+          message: error?.message || String(error),
+          stack: error?.stack,
+          name: error?.name,
+        },
+        result,
+        context,
+      };
+
+      await this.client.send(
+        new PutObjectCommand({
+          Bucket: errorBucket,
+          Key: errorKey,
+          Body: JSON.stringify(errorData, null, 2),
+          ContentType: "application/json",
+        })
+      );
+
+      console.log(
+        `[S3Utils] 💾 Error saved to s3://${errorBucket}/${errorKey}`
+      );
+      return errorKey;
+    } catch (saveErr: any) {
+      console.error(
+        `[S3Utils] ❌ Failed to save error to S3:`,
+        saveErr?.message || saveErr
+      );
+      return null;
+    }
+  }
+
   private async streamToString(stream: any): Promise<string> {
     return await new Promise((resolve, reject) => {
       const chunks: Buffer[] = [];
