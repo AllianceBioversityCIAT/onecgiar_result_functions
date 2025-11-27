@@ -71,7 +71,7 @@ export default function Home() {
       return fullName || person.name || person.email || "N/A";
     };
 
-    return results.map((result) => {
+    return results.map((result, index) => {
       const leadCenter =
         result.result_center_array?.find(
           (center: any) => center?.is_leading_result
@@ -90,6 +90,8 @@ export default function Home() {
         createdName,
         submitterName,
         uploadDate,
+        _fullResult: result, // Store reference to full result
+        _index: index,
       };
     });
   }, [results]);
@@ -304,6 +306,7 @@ export default function Home() {
         />
         <ResultsTable
           results={paginatedResults}
+          fullResults={paginatedResults.map((r: any) => r._fullResult)}
           filteredCount={filteredResults.length}
           currentPage={currentPage}
           totalPages={totalPages}

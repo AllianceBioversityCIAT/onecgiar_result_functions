@@ -7,4 +7,6 @@ export interface DisplayResult {
   createdName: string;
   submitterName: string;
   uploadDate: string;
+  _fullResult?: any;
+  _index?: number;
 }
