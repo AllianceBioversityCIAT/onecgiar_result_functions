@@ -175,6 +175,16 @@ export const handler = async (event: LambdaEvent) => {
           });
 
           for (const result of typeResults) {
+            const error = new Error(`Unsupported result type: ${type}`);
+
+            // Save error to S3 if jobId is available
+            if (result.jobId) {
+              await s3Utils.saveErrorToS3(result.jobId, result, error, {
+                stage: "unsupported_type",
+                supportedTypes: processorFactory.getSupportedTypes(),
+              });
+            }
+
             allProcessingResults.push({
               success: false,
               error: `Unsupported result type: ${type}`,
@@ -208,6 +218,21 @@ export const handler = async (event: LambdaEvent) => {
                   totalSuccessful++;
                 } else {
                   totalFailed++;
+
+                  // Save error to S3 if jobId is available
+                  if (result.jobId) {
+                    await s3Utils.saveErrorToS3(
+                      result.jobId,
+                      result,
+                      new Error(processingResult.error || "Processing failed"),
+                      {
+                        stage: "processing",
+                        externalError: processingResult.externalError,
+                        externalApiResponse:
+                          processingResult.externalApiResponse,
+                      }
+                    );
+                  }
                 }
 
                 return {
@@ -220,6 +245,14 @@ export const handler = async (event: LambdaEvent) => {
                   error instanceof Error ? error.message : "Unknown error";
                 logger.error("Processing failed", result.idempotencyKey, error);
                 totalFailed++;
+
+                // Save error to S3 if jobId is available
+                if (result.jobId) {
+                  await s3Utils.saveErrorToS3(result.jobId, result, error, {
+                    stage: "processing_exception",
+                    type: result.type,
+                  });
+                }
 
                 return {
                   success: false,
@@ -237,6 +270,14 @@ export const handler = async (event: LambdaEvent) => {
         logger.error(`Failed to process type ${type}`, undefined, error);
 
         for (const result of typeResults) {
+          // Save error to S3 if jobId is available
+          if (result.jobId) {
+            await s3Utils.saveErrorToS3(result.jobId, result, error, {
+              stage: "type_processing_failed",
+              resultType: type,
+            });
+          }
+
           allProcessingResults.push({
             success: false,
             error: error instanceof Error ? error.message : "Unknown error",
