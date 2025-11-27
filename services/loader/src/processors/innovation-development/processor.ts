@@ -95,6 +95,7 @@ export class InnovationDevelopmentProcessor implements ProcessorInterface {
         type: result.type,
         idempotencyKey: result.idempotencyKey,
         received_at: result.received_at,
+        tenant: result.tenant,
       });
 
       this.logger.success(

@@ -194,6 +194,7 @@ export class OpenSearchClient {
     console.log(`[OpenSearchClient] Indexing result to ${indexName}`, {
       documentId,
       type: result.type,
+      idempotencyKey: result.idempotencyKey,
       hasResultId: !!result.result_id,
       hasResultCode: !!result.result_code,
       hasId: !!result.id,

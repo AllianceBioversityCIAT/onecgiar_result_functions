@@ -92,9 +92,11 @@ export class KnowledgeProductProcessor implements ProcessorInterface {
 
       const opensearchResponse = await this.openSearchClient.indexResult({
         ...indexDoc,
+        // Override fields from external API to ensure consistency
         type: result.type,
         idempotencyKey: result.idempotencyKey,
         received_at: result.received_at,
+        tenant: result.tenant,
       });
 
       this.logger.success(

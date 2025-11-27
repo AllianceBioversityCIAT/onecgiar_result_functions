@@ -95,6 +95,7 @@ export class InnovationUseProcessor implements ProcessorInterface {
         type: result.type,
         idempotencyKey: result.idempotencyKey,
         received_at: result.received_at,
+        tenant: result.tenant,
       });
 
       this.logger.success("Innovation use processed successfully", resultId, {
