@@ -82,6 +82,7 @@ export const handler = async (event: LambdaEvent) => {
 
     const rootTenant = (rawData as any)?.tenant;
     const rootOp = (rawData as any)?.op;
+    const rootJobId = (rawData as any)?.jobId || detail?.jobId;
 
     const crypto = await import("crypto");
 
@@ -120,6 +121,7 @@ export const handler = async (event: LambdaEvent) => {
 
       const tenant = r.tenant || rootTenant;
       const op = r.op || rootOp;
+      const jobId = r.jobId || rootJobId;
 
       return {
         type,
@@ -127,6 +129,7 @@ export const handler = async (event: LambdaEvent) => {
         idempotencyKey,
         ...(tenant ? { tenant } : {}),
         ...(op ? { op } : {}),
+        ...(jobId ? { jobId } : {}),
         ...r,
       };
     });

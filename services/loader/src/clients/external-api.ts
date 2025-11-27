@@ -28,6 +28,7 @@ export class ExternalApiClient {
     const payload = {
       type: result.type,
       data: result.data,
+      ...(result.jobId ? { jobId: result.jobId } : {}),
     };
 
     console.log(

@@ -6,6 +6,7 @@ export interface EventDetail {
   payload?: any;
   idempotencyKey?: string;
   correlationId?: string;
+  jobId?: string;
   ts?: number;
 }
 
@@ -19,6 +20,7 @@ export interface ResultData {
   tenant?: string;
   type: string;
   op?: string;
+  jobId?: string;
   received_at: string;
   idempotencyKey: string;
   [key: string]: any;
