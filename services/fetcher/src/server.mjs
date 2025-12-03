@@ -1,13 +1,15 @@
 import express from "express";
-
 import { normalizeCommon } from "./normalizer.mjs"; 
 import { validateByType } from "./validator/registry.js"; 
-import { buildDetailWithOffload, putEventsBatch, offloadRequestBody } from "./utils.js"; 
+import { offloadRequestBody } from "./utils.js"; 
+import { ProcessorFactory } from "./processors/factory.mjs";
+import { Logger } from "./utils/logger.mjs";
+import { S3Utils } from "./utils/s3.mjs";
 
 import openapi from "./docs/openapi.json" with { type: "json" };
 
-const BUS = process.env.EVENT_BUS || "default";
 const DEFAULT_OP = (process.env.DEFAULT_OP || "create").toLowerCase();
+const BATCH_SIZE = parseInt(process.env.BATCH_SIZE || "10");
 
 const app = express();
 app.use(express.json({ limit: "5mb" }));
@@ -46,9 +48,14 @@ app.get("/docs", (_req, res) => {
 });
 
 app.post("/ingest", async (req, res) => {
+  const startTime = Date.now();
   const requestId =
     req.headers["x-amzn-trace-id"] || req.headers["x-request-id"];
   const body = req.body || {};
+
+  const logger = new Logger();
+  const s3Utils = new S3Utils();
+  const processorFactory = new ProcessorFactory(logger);
 
   console.log('[ingest] request received', {
     requestId,
@@ -90,9 +97,9 @@ app.post("/ingest", async (req, res) => {
     });
   }
 
-  const entries = [];
   const rejected = [];
-  const acceptedIndexes = [];
+  const acceptedResults = [];
+  const nowIso = new Date().toISOString();
 
   for (let i = 0; i < list.length; i++) {
     const it = list[i] || {};
@@ -129,12 +136,39 @@ app.post("/ingest", async (req, res) => {
       rejected.push({ index: i, type, errors: v.errors });
       continue;
     }
-    list[i].data = normalized;
-    list[i]._meta = { type, op };
-    acceptedIndexes.push(i);
+
+    const crypto = await import('crypto');
+    const handle = normalized?.knowledge_product?.handle;
+    const resultId = normalized?.result_id !== undefined ? normalized.result_id : normalized?.id;
+    let uniqueId = resultId ?? handle;
+    
+    if (!uniqueId) {
+      const contentHash = crypto
+        .createHash('sha256')
+        .update(JSON.stringify(normalized))
+        .digest('hex')
+        .slice(0, 16);
+      uniqueId = `auto-${contentHash}`;
+    }
+    
+    const idempotencyKey = `${tenant}:${type}:${op}:${uniqueId}`;
+
+    acceptedResults.push({
+      type,
+      received_at: nowIso,
+      idempotencyKey,
+      tenant,
+      op,
+      ...(jobId ? { jobId } : {}),
+      ...(resultId !== undefined ? { result_id: resultId } : {}),
+      ...normalized,
+      data: {
+        ...(normalized.data || {}),
+      },
+    });
   }
 
-  if (!acceptedIndexes.length) {
+  if (!acceptedResults.length) {
     return res.status(422).json({
       ok: false,
       error: "validation_failed",
@@ -146,129 +180,192 @@ app.post("/ingest", async (req, res) => {
     });
   }
 
+  let pointer;
   const ingestionEnvelope = {
     tenant,
     op: opDefault,
     ...(jobId ? { jobId } : {}),
-    results: list,
-    received_at: new Date().toISOString(),
+    results: acceptedResults,
+    received_at: nowIso,
     requestId,
     rejected,
-    acceptedIndexes,
   };
 
-  let pointer;
   try {
     pointer = await offloadRequestBody(ingestionEnvelope);
+    console.log('[ingest] Data offloaded to S3', { 
+      bucket: pointer.s3.bucket, 
+      key: pointer.s3.key,
+      correlationId: pointer.correlationId 
+    });
   } catch (err) {
     console.error('[ingest] failed full body offload', { message: err?.message });
-    return res.status(500).json({ ok: false, error: 'offload_failed', message: err?.message, requestId });
   }
 
-  for (const idx of acceptedIndexes) {
-    const it = list[idx];
-    const type = it._meta.type;
-    const op = it._meta.op;
-    const normalized = it.data;
-    const resultId =
-      normalized?.result_id !== undefined
-        ? normalized.result_id
-        : normalized?.id;
-    
-    let uniqueId = resultId ?? normalized?.handle;
-    
-    if (!uniqueId) {
-      const crypto = await import('crypto');
-      const contentHash = crypto
-        .createHash('sha256')
-        .update(JSON.stringify(normalized))
-        .digest('hex')
-        .slice(0, 16);
-      uniqueId = `auto-${contentHash}`;
-      console.log('[ingest] Generated unique ID from content hash', { 
-        type, 
-        uniqueId, 
-        title: normalized?.title?.slice(0, 50) 
-      });
+  const resultsByType = new Map();
+  for (const result of acceptedResults) {
+    const type = result.type || "unknown";
+    if (!resultsByType.has(type)) {
+      resultsByType.set(type, []);
     }
-    
-    const idempotencyKey = `${tenant}:${type}:${op}:${uniqueId}`;
-    const detail = {
-      s3: pointer.s3,
-      correlationId: pointer.correlationId,
-      idempotencyKey,
-      tenant,
-      type,
-      op,
-      result_index: idx,
-      ts: Date.now(),
-      offloadBytes: pointer.offloadBytes,
-      fullBody: true,
-      ...(jobId ? { jobId } : {}),
-      ...(resultId !== undefined ? { result_id: resultId } : {}),
-    };
-    entries.push({
-      Source: tenant,
-      DetailType: op,
-      EventBusName: BUS,
-      Detail: JSON.stringify(detail),
-    });
+    resultsByType.get(type).push(result);
   }
 
-  
-  try {
-    const outs = await putEventsBatch(entries);
-    console.log('[ingest] putEventsBatch completed', {
-      batches: outs.length,
-      totalEntries: entries.length,
-      rejectedCount: rejected.length
-    });
+  const allProcessingResults = [];
+  let totalSuccessful = 0;
+  let totalFailed = 0;
 
-    const eventIds = [];
-    let failedCount = 0;
-    const failed = [];
+  for (const [type, typeResults] of resultsByType) {
+    console.log(`[ingest] Processing ${typeResults.length} results of type: ${type}`);
 
-    let accIdx = 0;
-    for (const out of outs) {
-      failedCount += out?.FailedEntryCount || 0;
-      const ents = out?.Entries || [];
-      for (let k = 0; k < ents.length; k++) {
-        const e = ents[k];
-        if (e?.EventId) eventIds.push(e.EventId);
-        if (e?.ErrorCode || e?.ErrorMessage) {
-          failed.push({
-            index: acceptedIndexes[accIdx + k],
-            code: e.ErrorCode,
-            message: e.ErrorMessage,
+    try {
+      if (!processorFactory.isTypeSupported(type)) {
+        console.error(`[ingest] Unsupported result type: ${type}`, {
+          supportedTypes: processorFactory.getSupportedTypes(),
+        });
+
+        for (const result of typeResults) {
+          allProcessingResults.push({
+            success: false,
+            error: `Unsupported result type: ${type}`,
+            resultId: result.idempotencyKey,
+          });
+          totalFailed++;
+        }
+        continue;
+      }
+
+      const processor = processorFactory.getProcessor(type);
+
+      const batches = [];
+      for (let i = 0; i < typeResults.length; i += BATCH_SIZE) {
+        batches.push(typeResults.slice(i, i + BATCH_SIZE));
+      }
+
+      for (const batch of batches) {
+        const batchResults = await Promise.all(
+          batch.map(async (result) => {
+            try {
+              const processingResult = await processor.process(result);
+              logger.logProcessingResult(
+                processingResult,
+                processingResult.result
+              );
+
+              if (processingResult.success) {
+                totalSuccessful++;
+              } else {
+                totalFailed++;
+
+                if (result.jobId) {
+                  await s3Utils.saveErrorToS3(
+                    result.jobId,
+                    result,
+                    new Error(processingResult.error || "Processing failed"),
+                    {
+                      stage: "processing",
+                      externalError: processingResult.externalError,
+                      externalApiResponse:
+                        processingResult.externalApiResponse,
+                    }
+                  );
+                }
+              }
+
+              return {
+                ...processingResult,
+                resultId: result.idempotencyKey,
+                resultType: result.type,
+              };
+            } catch (error) {
+              const errorMessage =
+                error instanceof Error ? error.message : "Unknown error";
+              console.error('[ingest] Processing failed', result.idempotencyKey, error);
+              totalFailed++;
+
+              if (result.jobId) {
+                await s3Utils.saveErrorToS3(result.jobId, result, error, {
+                  stage: "processing_exception",
+                  type: result.type,
+                });
+              }
+
+              return {
+                success: false,
+                error: errorMessage,
+                resultId: result.idempotencyKey,
+                resultType: result.type,
+              };
+            }
+          })
+        );
+
+        allProcessingResults.push(...batchResults);
+      }
+    } catch (error) {
+      console.error(`[ingest] Failed to process type ${type}`, error);
+
+      for (const result of typeResults) {
+        if (result.jobId) {
+          await s3Utils.saveErrorToS3(result.jobId, result, error, {
+            stage: "type_processing_failed",
+            resultType: type,
           });
         }
-      }
-      accIdx += ents.length;
-    }
 
-    return res.status(202).json({
-      ok: failedCount === 0,
-      status: failedCount === 0 ? "accepted" : "partial_failure",
-      acceptedCount: entries.length,
-      rejectedCount: rejected.length,
-      failedCount,
-      eventIds,
-      rejected,
-      failed,
-      requestId,
-      offload: pointer?.s3,
-      correlationId: pointer?.correlationId,
-    });
-  } catch (err) {
-    console.error('[ingest] eventbridge error', { message: err?.message, requestId });
-    return res.status(500).json({
-      ok: false,
-      error: "eventbridge_error",
-      message: err?.message,
-      rejected,
-      requestId,
-    });
+        allProcessingResults.push({
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+          resultId: result.idempotencyKey,
+          resultType: type,
+        });
+        totalFailed++;
+      }
+    }
   }
+
+  const successfulResults = allProcessingResults
+    .filter(
+      (r) => r.success && "result" in r && r.result !== undefined
+    )
+    .map((r) => r.result);
+
+  if (successfulResults.length > 0) {
+    try {
+      await s3Utils.saveProcessedResults(successfulResults, "final");
+    } catch (error) {
+      console.error('[ingest] Failed to save processed results to S3', error);
+    }
+  }
+
+  const processingTimeMs = Date.now() - startTime;
+  logger.logBatchSummary(
+    acceptedResults.length,
+    totalSuccessful,
+    totalFailed,
+    processingTimeMs
+  );
+
+  return res.status(totalFailed === 0 ? 200 : 207).json({
+    ok: totalFailed === 0,
+    message:
+      totalFailed === 0
+        ? "All results processed successfully"
+        : `Processed with ${totalFailed} failures`,
+    processed: acceptedResults.length,
+    successful: totalSuccessful,
+    failed: totalFailed,
+    rejectedCount: rejected.length,
+    rejected,
+    processingTimeMs,
+    logs: logger.getLogsSummary(),
+    requestId,
+    ...(pointer ? { 
+      offload: pointer.s3,
+      correlationId: pointer.correlationId 
+    } : {}),
+    timestamp: new Date().toISOString(),
+  });
 });
 
 export default app;
