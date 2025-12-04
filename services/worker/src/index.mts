@@ -15,6 +15,12 @@ const TENANT = process.env.TENANT || "XXX";
 const OP = process.env.OP || "XXX";
 const LOG_LEVEL = process.env.LOG_LEVEL || "info";
 const FETCH_TIMEOUT_MS = Number(process.env.FETCH_TIMEOUT_MS || "15000");
+const SUMMARIES_PREFIX =
+  (process.env.SUMMARIES_PREFIX || "summaries/").replace(/^\/+|\/+$/g, "") +
+  "/";
+const SUMMARY_FAILURE_SAMPLE_LIMIT = Number(
+  process.env.SUMMARY_FAILURE_SAMPLE_LIMIT || "20"
+);
 
 function log(level: "debug" | "info" | "warn" | "error", ...args: unknown[]) {
   const order = { debug: 0, info: 1, warn: 2, error: 3 } as const;
@@ -33,6 +39,23 @@ async function streamToString(stream: any): Promise<string> {
   return Buffer.concat(chunks).toString("utf-8");
 }
 
+type FailureSample = { messageId: string; reason: string; key?: string };
+type JobSummary = {
+  jobId: string;
+  status: string;
+  total: number;
+  processed: number;
+  successCount: number;
+  failureCount: number;
+  failureSamples: FailureSample[];
+  createdAt: string;
+  updatedAt: string;
+  bucket?: string;
+  rawKey?: string;
+  chunksPrefix?: string;
+};
+type SummaryDelta = { success: number; failures: FailureSample[] };
+
 async function getChunkFromEvent(
   record: any
 ): Promise<{ chunk: any; key: string; bucket: string }> {
@@ -45,7 +68,7 @@ async function getChunkFromEvent(
     String(s3Event.s3.object.key).replace(/\+/g, " ")
   );
 
-  log("info", `🪣 Reading S3: bucket=${bucket} key=${key}`);
+  log("info", `Reading S3: bucket=${bucket} key=${key}`);
 
   const obj = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
   const jsonText = await streamToString(obj.Body);
@@ -54,7 +77,7 @@ async function getChunkFromEvent(
   try {
     parsed = JSON.parse(jsonText);
   } catch (err: any) {
-    log("error", "❌ Invalid JSON:", err?.message);
+    log("error", "Invalid JSON:", err?.message);
     throw err;
   }
 
@@ -89,6 +112,101 @@ async function fetchWithTimeout(
 function extractJobId(key: string): string {
   const match = key.match(/chunks\/([^\/]+)\//);
   return match ? match[1] : "unknown-job";
+}
+
+function getSummaryKey(jobId: string) {
+  return `${SUMMARIES_PREFIX}${jobId}/summary.json`;
+}
+
+async function getJobSummary(bucket: string, jobId: string): Promise<JobSummary> {
+  const key = getSummaryKey(jobId);
+  try {
+    const obj = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+    const jsonText = await streamToString(obj.Body);
+    return JSON.parse(jsonText);
+  } catch (err: any) {
+    const status = err?.$metadata?.httpStatusCode;
+    if (status === 404 || err?.name === "NoSuchKey") {
+      const nowIso = new Date().toISOString();
+      return {
+        jobId,
+        status: "running",
+        total: 0,
+        processed: 0,
+        successCount: 0,
+        failureCount: 0,
+        failureSamples: [],
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+    }
+    throw err;
+  }
+}
+
+async function saveJobSummary(
+  bucket: string,
+  jobId: string,
+  summary: JobSummary
+): Promise<void> {
+  const key = getSummaryKey(jobId);
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: JSON.stringify(summary, null, 2),
+      ContentType: "application/json",
+    })
+  );
+  log("debug", `Summary saved for job ${jobId} at ${key}`);
+}
+
+async function applySummaryDelta(
+  bucket: string,
+  jobId: string,
+  delta: SummaryDelta
+): Promise<void> {
+  try {
+    const nowIso = new Date().toISOString();
+    const summary = await getJobSummary(bucket, jobId);
+
+    const successDelta = delta.success ?? 0;
+    const failureDelta = delta.failures?.length ?? 0;
+
+    summary.successCount = (summary.successCount || 0) + successDelta;
+    summary.failureCount = (summary.failureCount || 0) + failureDelta;
+    summary.processed = (summary.successCount || 0) + (summary.failureCount || 0);
+
+    const existingSamples = Array.isArray(summary.failureSamples)
+      ? summary.failureSamples
+      : [];
+    const newSamples = delta.failures ?? [];
+
+    summary.failureSamples = [...newSamples, ...existingSamples].slice(
+      0,
+      SUMMARY_FAILURE_SAMPLE_LIMIT
+    );
+
+    summary.total = Number(summary.total || 0);
+    summary.createdAt = summary.createdAt || nowIso;
+    summary.updatedAt = nowIso;
+
+    const totalKnown = Number.isFinite(summary.total) && summary.total > 0;
+    if (totalKnown && summary.processed >= summary.total) {
+      summary.status =
+        summary.failureCount > 0 ? "partial_failed" : "succeeded";
+    } else if (!summary.status) {
+      summary.status = "running";
+    }
+
+    await saveJobSummary(bucket, jobId, summary);
+  } catch (err: any) {
+    log(
+      "error",
+      `Failed to update summary for job ${jobId}:`,
+      err?.message || err
+    );
+  }
 }
 
 // Save error details to S3
@@ -126,33 +244,44 @@ async function saveErrorToS3(
       })
     );
 
-    log("info", `💾 Error saved to S3: ${errorKey}`);
+    log("info", `Error saved to S3: ${errorKey}`);
   } catch (saveErr: any) {
-    log("error", `❌ Failed to save error to S3:`, saveErr?.message || saveErr);
+    log("error", `Failed to save error to S3:`, saveErr?.message || saveErr);
   }
 }
 
 export const handler = async (event: any) => {
   const failures: Array<{ itemIdentifier: string }> = [];
-  log("info", `🚀 SQS batch received: ${event.Records?.length || 0} messages`);
+  const summaryDeltas = new Map<
+    string,
+    { bucket: string; success: number; failures: FailureSample[] }
+  >();
+  log("info", `SQS batch received: ${event.Records?.length || 0} messages`);
+
+  const ensureDelta = (jobId: string, bucket: string) => {
+    if (!summaryDeltas.has(jobId))
+      summaryDeltas.set(jobId, { bucket, success: 0, failures: [] });
+    return summaryDeltas.get(jobId)!;
+  };
 
   for (const record of event.Records ?? []) {
     const messageId = record.messageId;
     let key = "";
     let bucket = BUCKET;
+    let jobId = "unknown-job";
     let payload: any = null;
 
     try {
       const chunkData = await getChunkFromEvent(record);
       key = chunkData.key;
       bucket = chunkData.bucket;
-      const jobId = extractJobId(key);
+      jobId = extractJobId(key);
       payload = buildEnvelope(chunkData.chunk, jobId);
 
       const preview = JSON.stringify(payload);
       log(
         "debug",
-        `📤 Body to send (${key}): ${
+        `Body to send (${key}): ${
           preview.length > 2000
             ? preview.slice(0, 2000) + " ... [truncated]"
             : preview
@@ -171,25 +300,49 @@ export const handler = async (event: any) => {
           0,
           500
         )}`;
-        log("error", `❌ ${errorMsg}`);
+        log("error", errorMsg);
         throw new Error(errorMsg);
       }
 
-      log("info", `✅ PRMS OK for ${key} (message ${messageId})`);
+      log("info", `PRMS OK for ${key} (message ${messageId})`);
+      if (jobId !== "unknown-job") {
+        const delta = ensureDelta(jobId, bucket);
+        delta.success += 1;
+      }
     } catch (err: any) {
-      log("error", `🛑 Error processing ${messageId}:`, err?.message || err);
+      log("error", `Error processing ${messageId}:`, err?.message || err);
 
       // Save error to S3 only once (here in the catch block)
       if (key && payload) {
         await saveErrorToS3(bucket, key, messageId, payload, err);
       }
 
+      if (jobId !== "unknown-job") {
+        const delta = ensureDelta(jobId, bucket);
+        delta.failures.push({
+          messageId,
+          reason: err?.message || "Unknown error",
+          key,
+        });
+      }
+
       failures.push({ itemIdentifier: messageId });
     }
   }
 
-  if (failures.length) log("warn", `⚠️ Failed messages: ${failures.length}`);
-  else log("info", "🏁 Batch processed successfully.");
+  if (failures.length) log("warn", `Failed messages: ${failures.length}`);
+  else log("info", "Batch processed successfully.");
+
+  if (summaryDeltas.size) {
+    await Promise.all(
+      [...summaryDeltas.entries()].map(([jobId, delta]) =>
+        applySummaryDelta(delta.bucket || BUCKET, jobId, {
+          success: delta.success,
+          failures: delta.failures,
+        })
+      )
+    );
+  }
 
   // SQS partial batch response
   return { batchItemFailures: failures };
