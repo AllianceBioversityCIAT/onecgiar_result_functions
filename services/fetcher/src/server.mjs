@@ -137,21 +137,26 @@ app.post("/ingest", async (req, res) => {
       continue;
     }
 
+    const normalizedData = normalized && typeof normalized === "object" ? normalized : {};
     const crypto = await import('crypto');
-    const handle = normalized?.knowledge_product?.handle;
-    const resultId = normalized?.result_id !== undefined ? normalized.result_id : normalized?.id;
+    const handle = normalizedData?.knowledge_product?.handle;
+    const resultId = normalizedData?.result_id !== undefined ? normalizedData.result_id : normalizedData?.id;
     let uniqueId = resultId ?? handle;
     
     if (!uniqueId) {
       const contentHash = crypto
         .createHash('sha256')
-        .update(JSON.stringify(normalized))
+        .update(JSON.stringify(normalizedData))
         .digest('hex')
         .slice(0, 16);
       uniqueId = `auto-${contentHash}`;
     }
     
     const idempotencyKey = `${tenant}:${type}:${op}:${uniqueId}`;
+    const payloadData =
+      normalizedData?.data && typeof normalizedData.data === "object" && Object.keys(normalizedData.data).length
+        ? { ...normalizedData.data }
+        : { ...normalizedData };
 
     acceptedResults.push({
       type,
@@ -161,10 +166,8 @@ app.post("/ingest", async (req, res) => {
       op,
       ...(jobId ? { jobId } : {}),
       ...(resultId !== undefined ? { result_id: resultId } : {}),
-      ...normalized,
-      data: {
-        ...(normalized.data || {}),
-      },
+      ...normalizedData,
+      data: payloadData,
     });
   }
 
