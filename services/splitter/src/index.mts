@@ -12,12 +12,38 @@ const RAW_PREFIX =
   (process.env.RAW_PREFIX || "raw/").replace(/^\/+|\/+$/g, "") + "/";
 const CHUNKS_PREFIX =
   (process.env.CHUNKS_PREFIX || "chunks/").replace(/^\/+|\/+$/g, "") + "/";
+const SUMMARIES_PREFIX =
+  (process.env.SUMMARIES_PREFIX || "summaries/").replace(/^\/+|\/+$/g, "") +
+  "/";
 
 async function streamToString(stream: any): Promise<string> {
   const src = stream instanceof Readable ? stream : Readable.fromWeb(stream);
   const chunks: Buffer[] = [];
   for await (const chunk of src) chunks.push(Buffer.from(chunk));
   return Buffer.concat(chunks).toString("utf-8");
+}
+
+function buildInitialSummary(
+  jobId: string,
+  total: number,
+  bucket: string,
+  rawKey: string
+) {
+  const nowIso = new Date().toISOString();
+  return {
+    jobId,
+    status: "running",
+    total,
+    processed: 0,
+    successCount: 0,
+    failureCount: 0,
+    failureSamples: [],
+    bucket,
+    rawKey,
+    chunksPrefix: `${CHUNKS_PREFIX}${jobId}/`,
+    createdAt: nowIso,
+    updatedAt: nowIso,
+  };
 }
 
 export const handler = async (event: any): Promise<void> => {
@@ -83,8 +109,23 @@ export const handler = async (event: any): Promise<void> => {
       );
     }
 
+    const summaryKey = `${SUMMARIES_PREFIX}${jobId}/summary.json`;
+    const summaryBody = buildInitialSummary(jobId, i, bucket, key);
+
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: summaryKey,
+        Body: JSON.stringify(summaryBody, null, 2),
+        ContentType: "application/json",
+      })
+    );
+
     console.log(
       `Splitter OK: ${i} files in ${CHUNKS_PREFIX}${jobId}/ (bucket=${bucket}, source=${key})`
+    );
+    console.log(
+      `Summary initialized at ${summaryKey} (total=${i}, status=running)`
     );
   }
 };
