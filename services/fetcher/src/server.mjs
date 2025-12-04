@@ -360,6 +360,7 @@ app.post("/ingest", async (req, res) => {
     failed: totalFailed,
     rejectedCount: rejected.length,
     rejected,
+    results: allProcessingResults,
     processingTimeMs,
     logs: logger.getLogsSummary(),
     requestId,
