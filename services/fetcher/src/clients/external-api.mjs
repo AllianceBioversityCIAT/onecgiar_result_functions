@@ -59,11 +59,27 @@ export class ExternalApiClient {
 
       if (!response.ok) {
         const errorBody = await response.text();
+        let parsedBody;
+        try {
+          parsedBody = JSON.parse(errorBody);
+        } catch {
+          parsedBody = undefined;
+        }
+
         console.error(
           `[ExternalApiClient] Error response body for ${result.idempotencyKey}:`,
           errorBody
         );
-        throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorBody}`);
+
+        const err = new Error(
+          `HTTP ${response.status}: ${response.statusText} - ${errorBody}`
+        );
+        err.status = response.status;
+        err.statusText = response.statusText;
+        err.apiResponse = parsedBody ?? errorBody;
+        err.responseBody = errorBody;
+        err.url = url;
+        throw err;
       }
 
       const data = (await response.json());
@@ -149,11 +165,20 @@ export class ExternalApiClient {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
+      const apiResponse =
+        (error && typeof error === "object" && "apiResponse" in error)
+          ? error.apiResponse
+          : undefined;
       console.error(
         `[ExternalApiClient] Failed to enrich result ${result.idempotencyKey}:`,
         error
       );
-      return { enriched: result, success: false, error: errorMessage };
+      return {
+        enriched: result,
+        apiResponse,
+        success: false,
+        error: errorMessage,
+      };
     }
   }
 

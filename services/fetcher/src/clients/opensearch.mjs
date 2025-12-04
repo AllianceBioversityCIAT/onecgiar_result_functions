@@ -138,9 +138,21 @@ export class OpenSearchClient {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(
+        let parsedBody;
+        try {
+          parsedBody = JSON.parse(errorText);
+        } catch {
+          parsedBody = undefined;
+        }
+
+        const err = new Error(
           `OpenSearch ${method} ${path} failed: ${response.status} ${response.statusText} - ${errorText}`
         );
+        err.status = response.status;
+        err.statusText = response.statusText;
+        err.responseBody = parsedBody ?? errorText;
+        err.source = "opensearch";
+        throw err;
       }
 
       const contentLength = response.headers.get("content-length");

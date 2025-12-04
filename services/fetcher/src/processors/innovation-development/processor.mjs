@@ -56,7 +56,8 @@ export class InnovationDevelopmentProcessor  {
           success: false,
           error: message,
           externalSuccess,
-          externalError: externalError,
+          externalError: externalError || message,
+          externalApiResponse,
         };
       }
 
@@ -109,6 +110,10 @@ export class InnovationDevelopmentProcessor  {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
+      const externalApiResponse =
+        (error && typeof error === "object" && "apiResponse" in error)
+          ? error.apiResponse
+          : error?.responseBody;
       this.logger.error(
         "Innovation development processing failed",
         resultId,
@@ -118,6 +123,8 @@ export class InnovationDevelopmentProcessor  {
       return {
         success: false,
         error: errorMessage,
+        externalError: errorMessage,
+        externalApiResponse,
       };
     }
   }

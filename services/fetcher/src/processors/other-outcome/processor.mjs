@@ -56,7 +56,8 @@ export class OtherOutcomeProcessor  {
           success: false,
           error: message,
           externalSuccess,
-          externalError: externalError,
+          externalError: externalError || message,
+          externalApiResponse,
         };
       }
 
@@ -105,11 +106,17 @@ export class OtherOutcomeProcessor  {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
+      const externalApiResponse =
+        (error && typeof error === "object" && "apiResponse" in error)
+          ? error.apiResponse
+          : error?.responseBody;
       this.logger.error("Other outcome processing failed", resultId, error);
 
       return {
         success: false,
         error: errorMessage,
+        externalError: errorMessage,
+        externalApiResponse,
       };
     }
   }
