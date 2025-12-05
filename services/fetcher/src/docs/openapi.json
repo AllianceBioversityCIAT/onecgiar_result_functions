@@ -1544,6 +1544,63 @@
         }
       }
     },
+    "/delete/{id}": {
+      "delete": {
+        "summary": "Delete a result by ID",
+        "description": "Calls the upstream API to delete the result and then removes it from OpenSearch indices.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Result identifier provided by the external API"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Result deleted",
+            "content": {
+              "application/json": {
+                "example": {
+                  "ok": true,
+                  "message": "Result deleted",
+                  "resultId": 12345,
+                  "external": {
+                    "status": 200,
+                    "statusText": "OK",
+                    "response": {
+                      "status": true,
+                      "message": "Result deleted"
+                    }
+                  },
+                  "opensearch": {
+                    "deleted": 1,
+                    "attempts": 1,
+                    "results": [
+                      {
+                        "index": "prms-results-knowledge_product",
+                        "id": "12345",
+                        "success": true
+                      }
+                    ]
+                  },
+                  "timestamp": "2025-10-10T12:00:00Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or missing result ID"
+          },
+          "500": {
+            "description": "Failed to delete the result"
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Healthcheck",

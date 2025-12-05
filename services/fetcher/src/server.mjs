@@ -5,6 +5,8 @@ import { offloadRequestBody } from "./utils.js";
 import { ProcessorFactory } from "./processors/factory.mjs";
 import { Logger } from "./utils/logger.mjs";
 import { S3Utils } from "./utils/s3.mjs";
+import { ExternalApiClient } from "./clients/external-api.mjs";
+import { OpenSearchClient } from "./clients/opensearch.mjs";
 
 import openapi from "./docs/openapi.json" with { type: "json" };
 
@@ -13,6 +15,9 @@ const BATCH_SIZE = parseInt(process.env.BATCH_SIZE || "10");
 
 const app = express();
 app.use(express.json({ limit: "5mb" }));
+
+const externalApiClient = new ExternalApiClient();
+const openSearchClient = new OpenSearchClient();
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "normalizer", ts: new Date().toISOString() });
@@ -370,6 +375,66 @@ app.post("/ingest", async (req, res) => {
     } : {}),
     timestamp: new Date().toISOString(),
   });
+});
+
+app.delete("/delete/:id", async (req, res) => {
+  const requestId =
+    req.headers["x-amzn-trace-id"] || req.headers["x-request-id"];
+  const logger = new Logger();
+  const rawId = req.params.id;
+  const resultId = Number(rawId);
+
+  if (!Number.isFinite(resultId)) {
+    return res.status(400).json({
+      ok: false,
+      error: "invalid_result_id",
+      message: "Parameter :id must be a valid number",
+      requestId,
+    });
+  }
+
+  try {
+    logger.info("Deleting result in external API", resultId);
+    const externalResponse = await externalApiClient.deleteResult(resultId);
+
+    logger.info("Deleting result documents in OpenSearch", resultId);
+    const opensearchDeletion = await openSearchClient.deleteByResultId(resultId);
+
+    logger.success("Result deletion completed", resultId, {
+      opensearchDeleted: opensearchDeletion.deleted,
+    });
+
+    return res.status(200).json({
+      ok: true,
+      message: "Result deleted",
+      resultId,
+      external: externalResponse,
+      opensearch: opensearchDeletion,
+      requestId,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const status =
+      typeof error?.status === "number" && error.status >= 400
+        ? error.status
+        : 500;
+
+    logger.error("Result deletion failed", resultId, {
+      status,
+      error: message,
+    });
+
+    return res.status(status).json({
+      ok: false,
+      error: "result_delete_failed",
+      message,
+      resultId,
+      requestId,
+      details: error?.apiResponse ?? error?.responseBody,
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 export default app;

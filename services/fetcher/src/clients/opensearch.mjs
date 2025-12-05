@@ -413,6 +413,88 @@ export class OpenSearchClient {
     }
   }
 
+  async deleteByResultId(resultId) {
+    const numericId = Number(resultId);
+    if (!Number.isFinite(numericId)) {
+      throw new Error("A valid numeric resultId is required to delete documents");
+    }
+
+    const query = {
+      size: 1000,
+      query: {
+        term: {
+          result_id: numericId,
+        },
+      },
+    };
+
+    console.log(
+      `[OpenSearchClient] Searching documents to delete for result_id=${numericId}`
+    );
+
+    let searchResponse;
+    try {
+      searchResponse = await this.search(query, true);
+    } catch (error) {
+      if (error?.status === 404 || error?.message?.includes("404")) {
+        console.warn(
+          `[OpenSearchClient] No alias/index found while deleting result_id=${numericId}`
+        );
+        return { deleted: 0, attempts: 0, results: [] };
+      }
+      throw error;
+    }
+
+    const hits = searchResponse?.hits?.hits || [];
+    if (!hits.length) {
+      console.log(
+        `[OpenSearchClient] No documents matched result_id=${numericId}`
+      );
+      return { deleted: 0, attempts: 0, results: [] };
+    }
+
+    console.log(
+      `[OpenSearchClient] Deleting ${hits.length} documents for result_id=${numericId}`
+    );
+
+    const results = [];
+
+    for (const hit of hits) {
+      const targetIndex = hit._index;
+      const documentId = hit._id;
+      try {
+        await this.makeRequest(
+          "DELETE",
+          `/${targetIndex}/_doc/${encodeURIComponent(documentId)}?refresh=true`
+        );
+        results.push({
+          index: targetIndex,
+          id: documentId,
+          success: true,
+        });
+      } catch (error) {
+        console.error(
+          `[OpenSearchClient] Failed to delete document ${documentId} from ${targetIndex}`,
+          error
+        );
+        results.push({
+          index: targetIndex,
+          id: documentId,
+          success: false,
+          error: error?.message,
+        });
+      }
+    }
+
+    const deleted = results.filter((item) => item.success).length;
+
+    return {
+      deleted,
+      attempts: results.length,
+      results,
+    };
+  }
+
   async search(query, useAlias = true) {
     const searchTarget = useAlias ? this.getGlobalAlias() : undefined;
     if (!searchTarget && useAlias) {

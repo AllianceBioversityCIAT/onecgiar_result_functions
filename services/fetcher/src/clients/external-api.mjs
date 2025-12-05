@@ -82,7 +82,7 @@ export class ExternalApiClient {
         throw err;
       }
 
-      const data = (await response.json());
+      const data = await response.json();
 
       console.log(
         `[ExternalApiClient] Full API response for ${result.idempotencyKey}:`,
@@ -117,13 +117,86 @@ export class ExternalApiClient {
 
       return data;
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
+      if (error instanceof Error && error.name === "AbortError") {
         console.error(
           `[ExternalApiClient] Timeout (${this.timeout}ms) sending result ${result.idempotencyKey}`
         );
       }
       console.error(
         `[ExternalApiClient] Error sending result ${result.idempotencyKey}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  async deleteResult(resultId) {
+    const numericId = Number(resultId);
+    if (!Number.isFinite(numericId)) {
+      throw new Error(
+        "A valid numeric resultId is required to delete a result"
+      );
+    }
+
+    if (!this.baseUrl) {
+      throw new Error("External API URL not configured");
+    }
+
+    const base = this.baseUrl.replace(/\/+$/, "");
+    const url = `${base}/delete/${encodeURIComponent(String(numericId))}`;
+
+    console.log(`[ExternalApiClient] Deleting result ${numericId} via ${url}`);
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      const contentType = response.headers.get("content-type") || "";
+      const body = contentType.includes("application/json")
+        ? await response.json()
+        : await response.text();
+
+      if (!response.ok) {
+        const err = new Error(
+          `HTTP ${response.status}: ${response.statusText} deleting result ${numericId}`
+        );
+        err.status = response.status;
+        err.statusText = response.statusText;
+        err.apiResponse = body;
+        err.url = url;
+        throw err;
+      }
+
+      console.log(
+        `[ExternalApiClient] Delete result ${numericId} response:`,
+        body
+      );
+
+      return {
+        status: response.status,
+        statusText: response.statusText,
+        response: body,
+      };
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        console.error(
+          `[ExternalApiClient] Timeout (${this.timeout}ms) deleting result ${numericId}`
+        );
+      }
+
+      console.error(
+        `[ExternalApiClient] Failed to delete result ${numericId}:`,
         error
       );
       throw error;
@@ -166,7 +239,7 @@ export class ExternalApiClient {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       const apiResponse =
-        (error && typeof error === "object" && "apiResponse" in error)
+        error && typeof error === "object" && "apiResponse" in error
           ? error.apiResponse
           : undefined;
       console.error(
