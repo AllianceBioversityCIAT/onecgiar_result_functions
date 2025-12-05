@@ -19,9 +19,7 @@ const SUMMARIES_PREFIX =
 const SUMMARY_POLL_INTERVAL_MS = Number(
   process.env.SUMMARY_POLL_INTERVAL_MS || "1000"
 );
-const SUMMARY_MAX_WAIT_MS = Number(
-  process.env.SUMMARY_MAX_WAIT_MS || "10000"
-);
+const SUMMARY_MAX_WAIT_MS = Number(process.env.SUMMARY_MAX_WAIT_MS || "10000");
 const SUMMARY_DEFAULT_WAIT_SECONDS = Number(
   process.env.SUMMARY_DEFAULT_WAIT_SECONDS || "10"
 );
@@ -46,7 +44,9 @@ async function headObjectOrNull(bucket: string, key: string) {
 }
 
 async function getObjectJson(bucket: string, key: string) {
-  const { Body } = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  const { Body } = await s3.send(
+    new GetObjectCommand({ Bucket: bucket, Key: key })
+  );
   if (Body && typeof (Body as any).transformToString === "function") {
     return JSON.parse(await (Body as any).transformToString());
   }
@@ -96,6 +96,8 @@ export const handler = async (event: any) => {
       bucket: SUMMARY_BUCKET,
       key: summaryKey,
     },
+    summary_url:
+      "https://" + SUMMARY_BUCKET + ".s3.us-east-1.amazonaws.com/" + summaryKey,
   };
 
   return {
@@ -104,3 +106,4 @@ export const handler = async (event: any) => {
     body: JSON.stringify(responseBody),
   };
 };
+
