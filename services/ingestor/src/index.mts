@@ -106,7 +106,14 @@ export const handler = async (event: any) => {
         if (lastSummary.status && lastSummary.status !== "running") break;
       }
     } catch (err: any) {
-      console.error("Error polling summary:", err?.message || err);
+      const status = err?.$metadata?.httpStatusCode;
+      const code = err?.name || err?.code;
+      console.error(
+        "Error polling summary:",
+        code,
+        status,
+        err?.message || err
+      );
       break;
     }
     await sleep(SUMMARY_POLL_INTERVAL_MS);
