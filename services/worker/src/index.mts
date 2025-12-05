@@ -39,7 +39,12 @@ async function streamToString(stream: any): Promise<string> {
   return Buffer.concat(chunks).toString("utf-8");
 }
 
-type FailureSample = { messageId: string; reason: string; key?: string };
+type FailureDetail = {
+  messageId: string;
+  reason: string;
+  key?: string;
+  payload?: any;
+};
 type JobSummary = {
   jobId: string;
   status: string;
@@ -47,14 +52,14 @@ type JobSummary = {
   processed: number;
   successCount: number;
   failureCount: number;
-  failureSamples: FailureSample[];
+  failuresDetail: FailureDetail[];
   createdAt: string;
   updatedAt: string;
   bucket?: string;
   rawKey?: string;
   chunksPrefix?: string;
 };
-type SummaryDelta = { success: number; failures: FailureSample[] };
+type SummaryDelta = { success: number; failures: FailureDetail[] };
 
 async function getChunkFromEvent(
   record: any
@@ -123,7 +128,15 @@ async function getJobSummary(bucket: string, jobId: string): Promise<JobSummary>
   try {
     const obj = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
     const jsonText = await streamToString(obj.Body);
-    return JSON.parse(jsonText);
+    const parsed = JSON.parse(jsonText);
+    // Normalize legacy failureSamples -> failuresDetail
+    if (!parsed.failuresDetail && Array.isArray(parsed.failureSamples)) {
+      parsed.failuresDetail = parsed.failureSamples;
+    }
+    parsed.failuresDetail = Array.isArray(parsed.failuresDetail)
+      ? parsed.failuresDetail
+      : [];
+    return parsed;
   } catch (err: any) {
     const status = err?.$metadata?.httpStatusCode;
     if (status === 404 || err?.name === "NoSuchKey") {
@@ -135,7 +148,7 @@ async function getJobSummary(bucket: string, jobId: string): Promise<JobSummary>
         processed: 0,
         successCount: 0,
         failureCount: 0,
-        failureSamples: [],
+        failuresDetail: [],
         createdAt: nowIso,
         updatedAt: nowIso,
       };
@@ -177,12 +190,17 @@ async function applySummaryDelta(
     summary.failureCount = (summary.failureCount || 0) + failureDelta;
     summary.processed = (summary.successCount || 0) + (summary.failureCount || 0);
 
-    const existingSamples = Array.isArray(summary.failureSamples)
-      ? summary.failureSamples
+    // Normalize legacy failureSamples -> failuresDetail
+    if (!summary.failuresDetail && Array.isArray((summary as any).failureSamples)) {
+      summary.failuresDetail = (summary as any).failureSamples;
+    }
+
+    const existingSamples = Array.isArray(summary.failuresDetail)
+      ? summary.failuresDetail
       : [];
     const newSamples = delta.failures ?? [];
 
-    summary.failureSamples = [...newSamples, ...existingSamples].slice(
+    summary.failuresDetail = [...newSamples, ...existingSamples].slice(
       0,
       SUMMARY_FAILURE_SAMPLE_LIMIT
     );
@@ -259,7 +277,7 @@ export const handler = async (event: any) => {
   const failures: Array<{ itemIdentifier: string }> = [];
   const summaryDeltas = new Map<
     string,
-    { bucket: string; success: number; failures: FailureSample[] }
+    { bucket: string; success: number; failures: FailureDetail[] }
   >();
   log("info", `SQS batch received: ${event.Records?.length || 0} messages`);
 
@@ -357,6 +375,7 @@ export const handler = async (event: any) => {
           messageId,
           reason: err?.message || "Unknown error",
           key,
+          payload,
         });
       }
 
