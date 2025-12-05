@@ -4,6 +4,7 @@ import {
   HeadObjectCommand,
   GetObjectCommand,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import crypto from "node:crypto";
 
 const s3 = new S3Client({});
@@ -24,6 +25,9 @@ const SUMMARY_MAX_WAIT_MS = Number(
 );
 const SUMMARY_DEFAULT_WAIT_SECONDS = Number(
   process.env.SUMMARY_DEFAULT_WAIT_SECONDS || "10"
+);
+const SUMMARY_URL_TTL_SECONDS = Number(
+  process.env.SUMMARY_URL_TTL_SECONDS || "3600"
 );
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -66,6 +70,19 @@ async function getSummaryIfChanged(
   return { etag, data };
 }
 
+async function buildSummaryUrl(bucket: string, key: string) {
+  try {
+    return await getSignedUrl(
+      s3,
+      new GetObjectCommand({ Bucket: bucket, Key: key }),
+      { expiresIn: SUMMARY_URL_TTL_SECONDS }
+    );
+  } catch (err: any) {
+    console.error("Failed to sign summary URL:", err?.message || err);
+    return null;
+  }
+}
+
 export const handler = async (event: any) => {
   const body =
     typeof event.body === "string"
@@ -94,6 +111,8 @@ export const handler = async (event: any) => {
       key: summaryKey,
     },
   };
+  const signedUrl = await buildSummaryUrl(SUMMARY_BUCKET, summaryKey);
+  if (signedUrl) responseBody.summary_url = signedUrl;
 
   return {
     statusCode: 202,
