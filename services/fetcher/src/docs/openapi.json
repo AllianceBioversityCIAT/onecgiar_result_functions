@@ -99,6 +99,22 @@
                               "grant_title": "Climate-Resilient Varieties"
                             }
                           ],
+                          "contributing_programs": [
+                            {
+                              "science_program_id": "SP02",
+                              "aow_compose_code": "SP02-AOW03",
+                              "result_title": "Nutrition outcomes improved",
+                              "result_indicator_description": "Households reached with nutrition interventions",
+                              "result_indicator_type_name": "Outcome"
+                            },
+                            {
+                              "science_program_id": "SP09",
+                              "aow_compose_code": "SP09.AOW01",
+                              "result_title": "Climate-resilient crop systems adopted",
+                              "result_indicator_description": "Number of climate resilient practices documented",
+                              "result_indicator_type_name": "Output"
+                            }
+                          ],
                           "knowledge_product": {
                             "handle": "hdl:20.500.12345/abc-2025",
                             "knowledge_product_type": "Journal Article",
@@ -184,6 +200,22 @@
                           "contributing_bilateral_projects": [
                             {
                               "grant_title": "AgPolicy 2025"
+                            }
+                          ],
+                          "contributing_programs": [
+                            {
+                              "science_program_id": "SP02",
+                              "aow_compose_code": "SP02-AOW03",
+                              "result_title": "Nutrition outcomes improved",
+                              "result_indicator_description": "Households reached with nutrition interventions",
+                              "result_indicator_type_name": "Outcome"
+                            },
+                            {
+                              "science_program_id": "SP09",
+                              "aow_compose_code": "SP09.AOW01",
+                              "result_title": "Climate-resilient crop systems adopted",
+                              "result_indicator_description": "Number of climate resilient practices documented",
+                              "result_indicator_type_name": "Output"
                             }
                           ],
                           "knowledge_product": {
@@ -275,6 +307,22 @@
                               "grant_title": "County Seed Data"
                             }
                           ],
+                          "contributing_programs": [
+                            {
+                              "science_program_id": "SP02",
+                              "aow_compose_code": "SP02-AOW03",
+                              "result_title": "Nutrition outcomes improved",
+                              "result_indicator_description": "Households reached with nutrition interventions",
+                              "result_indicator_type_name": "Outcome"
+                            },
+                            {
+                              "science_program_id": "SP09",
+                              "aow_compose_code": "SP09.AOW01",
+                              "result_title": "Climate-resilient crop systems adopted",
+                              "result_indicator_description": "Number of climate resilient practices documented",
+                              "result_indicator_type_name": "Output"
+                            }
+                          ],
                           "knowledge_product": {
                             "handle": "hdl:20.500.12345/kedata-2025",
                             "knowledge_product_type": "Dataset",
@@ -350,6 +398,22 @@
                               "grant_title": "Global Evidence 2025"
                             }
                           ],
+                          "contributing_programs": [
+                            {
+                              "science_program_id": "SP02",
+                              "aow_compose_code": "SP02-AOW03",
+                              "result_title": "Nutrition outcomes improved",
+                              "result_indicator_description": "Households reached with nutrition interventions",
+                              "result_indicator_type_name": "Outcome"
+                            },
+                            {
+                              "science_program_id": "SP09",
+                              "aow_compose_code": "SP09.AOW01",
+                              "result_title": "Climate-resilient crop systems adopted",
+                              "result_indicator_description": "Number of climate resilient practices documented",
+                              "result_indicator_type_name": "Output"
+                            }
+                          ],
                           "knowledge_product": {
                             "handle": "hdl:20.500.12345/global-2025",
                             "knowledge_product_type": "Journal Article",
@@ -423,6 +487,22 @@
                           "contributing_bilateral_projects": [
                             {
                               "grant_title": "MIN-001"
+                            }
+                          ],
+                          "contributing_programs": [
+                            {
+                              "science_program_id": "SP02",
+                              "aow_compose_code": "SP02-AOW03",
+                              "result_title": "Nutrition outcomes improved",
+                              "result_indicator_description": "Households reached with nutrition interventions",
+                              "result_indicator_type_name": "Outcome"
+                            },
+                            {
+                              "science_program_id": "SP09",
+                              "aow_compose_code": "SP09.AOW01",
+                              "result_title": "Climate-resilient crop systems adopted",
+                              "result_indicator_description": "Number of climate resilient practices documented",
+                              "result_indicator_type_name": "Output"
                             }
                           ],
                           "knowledge_product": {
@@ -526,6 +606,22 @@
                               "grant_title": "Climate Training Initiative"
                             }
                           ],
+                          "contributing_programs": [
+                            {
+                              "science_program_id": "SP02",
+                              "aow_compose_code": "SP02-AOW03",
+                              "result_title": "Nutrition outcomes improved",
+                              "result_indicator_description": "Households reached with nutrition interventions",
+                              "result_indicator_type_name": "Outcome"
+                            },
+                            {
+                              "science_program_id": "SP09",
+                              "aow_compose_code": "SP09.AOW01",
+                              "result_title": "Climate-resilient crop systems adopted",
+                              "result_indicator_description": "Number of climate resilient practices documented",
+                              "result_indicator_type_name": "Output"
+                            }
+                          ],
                           "capacity_sharing": {
                             "number_people_trained": {
                               "women": 150,
@@ -609,6 +705,22 @@
                               "grant_title": "Tech Innovation Fund"
                             }
                           ],
+                          "contributing_programs": [
+                            {
+                              "science_program_id": "SP02",
+                              "aow_compose_code": "SP02-AOW03",
+                              "result_title": "Nutrition outcomes improved",
+                              "result_indicator_description": "Households reached with nutrition interventions",
+                              "result_indicator_type_name": "Outcome"
+                            },
+                            {
+                              "science_program_id": "SP09",
+                              "aow_compose_code": "SP09.AOW01",
+                              "result_title": "Climate-resilient crop systems adopted",
+                              "result_indicator_description": "Number of climate resilient practices documented",
+                              "result_indicator_type_name": "Output"
+                            }
+                          ],
                           "innovation_development": {
                             "innovation_typology": {
                               "code": 12,
@@ -688,6 +800,22 @@
                           "contributing_bilateral_projects": [
                             {
                               "grant_title": "Seed Adoption Initiative"
+                            }
+                          ],
+                          "contributing_programs": [
+                            {
+                              "science_program_id": "SP02",
+                              "aow_compose_code": "SP02-AOW03",
+                              "result_title": "Nutrition outcomes improved",
+                              "result_indicator_description": "Households reached with nutrition interventions",
+                              "result_indicator_type_name": "Outcome"
+                            },
+                            {
+                              "science_program_id": "SP09",
+                              "aow_compose_code": "SP09.AOW01",
+                              "result_title": "Climate-resilient crop systems adopted",
+                              "result_indicator_description": "Number of climate resilient practices documented",
+                              "result_indicator_type_name": "Output"
                             }
                           ],
                           "innovation_use": {
@@ -828,6 +956,22 @@
                               "grant_title": "Innovation Monitoring Fund"
                             }
                           ],
+                          "contributing_programs": [
+                            {
+                              "science_program_id": "SP02",
+                              "aow_compose_code": "SP02-AOW03",
+                              "result_title": "Nutrition outcomes improved",
+                              "result_indicator_description": "Households reached with nutrition interventions",
+                              "result_indicator_type_name": "Outcome"
+                            },
+                            {
+                              "science_program_id": "SP09",
+                              "aow_compose_code": "SP09.AOW01",
+                              "result_title": "Climate-resilient crop systems adopted",
+                              "result_indicator_description": "Number of climate resilient practices documented",
+                              "result_indicator_type_name": "Output"
+                            }
+                          ],
                           "innovation_use": {
                             "current_innovation_use_numbers": {
                               "innov_use_to_be_determined": false,
@@ -934,6 +1078,22 @@
                               "grant_title": "Innovation Scaling Fund"
                             }
                           ],
+                          "contributing_programs": [
+                            {
+                              "science_program_id": "SP02",
+                              "aow_compose_code": "SP02-AOW03",
+                              "result_title": "Nutrition outcomes improved",
+                              "result_indicator_description": "Households reached with nutrition interventions",
+                              "result_indicator_type_name": "Outcome"
+                            },
+                            {
+                              "science_program_id": "SP09",
+                              "aow_compose_code": "SP09.AOW01",
+                              "result_title": "Climate-resilient crop systems adopted",
+                              "result_indicator_description": "Number of climate resilient practices documented",
+                              "result_indicator_type_name": "Output"
+                            }
+                          ],
                           "innovation_use": {
                             "current_innovation_use_numbers": {
                               "innov_use_to_be_determined": true
@@ -1009,6 +1169,22 @@
                           "contributing_bilateral_projects": [
                             {
                               "grant_title": "Kenya Agriculture Innovation Project"
+                            }
+                          ],
+                          "contributing_programs": [
+                            {
+                              "science_program_id": "SP02",
+                              "aow_compose_code": "SP02-AOW03",
+                              "result_title": "Nutrition outcomes improved",
+                              "result_indicator_description": "Households reached with nutrition interventions",
+                              "result_indicator_type_name": "Outcome"
+                            },
+                            {
+                              "science_program_id": "SP09",
+                              "aow_compose_code": "SP09.AOW01",
+                              "result_title": "Climate-resilient crop systems adopted",
+                              "result_indicator_description": "Number of climate resilient practices documented",
+                              "result_indicator_type_name": "Output"
                             }
                           ],
                           "policy_change": {
@@ -1090,6 +1266,22 @@
                             }
                           ],
                           "contributing_bilateral_projects": [],
+                          "contributing_programs": [
+                            {
+                              "science_program_id": "SP02",
+                              "aow_compose_code": "SP02-AOW03",
+                              "result_title": "Nutrition outcomes improved",
+                              "result_indicator_description": "Households reached with nutrition interventions",
+                              "result_indicator_type_name": "Outcome"
+                            },
+                            {
+                              "science_program_id": "SP09",
+                              "aow_compose_code": "SP09.AOW01",
+                              "result_title": "Climate-resilient crop systems adopted",
+                              "result_indicator_description": "Number of climate resilient practices documented",
+                              "result_indicator_type_name": "Output"
+                            }
+                          ],
                           "policy_change": {
                             "policy_type": {
                               "id": 2,
@@ -1167,6 +1359,22 @@
                             {
                               "grant_title": "General Fund"
                             }
+                          ],
+                          "contributing_programs": [
+                            {
+                              "science_program_id": "SP02",
+                              "aow_compose_code": "SP02-AOW03",
+                              "result_title": "Nutrition outcomes improved",
+                              "result_indicator_description": "Households reached with nutrition interventions",
+                              "result_indicator_type_name": "Outcome"
+                            },
+                            {
+                              "science_program_id": "SP09",
+                              "aow_compose_code": "SP09.AOW01",
+                              "result_title": "Climate-resilient crop systems adopted",
+                              "result_indicator_description": "Number of climate resilient practices documented",
+                              "result_indicator_type_name": "Output"
+                            }
                           ]
                         }
                       }
@@ -1231,6 +1439,22 @@
                             {
                               "grant_title": "Outcome Research Fund"
                             }
+                          ],
+                          "contributing_programs": [
+                            {
+                              "science_program_id": "SP02",
+                              "aow_compose_code": "SP02-AOW03",
+                              "result_title": "Nutrition outcomes improved",
+                              "result_indicator_description": "Households reached with nutrition interventions",
+                              "result_indicator_type_name": "Outcome"
+                            },
+                            {
+                              "science_program_id": "SP09",
+                              "aow_compose_code": "SP09.AOW01",
+                              "result_title": "Climate-resilient crop systems adopted",
+                              "result_indicator_description": "Number of climate resilient practices documented",
+                              "result_indicator_type_name": "Output"
+                            }
                           ]
                         }
                       }
@@ -1267,6 +1491,22 @@
                             "result_indicator_description": "n/a",
                             "result_indicator_type_name": "# Of Knowledge Products"
                           },
+                          "contributing_programs": [
+                            {
+                              "science_program_id": "SP02",
+                              "aow_compose_code": "SP02-AOW03",
+                              "result_title": "Nutrition outcomes improved",
+                              "result_indicator_description": "Households reached with nutrition interventions",
+                              "result_indicator_type_name": "Outcome"
+                            },
+                            {
+                              "science_program_id": "SP09",
+                              "aow_compose_code": "SP09.AOW01",
+                              "result_title": "Climate-resilient crop systems adopted",
+                              "result_indicator_description": "Number of climate resilient practices documented",
+                              "result_indicator_type_name": "Output"
+                            }
+                          ],
                           "knowledge_product": {
                             "handle": "hdl:20.500.12345/invalid",
                             "knowledge_product_type": "Other",

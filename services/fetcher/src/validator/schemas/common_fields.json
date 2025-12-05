@@ -310,6 +310,47 @@
         },
         "additionalProperties": false
       }
+    },
+
+    "contributing_programs": {
+      "type": "array",
+      "description": "Array of science programs contributing to the result",
+      "items": {
+        "type": "object",
+        "required": [
+          "science_program_id",
+          "aow_compose_code",
+          "result_title",
+          "result_indicator_description",
+          "result_indicator_type_name"
+        ],
+        "properties": {
+          "science_program_id": { "type": "string" },
+          "aow_compose_code": { "type": "string" },
+          "result_title": { "type": "string" },
+          "result_indicator_description": { "type": "string" },
+          "result_indicator_type_name": { "type": "string" }
+        },
+        "additionalProperties": false,
+        "examples": [
+          [
+            {
+              "science_program_id": "SP02",
+              "aow_compose_code": "SP02-AOW03",
+              "result_title": "Nutrition outcomes improved",
+              "result_indicator_description": "Households reached with nutrition interventions",
+              "result_indicator_type_name": "Outcome"
+            },
+            {
+              "science_program_id": "SP09",
+              "aow_compose_code": "SP09.AOW01",
+              "result_title": "Climate-resilient crop systems adopted",
+              "result_indicator_description": "Number of climate resilient practices documented",
+              "result_indicator_type_name": "Output"
+            }
+          ]
+        ]
+      }
     }
   }
 }
