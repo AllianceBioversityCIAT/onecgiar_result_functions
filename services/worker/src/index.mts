@@ -162,6 +162,8 @@ async function saveJobSummary(
   jobId: string,
   summary: JobSummary
 ): Promise<void> {
+  // Clean legacy field to avoid duplicate keys
+  if ((summary as any).failureSamples) delete (summary as any).failureSamples;
   const key = getSummaryKey(jobId);
   await s3.send(
     new PutObjectCommand({
