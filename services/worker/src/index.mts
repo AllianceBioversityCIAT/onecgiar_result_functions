@@ -311,26 +311,30 @@ export const handler = async (event: any) => {
 
       // Even with 2xx, PRMS could signal logical failures in the body (e.g., duplicates).
       const resBody = await res.text();
+      let parsedBody: any = null;
       if (resBody) {
         try {
-          const parsed = JSON.parse(resBody);
-          const logicalError =
-            parsed?.ok === false ||
-            parsed?.error ||
-            parsed?.failed > 0 ||
-            parsed?.failureCount > 0 ||
-            (parsed?.successful === 0 && parsed?.total > 0);
-          if (logicalError) {
-            const logicalMsg = `PRMS logical error (status ${res.status}): ${resBody.substring(
-              0,
-              500
-            )}`;
-            log("error", logicalMsg);
-            throw new Error(logicalMsg);
-          }
-        } catch (parseErr) {
-          // If body isn't JSON, ignore and proceed as success.
+          parsedBody = JSON.parse(resBody);
+        } catch {
+          // Ignore non-JSON body
           log("debug", "Non-JSON PRMS body, treating as success");
+        }
+      }
+
+      if (parsedBody) {
+        const logicalError =
+          parsedBody?.ok === false ||
+          parsedBody?.error ||
+          parsedBody?.failed > 0 ||
+          parsedBody?.failureCount > 0 ||
+          (parsedBody?.successful === 0 && parsedBody?.total > 0);
+        if (logicalError) {
+          const logicalMsg = `PRMS logical error (status ${res.status}): ${resBody.substring(
+            0,
+            500
+          )}`;
+          log("error", logicalMsg);
+          throw new Error(logicalMsg);
         }
       }
 
