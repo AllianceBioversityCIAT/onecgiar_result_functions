@@ -84,62 +84,16 @@ export const handler = async (event: any) => {
     })
   );
 
-  const waitSeconds = SUMMARY_DEFAULT_WAIT_SECONDS;
-  const timeoutMs = Math.min(waitSeconds * 1000, SUMMARY_MAX_WAIT_MS);
-  const deadline = Date.now() + timeoutMs;
   const summaryKey = getSummaryKey(jobId);
-
-  let lastEtag: string | undefined;
-  let lastSummary: any = null;
-
-  // Poll summary until ready or timeout
-  while (waitSeconds > 0 && Date.now() < deadline) {
-    try {
-      const changed = await getSummaryIfChanged(
-        SUMMARY_BUCKET,
-        summaryKey,
-        lastEtag
-      );
-      if (changed?.etag) lastEtag = changed.etag;
-      if (changed?.data) {
-        lastSummary = changed.data;
-        if (lastSummary.status && lastSummary.status !== "running") break;
-      }
-    } catch (err: any) {
-      const status = err?.$metadata?.httpStatusCode;
-      const code = err?.name || err?.code;
-      console.error(
-        "Error polling summary:",
-        code,
-        status,
-        err?.message || err
-      );
-      break;
-    }
-    await sleep(SUMMARY_POLL_INTERVAL_MS);
-  }
 
   const responseBody: any = {
     job_id: jobId,
     count: items.length,
-  };
-
-  if (lastSummary && lastSummary.status && lastSummary.status !== "running") {
-    responseBody.summary = lastSummary;
-    responseBody.summary_status = lastSummary.status;
-    responseBody.summary_source = "poll";
-  } else if (waitSeconds > 0) {
-    if (lastSummary) {
-      responseBody.summary = lastSummary;
-      responseBody.summary_status = lastSummary.status;
-    }
-    responseBody.summary_pending = true;
-    responseBody.summary_wait_ms = timeoutMs;
-    responseBody.summary_location = {
+    summary_location: {
       bucket: SUMMARY_BUCKET,
       key: summaryKey,
-    };
-  }
+    },
+  };
 
   return {
     statusCode: 202,
