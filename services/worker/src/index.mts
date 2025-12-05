@@ -199,6 +199,11 @@ async function applySummaryDelta(
       summary.status = "running";
     }
 
+    log(
+      "info",
+      `Updating summary for job=${jobId} in bucket=${bucket} -> status=${summary.status}, total=${summary.total}, processed=${summary.processed}, success=${summary.successCount}, failures=${summary.failureCount}`
+    );
+
     await saveJobSummary(bucket, jobId, summary);
   } catch (err: any) {
     log(
