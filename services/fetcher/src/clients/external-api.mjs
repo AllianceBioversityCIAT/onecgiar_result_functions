@@ -152,7 +152,7 @@ export class ExternalApiClient {
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
       const response = await fetch(url, {
-        method: "DELETE",
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
