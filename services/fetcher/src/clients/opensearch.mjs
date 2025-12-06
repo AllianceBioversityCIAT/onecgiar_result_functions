@@ -7,17 +7,12 @@ export class OpenSearchClient {
 
   constructor(endpoint, indexPrefix = "prms-results") {
     const baseEndpoint =
-      endpoint ||
-      process.env.OPENSEARCH_ENDPOINT ||
-      "https://localhost:9200";
+      endpoint || process.env.OPENSEARCH_ENDPOINT || "https://localhost:9200";
 
     this.endpoint = baseEndpoint.replace(/\/+$/, "");
     this.indexPrefix = indexPrefix;
 
-    if (
-      process.env.OPENSEARCH_USERNAME &&
-      process.env.OPENSEARCH_PASSWORD
-    ) {
+    if (process.env.OPENSEARCH_USERNAME && process.env.OPENSEARCH_PASSWORD) {
       this.auth = {
         username: process.env.OPENSEARCH_USERNAME,
         password: process.env.OPENSEARCH_PASSWORD,
@@ -115,11 +110,7 @@ export class OpenSearchClient {
     }
   }
 
-  async makeRequest(
-    method,
-    path,
-    body
-  ) {
+  async makeRequest(method, path, body) {
     const url = `${this.endpoint}${path}`;
 
     try {
@@ -132,8 +123,9 @@ export class OpenSearchClient {
         method,
         headers: this.getHeaders(),
         body: body ? JSON.stringify(body) : undefined,
-        ...(process.env.NODE_ENV !== "production" &&
-          ({ rejectUnauthorized: false })),
+        ...(process.env.NODE_ENV !== "production" && {
+          rejectUnauthorized: false,
+        }),
       });
 
       if (!response.ok) {
@@ -181,9 +173,38 @@ export class OpenSearchClient {
     }
   }
 
+  parseNumericId(value) {
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === "string" && value.trim() !== "") {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+
+    return undefined;
+  }
+
   async indexResult(result) {
     const indexName = this.getIndexName(result.type);
-    let documentId = result.idempotencyKey || result.result_id || result.id;
+    const resolvedResultId = this.parseNumericId(
+      result.result_id ??
+        result.id ??
+        result?.data?.result_id ??
+        result?.data?.id
+    );
+    let documentId =
+      result.idempotencyKey ||
+      resolvedResultId ||
+      result.result_id ||
+      result.id;
 
     if (!documentId) {
       try {
@@ -206,7 +227,7 @@ export class OpenSearchClient {
       documentId,
       type: result.type,
       idempotencyKey: result.idempotencyKey,
-      hasResultId: !!result.result_id,
+      hasResultId: resolvedResultId !== undefined,
       hasResultCode: !!result.result_code,
       hasId: !!result.id,
     });
@@ -214,8 +235,11 @@ export class OpenSearchClient {
     try {
       const document = {
         ...result,
+        ...(resolvedResultId !== undefined
+          ? { result_id: resolvedResultId }
+          : {}),
         indexed_at: new Date().toISOString(),
-        has_external_id: !!result.result_id,
+        has_external_id: resolvedResultId !== undefined,
       };
 
       const response = await this.makeRequest(
@@ -256,7 +280,17 @@ export class OpenSearchClient {
 
       for (const result of results) {
         const indexName = this.getIndexName(result.type);
-        const documentId = result.idempotencyKey || result.result_id || result.id;
+        const resolvedResultId = this.parseNumericId(
+          result.result_id ??
+            result.id ??
+            result?.data?.result_id ??
+            result?.data?.id
+        );
+        const documentId =
+          result.idempotencyKey ||
+          resolvedResultId ||
+          result.result_id ||
+          result.id;
 
         indexTypes.add(result.type);
 
@@ -272,9 +306,12 @@ export class OpenSearchClient {
         body.push(
           JSON.stringify({
             ...result,
+            ...(resolvedResultId !== undefined
+              ? { result_id: resolvedResultId }
+              : {}),
             indexed_at: new Date().toISOString(),
             tenant_type: `${result.tenant}_${result.type}`,
-            has_external_id: !!result.result_id,
+            has_external_id: resolvedResultId !== undefined,
           })
         );
       }
@@ -292,8 +329,7 @@ export class OpenSearchClient {
       );
 
       const errors = (response.items || []).filter(
-        (item) =>
-          item.index?.error || item.create?.error || item.update?.error
+        (item) => item.index?.error || item.create?.error || item.update?.error
       );
 
       if (errors.length > 0) {
@@ -416,20 +452,30 @@ export class OpenSearchClient {
   async deleteByResultId(resultId) {
     const numericId = Number(resultId);
     if (!Number.isFinite(numericId)) {
-      throw new Error("A valid numeric resultId is required to delete documents");
+      throw new Error(
+        "A valid numeric resultId is required to delete documents"
+      );
     }
 
     const query = {
       size: 1000,
       query: {
-        term: {
-          result_id: numericId,
+        bool: {
+          should: [
+            { term: { result_id: numericId } },
+            { term: { id: numericId } },
+            { term: { id: String(numericId) } },
+            { term: { "data.result_id": numericId } },
+            { term: { "data.id": numericId } },
+            { term: { "data.id": String(numericId) } },
+          ],
+          minimum_should_match: 1,
         },
       },
     };
 
     console.log(
-      `[OpenSearchClient] Searching documents to delete for result_id=${numericId}`
+      `[OpenSearchClient] Searching documents to delete for result_id/id=${numericId}`
     );
 
     let searchResponse;
