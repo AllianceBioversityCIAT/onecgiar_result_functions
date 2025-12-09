@@ -394,9 +394,30 @@ app.patch("/update/:id", async (req, res) => {
   }
 
   const body = req.body || {};
-  const type =
+  let type =
     typeof body.type === "string" ? body.type.toLowerCase().trim() : "";
-  const data = body.data;
+  let data = body.data;
+
+  const resultList = Array.isArray(body.results)
+    ? body.results
+    : body.results
+    ? [body.results]
+    : [];
+  const firstResult = resultList[0];
+
+  if ((!type || !type.length) && firstResult?.type) {
+    type =
+      typeof firstResult.type === "string"
+        ? firstResult.type.toLowerCase().trim()
+        : "";
+  }
+  if (
+    (!data || typeof data !== "object") &&
+    firstResult?.data &&
+    typeof firstResult.data === "object"
+  ) {
+    data = firstResult.data;
+  }
 
   if (!type) {
     return res.status(400).json({
@@ -419,22 +440,31 @@ app.patch("/update/:id", async (req, res) => {
   const tenantRaw =
     body.tenant !== undefined && body.tenant !== null
       ? String(body.tenant).trim()
+      : firstResult?.tenant && typeof firstResult.tenant === "string"
+      ? String(firstResult.tenant).trim()
       : undefined;
   const tenant = tenantRaw ? tenantRaw.toLowerCase() : undefined;
   const jobIdRaw =
     body.jobId !== undefined && body.jobId !== null
       ? String(body.jobId).trim()
+      : firstResult?.jobId !== undefined && firstResult?.jobId !== null
+      ? String(firstResult.jobId).trim()
       : undefined;
-  const jobId = jobIdRaw ? jobIdRaw : undefined;
+  const jobId = jobIdRaw || undefined;
   const providedIdempotencyKeyRaw =
     body.idempotencyKey !== undefined && body.idempotencyKey !== null
       ? String(body.idempotencyKey).trim()
+      : firstResult?.idempotencyKey !== undefined &&
+        firstResult?.idempotencyKey !== null
+      ? String(firstResult.idempotencyKey).trim()
       : undefined;
-  const providedIdempotencyKey = providedIdempotencyKeyRaw
-    ? providedIdempotencyKeyRaw
-    : undefined;
+  const providedIdempotencyKey = providedIdempotencyKeyRaw || undefined;
 
-  let receivedAt = body.received_at;
+  let receivedAt =
+    body.received_at ||
+    body.receivedAt ||
+    firstResult?.received_at ||
+    firstResult?.receivedAt;
   if (receivedAt) {
     const parsed = new Date(receivedAt);
     receivedAt = Number.isNaN(parsed.getTime())
