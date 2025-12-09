@@ -281,7 +281,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["link", "description"],
+        "required": ["link"],
         "properties": {
           "link": { "type": "string", "format": "uri" },
           "description": { "type": "string" }
