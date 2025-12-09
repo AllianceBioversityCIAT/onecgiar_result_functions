@@ -1736,39 +1736,39 @@
             }
           }
         }
-      }
-    },
-    "UpdateResultRequest": {
-      "type": "object",
-      "required": ["type", "data"],
-      "properties": {
-        "type": {
-          "type": "string",
-          "description": "Result type to update",
-          "example": "knowledge_product"
-        },
-        "tenant": {
-          "type": "string",
-          "description": "Tenant identifier responsible for the result",
-          "example": "prms.result-management.api"
-        },
-        "jobId": {
-          "type": "string",
-          "description": "Optional job identifier to correlate updates",
-          "example": "sync-123"
-        },
-        "idempotencyKey": {
-          "type": "string",
-          "description": "Optional idempotency key override"
-        },
-        "received_at": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Override for the received timestamp stored in OpenSearch"
-        },
-        "data": {
-          "type": "object",
-          "description": "Partial payload with the fields to update"
+      },
+      "UpdateResultRequest": {
+        "type": "object",
+        "required": ["type", "data"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Result type to update",
+            "example": "knowledge_product"
+          },
+          "tenant": {
+            "type": "string",
+            "description": "Tenant identifier responsible for the result",
+            "example": "prms.result-management.api"
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Optional job identifier to correlate updates",
+            "example": "sync-123"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Optional idempotency key override"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Override for the received timestamp stored in OpenSearch"
+          },
+          "data": {
+            "type": "object",
+            "description": "Partial payload with the fields to update"
+          }
         }
       }
     }
