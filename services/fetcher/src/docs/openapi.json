@@ -1544,6 +1544,85 @@
         }
       }
     },
+    "/update/{id}": {
+      "patch": {
+        "summary": "Update a result by ID",
+        "description": "Calls the upstream API to update the result and then synchronizes the OpenSearch documents. If no documents exist, a new one is indexed with the updated payload.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Result identifier provided by the external API"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateResultRequest"
+              },
+              "example": {
+                "type": "knowledge_product",
+                "tenant": "prms.result-management.api",
+                "jobId": "sync-123",
+                "idempotencyKey": "prms.result-management.api:knowledge_product:result:12345",
+                "data": {
+                  "title": "Updated knowledge product title",
+                  "description": "Short description for the updated record."
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Result updated",
+            "content": {
+              "application/json": {
+                "example": {
+                  "ok": true,
+                  "message": "Result updated",
+                  "resultId": 12345,
+                  "type": "knowledge_product",
+                  "external": {
+                    "status": true,
+                    "message": "Result updated successfully",
+                    "response": {
+                      "result_id": 12345,
+                      "code": 9876
+                    }
+                  },
+                  "opensearch": {
+                    "action": "updated",
+                    "updated": 1,
+                    "attempts": 1,
+                    "results": [
+                      {
+                        "index": "prms-results-knowledge_product",
+                        "id": "12345",
+                        "success": true
+                      }
+                    ]
+                  },
+                  "timestamp": "2025-10-10T12:00:00Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ID or request payload"
+          },
+          "500": {
+            "description": "Failed to update the result"
+          }
+        }
+      }
+    },
     "/delete/{id}": {
       "delete": {
         "summary": "Delete a result by ID",
@@ -1656,6 +1735,40 @@
               }
             }
           }
+        }
+      }
+    },
+    "UpdateResultRequest": {
+      "type": "object",
+      "required": ["type", "data"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Result type to update",
+          "example": "knowledge_product"
+        },
+        "tenant": {
+          "type": "string",
+          "description": "Tenant identifier responsible for the result",
+          "example": "prms.result-management.api"
+        },
+        "jobId": {
+          "type": "string",
+          "description": "Optional job identifier to correlate updates",
+          "example": "sync-123"
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "description": "Optional idempotency key override"
+        },
+        "received_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Override for the received timestamp stored in OpenSearch"
+        },
+        "data": {
+          "type": "object",
+          "description": "Partial payload with the fields to update"
         }
       }
     }
