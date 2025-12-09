@@ -30,34 +30,7 @@
                   "type": "integer"
                 }
               },
-              "additionalProperties": false,
-              "allOf": [
-                {
-                  "if": {
-                    "properties": {
-                      "id": { "const": 1 }
-                    }
-                  },
-                  "then": {
-                    "required": ["status_amount", "amount"]
-                  }
-                },
-                {
-                  "if": {
-                    "properties": {
-                      "id": { "not": { "const": 1 } }
-                    }
-                  },
-                  "then": {
-                    "not": {
-                      "anyOf": [
-                        { "required": ["status_amount"] },
-                        { "required": ["amount"] }
-                      ]
-                    }
-                  }
-                }
-              ]
+              "additionalProperties": false
             },
             "policy_stage": {
               "type": "object",
