@@ -19,6 +19,63 @@ app.use(express.json({ limit: "5mb" }));
 const externalApiClient = new ExternalApiClient();
 const openSearchClient = new OpenSearchClient();
 
+const RESULT_TYPE_FIXED_FIELDS = {
+  knowledge_product: { result_type_id: 6, result_level_id: 4 },
+  capacity_sharing: { result_type_id: 3, result_level_id: 4 },
+  innovation_development: { result_type_id: 7, result_level_id: 4 },
+  innovation_use: { result_type_id: 2, result_level_id: 3 },
+  other_output: { result_type_id: 8, result_level_id: 4 },
+  other_outcome: { result_type_id: 4, result_level_id: 3 },
+  policy_change: { result_type_id: 1, result_level_id: 3 },
+};
+
+const RESULT_TYPE_ALIASES = {
+  kp: "knowledge_product",
+  knowledgeproduct: "knowledge_product",
+  cs: "capacity_sharing",
+  capacitysharing: "capacity_sharing",
+  id: "innovation_development",
+  innovationdevelopment: "innovation_development",
+  iu: "innovation_use",
+  innovationuse: "innovation_use",
+  oo: "other_output",
+  otheroutput: "other_output",
+  oc: "other_outcome",
+  otheroutcome: "other_outcome",
+  pc: "policy_change",
+  policychange: "policy_change",
+};
+
+const normalizeResultTypeValue = (value) => {
+  if (!value) {
+    return "";
+  }
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+};
+
+const resolveCanonicalResultType = (value) => {
+  const normalized = normalizeResultTypeValue(value);
+  if (!normalized) {
+    return "";
+  }
+  return RESULT_TYPE_ALIASES[normalized] || normalized;
+};
+
+const applyFixedFieldsForType = (resultType, data = {}) => {
+  const fixed = RESULT_TYPE_FIXED_FIELDS[resultType];
+  if (!fixed) {
+    return { ...data };
+  }
+
+  return {
+    ...data,
+    ...fixed,
+  };
+};
+
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "normalizer", ts: new Date().toISOString() });
 });
@@ -394,8 +451,7 @@ app.patch("/update/:id", async (req, res) => {
   }
 
   const body = req.body || {};
-  let type =
-    typeof body.type === "string" ? body.type.toLowerCase().trim() : "";
+  let type = resolveCanonicalResultType(body.type);
   let data = body.data;
 
   const resultList = Array.isArray(body.results)
@@ -406,10 +462,7 @@ app.patch("/update/:id", async (req, res) => {
   const firstResult = resultList[0];
 
   if ((!type || !type.length) && firstResult?.type) {
-    type =
-      typeof firstResult.type === "string"
-        ? firstResult.type.toLowerCase().trim()
-        : "";
+    type = resolveCanonicalResultType(firstResult.type);
   }
   if (
     (!data || typeof data !== "object") &&
@@ -474,6 +527,9 @@ app.patch("/update/:id", async (req, res) => {
     receivedAt = new Date().toISOString();
   }
 
+  const enrichedData = applyFixedFieldsForType(type, data);
+  const fixedFields = RESULT_TYPE_FIXED_FIELDS[type];
+
   try {
     logger.info("Updating result in external API", resultId, {
       type,
@@ -481,7 +537,7 @@ app.patch("/update/:id", async (req, res) => {
 
     const externalResponse = await externalApiClient.updateResult(resultId, {
       type,
-      data,
+      data: enrichedData,
       ...(jobId ? { jobId } : {}),
     });
 
@@ -514,6 +570,15 @@ app.patch("/update/:id", async (req, res) => {
         received_at: responsePayload?.received_at || receivedAt,
         result_id: responsePayload?.result_id ?? resultId,
       };
+
+      if (fixedFields) {
+        baseDocument.data = {
+          ...(baseDocument.data && typeof baseDocument.data === "object"
+            ? baseDocument.data
+            : {}),
+          ...fixedFields,
+        };
+      }
 
       logger.info("Updating result documents in OpenSearch", resultId, {
         type,
