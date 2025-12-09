@@ -377,6 +377,182 @@ app.post("/ingest", async (req, res) => {
   });
 });
 
+app.patch("/update/:id", async (req, res) => {
+  const requestId =
+    req.headers["x-amzn-trace-id"] || req.headers["x-request-id"];
+  const logger = new Logger();
+  const rawId = req.params.id;
+  const resultId = Number(rawId);
+
+  if (!Number.isFinite(resultId)) {
+    return res.status(400).json({
+      ok: false,
+      error: "invalid_result_id",
+      message: "Parameter :id must be a valid number",
+      requestId,
+    });
+  }
+
+  const body = req.body || {};
+  const type =
+    typeof body.type === "string" ? body.type.toLowerCase().trim() : "";
+  const data = body.data;
+
+  if (!type) {
+    return res.status(400).json({
+      ok: false,
+      error: "type_required",
+      message: "Body must include a valid type",
+      requestId,
+    });
+  }
+
+  if (!data || typeof data !== "object") {
+    return res.status(400).json({
+      ok: false,
+      error: "data_required",
+      message: "Body must include a data object to update",
+      requestId,
+    });
+  }
+
+  const tenantRaw =
+    body.tenant !== undefined && body.tenant !== null
+      ? String(body.tenant).trim()
+      : undefined;
+  const tenant = tenantRaw ? tenantRaw.toLowerCase() : undefined;
+  const jobIdRaw =
+    body.jobId !== undefined && body.jobId !== null
+      ? String(body.jobId).trim()
+      : undefined;
+  const jobId = jobIdRaw ? jobIdRaw : undefined;
+  const providedIdempotencyKeyRaw =
+    body.idempotencyKey !== undefined && body.idempotencyKey !== null
+      ? String(body.idempotencyKey).trim()
+      : undefined;
+  const providedIdempotencyKey = providedIdempotencyKeyRaw
+    ? providedIdempotencyKeyRaw
+    : undefined;
+
+  let receivedAt = body.received_at;
+  if (receivedAt) {
+    const parsed = new Date(receivedAt);
+    receivedAt = Number.isNaN(parsed.getTime())
+      ? new Date().toISOString()
+      : parsed.toISOString();
+  } else {
+    receivedAt = new Date().toISOString();
+  }
+
+  try {
+    logger.info("Updating result in external API", resultId, {
+      type,
+    });
+
+    const externalResponse = await externalApiClient.updateResult(resultId, {
+      type,
+      data,
+      ...(jobId ? { jobId } : {}),
+    });
+
+    const responsePayload =
+      externalResponse?.response ??
+      externalResponse?.data ??
+      externalResponse ??
+      null;
+
+    let opensearchOutcome = null;
+
+    if (responsePayload) {
+      const normalizedType =
+        typeof responsePayload?.type === "string" && responsePayload.type
+          ? responsePayload.type.toLowerCase()
+          : type;
+      const normalizedTenant =
+        typeof responsePayload?.tenant === "string" && responsePayload.tenant
+          ? responsePayload.tenant.toLowerCase()
+          : tenant || "unknown";
+
+      const baseDocument = {
+        ...responsePayload,
+        type: normalizedType,
+        tenant: normalizedTenant,
+        idempotencyKey:
+          responsePayload?.idempotencyKey ||
+          providedIdempotencyKey ||
+          `${normalizedTenant}:${normalizedType}:result:${resultId}`,
+        received_at: responsePayload?.received_at || receivedAt,
+        result_id: responsePayload?.result_id ?? resultId,
+      };
+
+      logger.info("Updating result documents in OpenSearch", resultId, {
+        type,
+      });
+
+      const updateResponse = await openSearchClient.updateDocumentsByResultId(
+        resultId,
+        baseDocument
+      );
+
+      if (!updateResponse.updated) {
+        logger.warn(
+          "No OpenSearch documents matched for update, indexing fallback document",
+          resultId,
+          { type }
+        );
+        await openSearchClient.ensureIndex(type);
+        const indexResponse = await openSearchClient.indexResult(baseDocument);
+        opensearchOutcome = {
+          action: "indexed",
+          response: indexResponse,
+        };
+      } else {
+        opensearchOutcome = {
+          action: "updated",
+          ...updateResponse,
+        };
+      }
+    } else {
+      logger.warn(
+        "External API did not return payload to update OpenSearch",
+        resultId
+      );
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: "Result updated",
+      resultId,
+      type,
+      requestId,
+      external: externalResponse,
+      opensearch: opensearchOutcome,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const status =
+      typeof error?.status === "number" && error.status >= 400
+        ? error.status
+        : 500;
+
+    logger.error("Result update failed", resultId, {
+      status,
+      error: message,
+    });
+
+    return res.status(status).json({
+      ok: false,
+      error: "result_update_failed",
+      message,
+      resultId,
+      requestId,
+      details: error?.apiResponse ?? error?.responseBody,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 app.delete("/delete/:id", async (req, res) => {
   const requestId =
     req.headers["x-amzn-trace-id"] || req.headers["x-request-id"];

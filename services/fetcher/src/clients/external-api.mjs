@@ -203,6 +203,99 @@ export class ExternalApiClient {
     }
   }
 
+  async updateResult(resultId, payload) {
+    const numericId = Number(resultId);
+    if (!Number.isFinite(numericId)) {
+      throw new Error(
+        "A valid numeric resultId is required to update a result"
+      );
+    }
+
+    if (!payload || typeof payload !== "object") {
+      throw new Error("Update payload must be an object");
+    }
+
+    const type =
+      typeof payload.type === "string" ? payload.type.trim() : undefined;
+    if (!type) {
+      throw new Error("Update payload must include a type");
+    }
+
+    if (!payload.data || typeof payload.data !== "object") {
+      throw new Error("Update payload must include a data object");
+    }
+
+    if (!this.baseUrl) {
+      throw new Error("External API URL not configured");
+    }
+
+    const body = {
+      type,
+      data: payload.data,
+      ...(payload.jobId ? { jobId: payload.jobId } : {}),
+    };
+
+    const base = this.baseUrl.replace(/\/+$/, "");
+    const url = `${base}/update/${encodeURIComponent(String(numericId))}`;
+
+    console.log(`[ExternalApiClient] Updating result ${numericId} via ${url}`, {
+      type,
+      hasJobId: !!payload.jobId,
+    });
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+      const response = await fetch(url, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      const contentType = response.headers.get("content-type") || "";
+      const responseBody = contentType.includes("application/json")
+        ? await response.json()
+        : await response.text();
+
+      if (!response.ok) {
+        const err = new Error(
+          `HTTP ${response.status}: ${response.statusText} updating result ${numericId}`
+        );
+        err.status = response.status;
+        err.statusText = response.statusText;
+        err.apiResponse = responseBody;
+        err.url = url;
+        throw err;
+      }
+
+      console.log(
+        `[ExternalApiClient] Update result ${numericId} response:`,
+        responseBody
+      );
+
+      return responseBody;
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        console.error(
+          `[ExternalApiClient] Timeout (${this.timeout}ms) updating result ${numericId}`
+        );
+      }
+
+      console.error(
+        `[ExternalApiClient] Failed to update result ${numericId}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
   /**
    * Sends a result once and returns both the possibly enriched result (adding result_id/result_code)
    * and the raw API response. On failure returns the original result and throws the error upward if desired.

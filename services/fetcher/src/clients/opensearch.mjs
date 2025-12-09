@@ -192,6 +192,37 @@ export class OpenSearchClient {
     return undefined;
   }
 
+  buildResultIdQuery(numericId) {
+    return {
+      size: 1000,
+      query: {
+        bool: {
+          should: [
+            { term: { result_id: numericId } },
+            { term: { id: numericId } },
+            { term: { id: String(numericId) } },
+            { term: { "data.result_id": numericId } },
+            { term: { "data.id": numericId } },
+            { term: { "data.id": String(numericId) } },
+          ],
+          minimum_should_match: 1,
+        },
+      },
+    };
+  }
+
+  async searchDocumentsByResultId(resultId) {
+    const numericId = Number(resultId);
+    if (!Number.isFinite(numericId)) {
+      throw new Error(
+        "A valid numeric resultId is required to search documents"
+      );
+    }
+
+    const query = this.buildResultIdQuery(numericId);
+    return this.search(query, true);
+  }
+
   async indexResult(result) {
     const indexName = this.getIndexName(result.type);
     const resolvedResultId = this.parseNumericId(
@@ -457,30 +488,13 @@ export class OpenSearchClient {
       );
     }
 
-    const query = {
-      size: 1000,
-      query: {
-        bool: {
-          should: [
-            { term: { result_id: numericId } },
-            { term: { id: numericId } },
-            { term: { id: String(numericId) } },
-            { term: { "data.result_id": numericId } },
-            { term: { "data.id": numericId } },
-            { term: { "data.id": String(numericId) } },
-          ],
-          minimum_should_match: 1,
-        },
-      },
-    };
-
     console.log(
       `[OpenSearchClient] Searching documents to delete for result_id/id=${numericId}`
     );
 
     let searchResponse;
     try {
-      searchResponse = await this.search(query, true);
+      searchResponse = await this.searchDocumentsByResultId(numericId);
     } catch (error) {
       if (error?.status === 404 || error?.message?.includes("404")) {
         console.warn(
@@ -539,6 +553,108 @@ export class OpenSearchClient {
       attempts: results.length,
       results,
     };
+  }
+
+  async updateDocumentsByResultId(resultId, document) {
+    const numericId = Number(resultId);
+    if (!Number.isFinite(numericId)) {
+      throw new Error(
+        "A valid numeric resultId is required to update documents"
+      );
+    }
+
+    if (!document || typeof document !== "object") {
+      throw new Error("A document payload is required to update OpenSearch");
+    }
+
+    console.log(
+      `[OpenSearchClient] Searching documents to update for result_id/id=${numericId}`
+    );
+
+    let searchResponse;
+    try {
+      searchResponse = await this.searchDocumentsByResultId(numericId);
+    } catch (error) {
+      if (error?.status === 404 || error?.message?.includes("404")) {
+        console.warn(
+          `[OpenSearchClient] No alias/index found while updating result_id=${numericId}`
+        );
+        return { updated: 0, attempts: 0, results: [] };
+      }
+      throw error;
+    }
+
+    const hits = searchResponse?.hits?.hits || [];
+    if (!hits.length) {
+      console.warn(
+        `[OpenSearchClient] No documents matched result_id=${numericId} for update`
+      );
+      return { updated: 0, attempts: 0, results: [] };
+    }
+
+    const results = [];
+
+    for (const hit of hits) {
+      const targetIndex = hit._index;
+      const documentId = hit._id;
+      const existingSource = hit?._source || {};
+      const updatedDocument = { ...document };
+
+      updatedDocument.type = updatedDocument.type || existingSource.type;
+      updatedDocument.tenant = updatedDocument.tenant || existingSource.tenant;
+      updatedDocument.idempotencyKey =
+        updatedDocument.idempotencyKey ||
+        existingSource.idempotencyKey ||
+        documentId;
+      updatedDocument.received_at =
+        updatedDocument.received_at ||
+        existingSource.received_at ||
+        new Date().toISOString();
+      updatedDocument.result_id =
+        this.parseNumericId(
+          updatedDocument.result_id ??
+            updatedDocument.id ??
+            updatedDocument?.data?.result_id ??
+            updatedDocument?.data?.id ??
+            existingSource.result_id ??
+            existingSource.id
+        ) ?? numericId;
+
+      const resolvedResultId = this.parseNumericId(updatedDocument.result_id);
+
+      const body = {
+        ...updatedDocument,
+        indexed_at: new Date().toISOString(),
+        has_external_id: resolvedResultId !== undefined,
+      };
+
+      try {
+        await this.makeRequest(
+          "PUT",
+          `/${targetIndex}/_doc/${encodeURIComponent(documentId)}?refresh=true`,
+          body
+        );
+        results.push({
+          index: targetIndex,
+          id: documentId,
+          success: true,
+        });
+      } catch (error) {
+        console.error(
+          `[OpenSearchClient] Failed to update document ${documentId} in ${targetIndex}`,
+          error
+        );
+        results.push({
+          index: targetIndex,
+          id: documentId,
+          success: false,
+          error: error?.message,
+        });
+      }
+    }
+
+    const updated = results.filter((item) => item.success).length;
+    return { updated, attempts: results.length, results };
   }
 
   async search(query, useAlias = true) {
