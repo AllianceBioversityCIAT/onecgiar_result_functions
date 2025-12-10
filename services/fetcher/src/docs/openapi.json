@@ -1566,14 +1566,37 @@
               "schema": {
                 "$ref": "#/components/schemas/UpdateResultRequest"
               },
-              "example": {
-                "type": "knowledge_product",
-                "tenant": "prms.result-management.api",
-                "jobId": "sync-123",
-                "idempotencyKey": "prms.result-management.api:knowledge_product:result:12345",
-                "data": {
-                  "title": "Updated knowledge product title",
-                  "description": "Short description for the updated record."
+              "examples": {
+                "flatPayload": {
+                  "summary": "Direct update payload",
+                  "value": {
+                    "type": "knowledge_product",
+                    "tenant": "prms.result-management.api",
+                    "jobId": "sync-123",
+                    "idempotencyKey": "prms.result-management.api:knowledge_product:result:12345",
+                    "data": {
+                      "title": "Updated knowledge product title",
+                      "description": "Short description for the updated record."
+                    }
+                  }
+                },
+                "ingestCompatibleWrapper": {
+                  "summary": "Wrapper compatible with ingest payloads",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "knowledge_product",
+                        "jobId": "sync-123",
+                        "idempotencyKey": "prms.result-management.api:knowledge_product:result:12345",
+                        "data": {
+                          "title": "Updated knowledge product title",
+                          "description": "Short description for the updated record."
+                        }
+                      }
+                    ]
+                  }
                 }
               }
             }
