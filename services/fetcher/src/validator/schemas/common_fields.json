@@ -7,7 +7,6 @@
   "required": [
     "created_date",
     "created_by",
-    "submitted_by",
     "lead_center",
     "title",
     "description",
