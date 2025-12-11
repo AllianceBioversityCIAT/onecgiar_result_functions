@@ -98,7 +98,7 @@
     "toc_mapping": {
       "type": "object",
       "description": "TOC mapping to a single Science Program",
-      "required": ["science_program_id", "result_title"],
+      "required": ["science_program_id"],
       "properties": {
         "science_program_id": { "type": "string" },
         "aow_compose_code": { "type": "string" },
