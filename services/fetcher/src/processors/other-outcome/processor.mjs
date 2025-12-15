@@ -89,6 +89,8 @@ export class OtherOutcomeProcessor  {
         idempotencyKey: result.idempotencyKey,
         received_at: result.received_at,
         tenant: result.tenant,
+        // Store original payload for reference
+        payload: result,
       });
 
       this.logger.success("Other outcome processed successfully", resultId, {

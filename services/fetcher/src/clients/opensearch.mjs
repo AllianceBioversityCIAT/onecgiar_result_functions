@@ -451,6 +451,10 @@ export class OpenSearchClient {
                 name: { type: "text" },
               },
             },
+            payload: {
+              type: "object",
+              enabled: true,
+            },
           },
         },
         settings: {
@@ -626,6 +630,10 @@ export class OpenSearchClient {
         ...updatedDocument,
         indexed_at: new Date().toISOString(),
         has_external_id: resolvedResultId !== undefined,
+        // Preserve existing payload if present, otherwise use new payload if provided
+        payload: updatedDocument.payload !== undefined 
+          ? updatedDocument.payload 
+          : existingSource.payload,
       };
 
       try {

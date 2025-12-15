@@ -569,6 +569,8 @@ app.patch("/update/:id", async (req, res) => {
           `${normalizedTenant}:${normalizedType}:result:${resultId}`,
         received_at: responsePayload?.received_at || receivedAt,
         result_id: responsePayload?.result_id ?? resultId,
+        // Include payload from request body if provided
+        ...(body.payload || firstResult ? { payload: body.payload || firstResult || body } : {}),
       };
 
       if (fixedFields) {
