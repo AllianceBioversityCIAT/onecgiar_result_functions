@@ -3,7 +3,7 @@ name: Trigger Jenkins Job
 on:
   push:
     branches:
-      - dev
+      - main
   workflow_dispatch: # Allows manual execution
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
       - name: Get branch name and build Jenkins URL
         run: |
           BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          JENKINS_URL="https://automation.prms.cgiar.org/job/clarisa-result-management-lambda-dev/build"
+          JENKINS_URL="https://automation.prms.cgiar.org/job/clarisa-result-management-main/build"
           echo "Jenkins job URL for the branch $BRANCH_NAME is: $JENKINS_URL"
           echo "JENKINS_URL=${JENKINS_URL}" >> $GITHUB_ENV
 
