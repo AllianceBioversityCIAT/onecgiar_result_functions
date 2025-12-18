@@ -34,10 +34,39 @@ export function validateByType(type, data) {
   }
   const valid = v(data);
   if (!valid) {
-    const errors = (v.errors || []).map(
-      (e) => `${e.instancePath || "(root)"} ${e.message}`
-    );
-    return { ok: false, errors };
+    const errors = (v.errors || []).map((e) => {
+      let message = `${e.instancePath || "(root)"} ${e.message}`;
+      
+      // Add more context for enum errors
+      if (e.keyword === "enum" && e.params && e.params.allowedValues) {
+        message += `. Allowed values: ${JSON.stringify(e.params.allowedValues)}`;
+      }
+      
+      // Add context for required field errors
+      if (e.keyword === "required" && e.params && e.params.missingProperty) {
+        message += `. Missing required property: ${e.params.missingProperty}`;
+      }
+      
+      // Add context for minimum items
+      if (e.keyword === "minItems" && e.params) {
+        message += `. Minimum required: ${e.params.limit}`;
+      }
+      
+      return {
+        path: e.instancePath || "(root)",
+        message: e.message,
+        keyword: e.keyword,
+        params: e.params,
+        fullMessage: message,
+      };
+    });
+    
+    // Return both detailed errors and simplified string messages for backward compatibility
+    return { 
+      ok: false, 
+      errors: errors.map(e => e.fullMessage),
+      detailedErrors: errors,
+    };
   }
   return { ok: true, data };
 }
