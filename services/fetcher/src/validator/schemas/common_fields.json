@@ -116,12 +116,13 @@
         { "required": ["scope_label"] }
       ],
       "properties": {
-        "scope_code": { "type": "number", "enum": [1, 2, 4, 5, 50] },
+        "scope_code": { "type": "number", "enum": [1, 2, 3, 4, 5, 50] },
         "scope_label": {
           "type": "string",
           "enum": [
             "Global",
             "Regional",
+            "Multi-national",
             "National",
             "Sub-national",
             "This is yet to be determined"
@@ -210,6 +211,18 @@
             ]
           },
           "then": { "required": ["regions"] }
+        },
+        {
+          "if": {
+            "anyOf": [
+              { "properties": { "scope_code": { "const": 3 } } },
+              { "properties": { "scope_label": { "const": "Multi-national" } } }
+            ]
+          },
+          "then": {
+            "required": ["countries"],
+            "properties": { "countries": { "minItems": 2 } }
+          }
         },
         {
           "if": {

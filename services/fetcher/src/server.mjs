@@ -195,7 +195,13 @@ app.post("/ingest", async (req, res) => {
 
     const v = validateByType(type, normalized);
     if (!v.ok) {
-      rejected.push({ index: i, type, errors: v.errors });
+      rejected.push({ 
+        index: i, 
+        type, 
+        errors: v.errors,
+        // Include detailed errors if available for better debugging
+        ...(v.detailedErrors ? { detailedErrors: v.detailedErrors } : {}),
+      });
       continue;
     }
 
@@ -337,11 +343,25 @@ app.post("/ingest", async (req, res) => {
                 }
               }
 
-              return {
+              // Enhance error response with better structure
+              const response = {
                 ...processingResult,
                 resultId: result.idempotencyKey,
                 resultType: result.type,
               };
+
+              // If there's an error, make error details more accessible
+              if (!processingResult.success) {
+                response.errorDetails = {
+                  message: processingResult.error || "Processing failed",
+                  externalError: processingResult.externalError,
+                  externalApiResponse: processingResult.externalApiResponse,
+                  // Include validation errors if present
+                  ...(processingResult.validationErrors ? { validationErrors: processingResult.validationErrors } : {}),
+                };
+              }
+
+              return response;
             } catch (error) {
               const errorMessage =
                 error instanceof Error ? error.message : "Unknown error";
@@ -355,9 +375,24 @@ app.post("/ingest", async (req, res) => {
                 });
               }
 
+              // Extract error details from caught error
+              const errorDetails = {
+                message: errorMessage,
+                ...(error && typeof error === "object" && "apiResponse" in error
+                  ? { externalApiResponse: error.apiResponse }
+                  : {}),
+                ...(error && typeof error === "object" && "responseBody" in error
+                  ? { externalResponseBody: error.responseBody }
+                  : {}),
+                ...(error && typeof error === "object" && "status" in error
+                  ? { httpStatus: error.status, httpStatusText: error.statusText }
+                  : {}),
+              };
+
               return {
                 success: false,
                 error: errorMessage,
+                errorDetails,
                 resultId: result.idempotencyKey,
                 resultType: result.type,
               };
@@ -378,9 +413,17 @@ app.post("/ingest", async (req, res) => {
           });
         }
 
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         allProcessingResults.push({
           success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: errorMessage,
+          errorDetails: {
+            message: errorMessage,
+            stage: "type_processing_failed",
+            ...(error && typeof error === "object" && "apiResponse" in error
+              ? { externalApiResponse: error.apiResponse }
+              : {}),
+          },
           resultId: result.idempotencyKey,
           resultType: type,
         });
