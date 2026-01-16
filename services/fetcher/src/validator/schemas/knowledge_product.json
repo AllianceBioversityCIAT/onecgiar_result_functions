@@ -1,63 +1,624 @@
 {
   "$id": "https://prms/schemas/knowledge_product.json",
   "title": "Knowledge Product",
-  "description": "Schema for Knowledge Product results, extending common_fields.json",
+  "description": "Schema for Knowledge Product results, extending common_fields.json but excluding title, description, geo_focus, and contributing_center from required fields",
   "type": "object",
-  "allOf": [
-    { "$ref": "https://prms/schemas/common_fields.json" },
-    {
+  "additionalProperties": true,
+  "required": [
+    "created_date",
+    "created_by",
+    "lead_center",
+    "toc_mapping",
+    "contributing_partners",
+    "evidence",
+    "contributing_bilateral_projects",
+    "knowledge_product"
+  ],
+  "properties": {
+    "result_id": {
+      "description": "Identifier of the result in the source system (optional).",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "created_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date when the result was created. If empty, current date will be used."
+    },
+    "created_by": {
       "type": "object",
+      "description": "Information about the user who created the result.",
+      "required": [
+        "email",
+        "name"
+      ],
       "properties": {
-        "knowledge_product": {
-          "type": "object",
-          "description": "Knowledge product specific fields",
-          "properties": {
-            "handle": {
-              "type": "string",
-              "description": "Unique identifier or handle for the knowledge product (e.g. institutional handle, repository handle, or other persistent ID)"
-            },
-            "knowledge_product_type": {
-              "type": "string",
-              "description": "Type of knowledge product (e.g. Journal Article, Policy Brief, Report)"
-            },
-            "metadataCG": {
-              "type": "object",
-              "description": "Metadata describing accessibility, peer-review status, and publication year. DOI is optional and if provided belongs at higher integration layers, not enforced here.",
-              "properties": {
-                "source": { "type": "string" },
-                "accessibility": { "type": "boolean" },
-                "is_isi": { "type": "boolean" },
-                "is_peer_reviewed": { "type": "boolean" },
-                "issue_year": { "type": "number" }
-              },
-              "required": [
-                "source",
-                "accessibility",
-                "is_isi",
-                "is_peer_reviewed",
-                "issue_year"
-              ]
-            },
-            "licence": {
-              "type": "string",
-              "description": "License under which the knowledge product is published (e.g. CC-BY 4.0)"
-            },
-            "agrovoc_keywords": {
-              "type": "array",
-              "items": { "type": "string" },
-              "description": "Controlled vocabulary keywords from AGROVOC."
-            }
-          },
-          "required": [
-            "handle",
-            "knowledge_product_type",
-            "metadataCG",
-            "licence"
-          ],
-          "additionalProperties": false
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address of the user who created the result."
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the user who created the result."
+        }
+      }
+    },
+    "submitted_by": {
+      "type": "object",
+      "description": "Information about the user who submitted the result.",
+      "required": [
+        "email",
+        "name",
+        "submitted_date"
+      ],
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address of the user who submitted the result."
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the user who submitted the result."
+        },
+        "comment": {
+          "type": "string",
+          "description": "Optional comment from the submitter."
+        },
+        "submitted_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date when the result was submitted. If empty, current date will be used."
         }
       },
-      "required": ["knowledge_product"]
+      "additionalProperties": false
+    },
+    "lead_center": {
+      "type": "object",
+      "description": "Main center responsible for the result. Must provide at least one of: name, acronym, institution_id.",
+      "anyOf": [
+        {
+          "required": [
+            "name"
+          ]
+        },
+        {
+          "required": [
+            "acronym"
+          ]
+        },
+        {
+          "required": [
+            "institution_id"
+          ]
+        }
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "acronym": {
+          "type": "string"
+        },
+        "institution_id": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "toc_mapping": {
+      "type": "object",
+      "description": "TOC mapping to a single Science Program",
+      "required": [
+        "science_program_id"
+      ],
+      "properties": {
+        "science_program_id": {
+          "type": "string"
+        },
+        "aow_compose_code": {
+          "type": "string"
+        },
+        "result_title": {
+          "type": "string"
+        },
+        "result_indicator_description": {
+          "type": "string"
+        },
+        "result_indicator_type_name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "geo_focus": {
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "scope_code"
+          ]
+        },
+        {
+          "required": [
+            "scope_label"
+          ]
+        }
+      ],
+      "properties": {
+        "scope_code": {
+          "type": "number",
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            50
+          ]
+        },
+        "scope_label": {
+          "type": "string",
+          "enum": [
+            "Global",
+            "Regional",
+            "Multi-national",
+            "National",
+            "Sub-national",
+            "This is yet to be determined"
+          ]
+        },
+        "regions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "anyOf": [
+              {
+                "required": [
+                  "um49code"
+                ]
+              },
+              {
+                "required": [
+                  "name"
+                ]
+              }
+            ],
+            "properties": {
+              "um49code": {
+                "type": "number"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "countries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "anyOf": [
+              {
+                "required": [
+                  "id"
+                ]
+              },
+              {
+                "required": [
+                  "name"
+                ]
+              },
+              {
+                "required": [
+                  "iso_alpha_3"
+                ]
+              },
+              {
+                "required": [
+                  "iso_alpha_2"
+                ]
+              }
+            ],
+            "properties": {
+              "id": {
+                "type": "number"
+              },
+              "name": {
+                "type": "string"
+              },
+              "iso_alpha_3": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3
+              },
+              "iso_alpha_2": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "subnational_areas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "anyOf": [
+              {
+                "required": [
+                  "id"
+                ]
+              },
+              {
+                "required": [
+                  "name"
+                ]
+              }
+            ],
+            "properties": {
+              "id": {
+                "type": "number"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "anyOf": [
+              {
+                "properties": {
+                  "scope_code": {
+                    "const": 50
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "scope_label": {
+                    "const": "This is yet to be determined"
+                  }
+                }
+              }
+            ]
+          },
+          "then": {
+            "properties": {}
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              {
+                "properties": {
+                  "scope_code": {
+                    "const": 1
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "scope_label": {
+                    "const": "Global"
+                  }
+                }
+              }
+            ]
+          },
+          "then": {
+            "properties": {}
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              {
+                "properties": {
+                  "scope_code": {
+                    "const": 2
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "scope_label": {
+                    "const": "Regional"
+                  }
+                }
+              }
+            ]
+          },
+          "then": {
+            "required": [
+              "regions"
+            ]
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              {
+                "properties": {
+                  "scope_code": {
+                    "const": 3
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "scope_label": {
+                    "const": "Multi-national"
+                  }
+                }
+              }
+            ]
+          },
+          "then": {
+            "required": [
+              "countries"
+            ],
+            "properties": {
+              "countries": {
+                "minItems": 2
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              {
+                "properties": {
+                  "scope_code": {
+                    "const": 4
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "scope_label": {
+                    "const": "National"
+                  }
+                }
+              }
+            ]
+          },
+          "then": {
+            "required": [
+              "countries"
+            ],
+            "properties": {
+              "countries": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              {
+                "properties": {
+                  "scope_code": {
+                    "const": 5
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "scope_label": {
+                    "const": "Sub-national"
+                  }
+                }
+              }
+            ]
+          },
+          "then": {
+            "required": [
+              "countries",
+              "subnational_areas"
+            ],
+            "properties": {
+              "countries": {
+                "minItems": 1
+              },
+              "subnational_areas": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "contributing_center": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "anyOf": [
+          {
+            "required": [
+              "institution_id"
+            ]
+          },
+          {
+            "required": [
+              "acronym"
+            ]
+          },
+          {
+            "required": [
+              "name"
+            ]
+          }
+        ],
+        "properties": {
+          "institution_id": {
+            "type": "number"
+          },
+          "acronym": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "contributing_partners": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "anyOf": [
+          {
+            "required": [
+              "institution_id"
+            ]
+          },
+          {
+            "required": [
+              "acronym"
+            ]
+          },
+          {
+            "required": [
+              "name"
+            ]
+          }
+        ],
+        "properties": {
+          "institution_id": {
+            "type": "number"
+          },
+          "acronym": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "link"
+        ],
+        "properties": {
+          "link": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "contributing_bilateral_projects": {
+      "type": "array",
+      "description": "Array of bilateral project grants that contributed to this result",
+      "items": {
+        "type": "object",
+        "required": [
+          "grant_title"
+        ],
+        "properties": {
+          "grant_title": {
+            "type": "string",
+            "description": "Title of the bilateral grant/project"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "contributing_programs": {
+      "type": "array",
+      "description": "Array of science programs contributing to the result",
+      "items": {
+        "type": "object",
+        "required": [
+          "science_program_id",
+          "aow_compose_code",
+          "result_title",
+          "result_indicator_description",
+          "result_indicator_type_name"
+        ],
+        "properties": {
+          "science_program_id": {
+            "type": "string"
+          },
+          "aow_compose_code": {
+            "type": "string"
+          },
+          "result_title": {
+            "type": "string"
+          },
+          "result_indicator_description": {
+            "type": "string"
+          },
+          "result_indicator_type_name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "examples": [
+          [
+            {
+              "science_program_id": "SP02",
+              "aow_compose_code": "SP02-AOW03",
+              "result_title": "Nutrition outcomes improved",
+              "result_indicator_description": "Households reached with nutrition interventions",
+              "result_indicator_type_name": "Outcome"
+            },
+            {
+              "science_program_id": "SP09",
+              "aow_compose_code": "SP09.AOW01",
+              "result_title": "Climate-resilient crop systems adopted",
+              "result_indicator_description": "Number of climate resilient practices documented",
+              "result_indicator_type_name": "Output"
+            }
+          ]
+        ]
+      }
+    },
+    "knowledge_product": {
+      "type": "object",
+      "description": "Knowledge product specific fields",
+      "properties": {
+        "handle": {
+          "type": "string",
+          "description": "Unique identifier or handle for the knowledge product (e.g. institutional handle, repository handle, or other persistent ID)"
+        }
+      },
+      "required": [
+        "handle"
+      ],
+      "additionalProperties": true
     }
-  ]
+  }
 }
