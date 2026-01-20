@@ -1,7 +1,7 @@
 {
   "$id": "https://prms/schemas/knowledge_product.json",
   "title": "Knowledge Product",
-  "description": "Schema for Knowledge Product results, extending common_fields.json but excluding title, description, geo_focus, and contributing_center from required fields",
+  "description": "Schema for Knowledge Product results, extending common_fields.json but excluding title, description, geo_focus, contributing_center, contributing_partners, and evidence from required fields",
   "type": "object",
   "additionalProperties": true,
   "required": [
@@ -9,8 +9,6 @@
     "created_by",
     "lead_center",
     "toc_mapping",
-    "contributing_partners",
-    "evidence",
     "contributing_bilateral_projects",
     "knowledge_product"
   ],
@@ -484,59 +482,6 @@
             "type": "string"
           }
         }
-      }
-    },
-    "contributing_partners": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "anyOf": [
-          {
-            "required": [
-              "institution_id"
-            ]
-          },
-          {
-            "required": [
-              "acronym"
-            ]
-          },
-          {
-            "required": [
-              "name"
-            ]
-          }
-        ],
-        "properties": {
-          "institution_id": {
-            "type": "number"
-          },
-          "acronym": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      }
-    },
-    "evidence": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": [
-          "link"
-        ],
-        "properties": {
-          "link": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
       }
     },
     "contributing_bilateral_projects": {
