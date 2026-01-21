@@ -21,7 +21,7 @@ const openSearchClient = new OpenSearchClient();
 
 const RESULT_TYPE_FIXED_FIELDS = {
   knowledge_product: { result_type_id: 6, result_level_id: 4 },
-  capacity_sharing: { result_type_id: 3, result_level_id: 4 },
+  capacity_sharing: { result_type_id: 5, result_level_id: 4 },
   innovation_development: { result_type_id: 7, result_level_id: 4 },
   innovation_use: { result_type_id: 2, result_level_id: 3 },
   other_output: { result_type_id: 8, result_level_id: 4 },
