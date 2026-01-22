@@ -496,6 +496,10 @@
           "grant_title": {
             "type": "string",
             "description": "Title of the bilateral grant/project"
+          },
+          "is_lead": {
+            "type": "boolean",
+            "description": "Indicates if this bilateral project is the lead project"
           }
         },
         "additionalProperties": false
