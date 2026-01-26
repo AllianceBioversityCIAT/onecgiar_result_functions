@@ -753,4 +753,534 @@ app.delete("/delete/:id", async (req, res) => {
   }
 });
 
+// Helper functions for sync endpoint
+const extractResultId = (externalResult, externalApiClient) => {
+  return externalApiClient.parseNumeric(
+    externalResult.result_id ??
+      externalResult.id ??
+      externalResult?.data?.result_id ??
+      externalResult?.data?.id
+  );
+};
+
+const extractAndNormalizeData = (externalResult) => {
+  let data = externalResult.data || externalResult;
+  if (data === externalResult && externalResult.type) {
+    const { type, result_id, id, ...rest } = data;
+    data = rest;
+  }
+  return normalizeCommon ? normalizeCommon({ ...data }) : { ...data };
+};
+
+const processExternalResult = async (params) => {
+  const {
+    externalResult,
+    index,
+    tenant,
+    existingResultIds,
+    processorFactory,
+    externalApiClient,
+    openSearchClient,
+    dryRun,
+  } = params;
+  const resultId = extractResultId(externalResult, externalApiClient);
+  const type = resolveCanonicalResultType(
+    externalResult.type ?? externalResult?.data?.type
+  );
+
+  if (!type) {
+    return {
+      skipped: {
+        index,
+        reason: "Missing or invalid type",
+        result: externalResult,
+      },
+    };
+  }
+
+  let normalized;
+  try {
+    normalized = extractAndNormalizeData(externalResult);
+  } catch (error) {
+    return {
+      error: {
+        index,
+        resultId,
+        type,
+        error: `Normalization failed: ${error?.message}`,
+        result: externalResult,
+      },
+    };
+  }
+
+  const validation = validateByType(type, normalized);
+  if (!validation.ok) {
+    return {
+      error: {
+        index,
+        resultId,
+        type,
+        error: "Validation failed",
+        validationErrors: validation.errors,
+        result: externalResult,
+      },
+    };
+  }
+
+  const enrichedData = applyFixedFieldsForType(type, normalized);
+  const shouldCreate = resultId === undefined || !existingResultIds.has(resultId);
+
+  if (dryRun) {
+    return {
+      [shouldCreate ? "created" : "updated"]: {
+        index,
+        resultId,
+        type,
+        action: shouldCreate ? "create" : "update",
+        wouldProcess: true,
+      },
+    };
+  }
+
+  if (shouldCreate) {
+    return await createResult(
+      resultId,
+      type,
+      tenant,
+      enrichedData,
+      processorFactory,
+      index,
+      externalResult
+    );
+  } else {
+    return await updateResult(
+      resultId,
+      type,
+      tenant,
+      enrichedData,
+      externalApiClient,
+      openSearchClient,
+      index
+    );
+  }
+};
+
+const createResult = async (
+  resultId,
+  type,
+  tenant,
+  enrichedData,
+  processorFactory,
+  index,
+  externalResult
+) => {
+  try {
+    const nowIso = new Date().toISOString();
+    const idempotencyKey = resultId
+      ? `${tenant}:${type}:create:${resultId}`
+      : `${tenant}:${type}:create:${nowIso}`;
+
+    const resultPayload = {
+      type,
+      received_at: nowIso,
+      idempotencyKey,
+      tenant,
+      op: "create",
+      ...enrichedData,
+      data: enrichedData,
+    };
+
+    if (!processorFactory.isTypeSupported(type)) {
+      return {
+        error: {
+          index,
+          resultId,
+          type,
+          error: `Unsupported result type: ${type}`,
+          result: externalResult,
+        },
+      };
+    }
+
+    const processor = processorFactory.getProcessor(type);
+    const processingResult = await processor.process(resultPayload);
+
+    if (processingResult.success) {
+      return {
+        created: {
+          index,
+          resultId: processingResult.result?.result_id ?? resultId,
+          type,
+          action: "create",
+        },
+      };
+    } else {
+      return {
+        error: {
+          index,
+          resultId,
+          type,
+          error: processingResult.error || "Processing failed",
+          result: externalResult,
+        },
+      };
+    }
+  } catch (error) {
+    return {
+      error: {
+        index,
+        resultId,
+        type,
+        error: error?.message || "Create failed",
+        result: externalResult,
+      },
+    };
+  }
+};
+
+const updateResult = async (
+  resultId,
+  type,
+  tenant,
+  enrichedData,
+  externalApiClient,
+  openSearchClient,
+  index
+) => {
+  try {
+    const updatePayload = {
+      type,
+      data: enrichedData,
+      tenant,
+    };
+
+    await externalApiClient.updateResult(resultId, updatePayload);
+
+    const baseDocument = {
+      ...enrichedData,
+      type,
+      tenant,
+      result_id: resultId,
+      received_at: new Date().toISOString(),
+    };
+
+    await openSearchClient.updateDocumentsByResultId(resultId, baseDocument);
+
+    return {
+      updated: {
+        index,
+        resultId,
+        type,
+        action: "update",
+      },
+    };
+  } catch (error) {
+    return {
+      error: {
+        index,
+        resultId,
+        type,
+        error: error?.message || "Update failed",
+      },
+    };
+  }
+};
+
+const deleteOrphanedResults = async (
+  toDelete,
+  dryRun,
+  externalApiClient,
+  openSearchClient,
+  logger
+) => {
+  const deleted = [];
+  const errors = [];
+
+  if (dryRun) {
+    return {
+      deleted: toDelete.map((resultId) => ({
+        resultId,
+        action: "delete",
+        wouldDelete: true,
+      })),
+      errors: [],
+    };
+  }
+
+  if (toDelete.length === 0) {
+    return { deleted: [], errors: [] };
+  }
+
+  logger.info(`Deleting ${toDelete.length} results not found in external API`, null);
+
+  for (const resultId of toDelete) {
+    try {
+      await externalApiClient.deleteResult(resultId);
+      await openSearchClient.deleteByResultId(resultId);
+      deleted.push({
+        resultId,
+        action: "delete",
+      });
+    } catch (error) {
+      errors.push({
+        resultId,
+        error: `Delete failed: ${error?.message}`,
+        action: "delete",
+      });
+    }
+  }
+
+  return { deleted, errors };
+};
+
+const addResultToCollection = (results, processResult) => {
+  if (processResult.created) {
+    results.created.push(processResult.created);
+  } else if (processResult.updated) {
+    results.updated.push(processResult.updated);
+  } else if (processResult.skipped) {
+    results.skipped.push(processResult.skipped);
+  } else if (processResult.error) {
+    results.errors.push(processResult.error);
+  }
+};
+
+const processSingleExternalResult = async (params) => {
+  const {
+    externalResult,
+    index,
+    tenant,
+    existingResultIds,
+    processorFactory,
+    externalApiClient,
+    openSearchClient,
+    dryRun,
+  } = params;
+
+  try {
+    const resultId = extractResultId(externalResult, externalApiClient);
+    const processResult = await processExternalResult({
+      externalResult,
+      index,
+      tenant,
+      existingResultIds,
+      processorFactory,
+      externalApiClient,
+      openSearchClient,
+      dryRun,
+    });
+    return { resultId, processResult };
+  } catch (error) {
+    return {
+      resultId: undefined,
+      processResult: {
+        error: {
+          index,
+          error: error?.message || "Processing failed",
+          result: externalResult,
+        },
+      },
+    };
+  }
+};
+
+const processAllExternalResults = async (params) => {
+  const {
+    externalResults,
+    tenant,
+    existingResultIds,
+    processorFactory,
+    externalApiClient,
+    openSearchClient,
+    dryRun,
+  } = params;
+
+  const results = {
+    created: [],
+    updated: [],
+    deleted: [],
+    skipped: [],
+    errors: [],
+  };
+
+  const externalResultIds = new Set();
+
+  for (let i = 0; i < externalResults.length; i++) {
+    const { resultId, processResult } = await processSingleExternalResult({
+      externalResult: externalResults[i],
+      index: i,
+      tenant,
+      existingResultIds,
+      processorFactory,
+      externalApiClient,
+      openSearchClient,
+      dryRun,
+    });
+
+    if (resultId !== undefined) {
+      externalResultIds.add(resultId);
+    }
+
+    addResultToCollection(results, processResult);
+  }
+
+  return { results, externalResultIds };
+};
+
+const buildSyncResponse = (params) => {
+  const {
+    results,
+    externalResults,
+    processingTimeMs,
+    requestId,
+    dryRun,
+  } = params;
+
+  return {
+    ok: results.errors.length === 0,
+    message: dryRun
+      ? "Dry run completed - no changes made"
+      : "Synchronization completed",
+    processed: externalResults.length,
+    created: results.created.length,
+    updated: results.updated.length,
+    deleted: results.deleted.length,
+    skipped: results.skipped.length,
+    errors: results.errors.length,
+    details: {
+      created: results.created,
+      updated: results.updated,
+      deleted: results.deleted,
+      skipped: results.skipped,
+      errors: results.errors,
+    },
+    processingTimeMs,
+    requestId,
+    dryRun,
+    timestamp: new Date().toISOString(),
+  };
+};
+
+app.post("/sync", async (req, res) => {
+  const startTime = Date.now();
+  const requestId =
+    req.headers["x-amzn-trace-id"] || req.headers["x-request-id"];
+  const logger = new Logger();
+  const processorFactory = new ProcessorFactory(logger);
+  const body = req.body || {};
+
+  const tenant = String(body.tenant || "unknown").toLowerCase();
+  const bilateral = body.bilateral === true || body.bilateral === "true";
+  const resultType = body.type ? String(body.type).toLowerCase() : undefined;
+  const dryRun = body.dryRun === true || body.dryRun === "true";
+
+  console.log("[sync] Starting synchronization", {
+    requestId,
+    tenant,
+    bilateral,
+    resultType,
+    dryRun,
+  });
+
+  try {
+    logger.info("Fetching results from external API", null, {
+      bilateral,
+      resultType,
+    });
+
+    const externalResults = await externalApiClient.getAllResults({
+      bilateral,
+      type: resultType,
+    });
+
+    if (!Array.isArray(externalResults) || externalResults.length === 0) {
+      return res.status(200).json({
+        ok: true,
+        message: "No results found in external API",
+        processed: 0,
+        created: 0,
+        updated: 0,
+        deleted: 0,
+        skipped: 0,
+        errors: [],
+        requestId,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    console.log(
+      `[sync] Fetched ${externalResults.length} results from external API`
+    );
+
+    logger.info("Fetching existing result IDs from OpenSearch", null);
+    const existingResultIds = await openSearchClient.getAllResultIds();
+    console.log(
+      `[sync] Found ${existingResultIds.size} existing result_ids in OpenSearch`
+    );
+
+    const { results, externalResultIds } = await processAllExternalResults({
+      externalResults,
+      tenant,
+      existingResultIds,
+      processorFactory,
+      externalApiClient,
+      openSearchClient,
+      dryRun,
+    });
+
+    const toDelete = Array.from(existingResultIds).filter(
+      (id) => !externalResultIds.has(id)
+    );
+
+    const deleteResults = await deleteOrphanedResults(
+      toDelete,
+      dryRun,
+      externalApiClient,
+      openSearchClient,
+      logger
+    );
+    results.deleted.push(...deleteResults.deleted);
+    results.errors.push(...deleteResults.errors);
+
+    const processingTimeMs = Date.now() - startTime;
+
+    logger.logBatchSummary(
+      externalResults.length,
+      results.created.length + results.updated.length,
+      results.errors.length,
+      processingTimeMs
+    );
+
+    const response = buildSyncResponse({
+      results,
+      externalResults,
+      processingTimeMs,
+      requestId,
+      dryRun,
+    });
+
+    return res.status(results.errors.length > 0 ? 207 : 200).json(response);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const status =
+      typeof error?.status === "number" && error.status >= 400
+        ? error.status
+        : 500;
+
+    logger.error("Synchronization failed", null, {
+      status,
+      error: message,
+    });
+
+    return res.status(status).json({
+      ok: false,
+      error: "sync_failed",
+      message,
+      requestId,
+      details: error?.apiResponse ?? error?.responseBody,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 export default app;

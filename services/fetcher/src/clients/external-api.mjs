@@ -390,4 +390,115 @@ export class ExternalApiClient {
 
     return undefined;
   }
+
+  /**
+   * Fetches all results from the external API.
+   * Supports optional filtering by bilateral IDs or other parameters.
+   * 
+   * @param {Object} options - Query options
+   * @param {boolean} options.bilateral - If true, only fetch bilateral results
+   * @param {string} options.type - Optional result type filter
+   * @returns {Promise<Array>} Array of results in the standard format
+   */
+  async getAllResults(options = {}) {
+    if (!this.baseUrl) {
+      throw new Error("External API URL not configured");
+    }
+
+    const base = this.baseUrl.replace(/\/+$/, "");
+    // Endpoint for bilateral results synchronization
+    let url = `${base}/api/bilateral/results`;
+    
+    const queryParams = new URLSearchParams();
+    if (options.bilateral) {
+      queryParams.append("bilateral", "true");
+    }
+    if (options.type) {
+      queryParams.append("type", options.type);
+    }
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+
+    console.log(`[ExternalApiClient] Fetching all results from ${url}`, options);
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        let parsedBody;
+        try {
+          parsedBody = JSON.parse(errorBody);
+        } catch {
+          parsedBody = undefined;
+        }
+
+        console.error(
+          `[ExternalApiClient] Error fetching results:`,
+          errorBody
+        );
+
+        const err = new Error(
+          `HTTP ${response.status}: ${response.statusText} - ${errorBody}`
+        );
+        err.status = response.status;
+        err.statusText = response.statusText;
+        err.apiResponse = parsedBody ?? errorBody;
+        err.responseBody = errorBody;
+        err.url = url;
+        throw err;
+      }
+
+      const data = await response.json();
+
+      // Handle different response formats:
+      // 1. Direct array: [{type, data, result_id, ...}, ...]
+      // 2. Wrapped: {results: [...], data: [...], response: [...]}
+      // 3. Paginated: {results: [...], total: N, page: N}
+      let results = [];
+      
+      if (Array.isArray(data)) {
+        results = data;
+      } else if (Array.isArray(data?.results)) {
+        results = data.results;
+      } else if (Array.isArray(data?.data)) {
+        results = data.data;
+      } else if (Array.isArray(data?.response)) {
+        results = data.response;
+      } else if (data && typeof data === "object") {
+        // Single result object, wrap in array
+        results = [data];
+      }
+
+      console.log(
+        `[ExternalApiClient] Fetched ${results.length} results from external API`
+      );
+
+      return results;
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        console.error(
+          `[ExternalApiClient] Timeout (${this.timeout}ms) fetching results`
+        );
+      }
+      console.error(
+        `[ExternalApiClient] Failed to fetch results:`,
+        error
+      );
+      throw error;
+    }
+  }
 }

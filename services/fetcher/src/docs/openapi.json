@@ -1703,6 +1703,130 @@
         }
       }
     },
+    "/sync": {
+      "post": {
+        "summary": "Synchronize results with external API",
+        "description": "Fetches all results from the external API, compares with OpenSearch, and performs create/update/delete operations as needed. Validates all results before processing.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncRequest"
+              },
+              "examples": {
+                "bilateralSync": {
+                  "summary": "Sync bilateral results only",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "bilateral": true,
+                    "dryRun": false
+                  }
+                },
+                "dryRun": {
+                  "summary": "Dry run - preview changes without applying",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "bilateral": false,
+                    "dryRun": true
+                  }
+                },
+                "typeFilter": {
+                  "summary": "Sync specific result type only",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "type": "knowledge_product",
+                    "dryRun": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Synchronization completed successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "ok": true,
+                  "message": "Synchronization completed",
+                  "processed": 150,
+                  "created": 25,
+                  "updated": 100,
+                  "deleted": 5,
+                  "skipped": 10,
+                  "errors": 10,
+                  "details": {
+                    "created": [
+                      {
+                        "index": 0,
+                        "resultId": 12345,
+                        "type": "knowledge_product",
+                        "action": "create"
+                      }
+                    ],
+                    "updated": [
+                      {
+                        "index": 1,
+                        "resultId": 12346,
+                        "type": "capacity_sharing",
+                        "action": "update"
+                      }
+                    ],
+                    "deleted": [
+                      {
+                        "resultId": 99999,
+                        "action": "delete"
+                      }
+                    ],
+                    "skipped": [],
+                    "errors": []
+                  },
+                  "processingTimeMs": 12500,
+                  "dryRun": false,
+                  "timestamp": "2025-10-10T12:00:00Z"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Synchronization completed with errors",
+            "content": {
+              "application/json": {
+                "example": {
+                  "ok": false,
+                  "message": "Synchronization completed",
+                  "processed": 150,
+                  "created": 20,
+                  "updated": 95,
+                  "deleted": 5,
+                  "skipped": 10,
+                  "errors": 20,
+                  "details": {
+                    "errors": [
+                      {
+                        "index": 5,
+                        "resultId": 12350,
+                        "type": "knowledge_product",
+                        "error": "Validation failed",
+                        "validationErrors": []
+                      }
+                    ]
+                  },
+                  "processingTimeMs": 12500,
+                  "dryRun": false,
+                  "timestamp": "2025-10-10T12:00:00Z"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Synchronization failed"
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Healthcheck",
@@ -1791,6 +1915,40 @@
           "data": {
             "type": "object",
             "description": "Partial payload with the fields to update"
+          }
+        }
+      },
+      "SyncRequest": {
+        "type": "object",
+        "properties": {
+          "tenant": {
+            "type": "string",
+            "description": "Tenant identifier",
+            "example": "prms.result-management.api",
+            "default": "unknown"
+          },
+          "bilateral": {
+            "type": "boolean",
+            "description": "If true, only fetch bilateral results from external API",
+            "default": false
+          },
+          "type": {
+            "type": "string",
+            "description": "Optional result type filter (e.g., 'knowledge_product')",
+            "enum": [
+              "knowledge_product",
+              "capacity_sharing",
+              "innovation_development",
+              "innovation_use",
+              "other_output",
+              "other_outcome",
+              "policy_change"
+            ]
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "If true, preview changes without applying them",
+            "default": false
           }
         }
       }

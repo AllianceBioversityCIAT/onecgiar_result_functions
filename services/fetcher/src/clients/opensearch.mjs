@@ -709,4 +709,94 @@ export class OpenSearchClient {
       throw error;
     }
   }
+
+  /**
+   * Gets all existing result_ids from OpenSearch indices.
+   * Useful for comparing with external API to determine what needs to be created/updated/deleted.
+   * 
+   * @returns {Promise<Set<number>>} Set of all result_ids found in OpenSearch
+   */
+  async getAllResultIds() {
+    const aliasName = this.getGlobalAlias();
+    const resultIds = new Set();
+
+    try {
+      // Use scroll API for large result sets
+      const query = {
+        size: 1000,
+        _source: ["result_id", "id"],
+        query: {
+          bool: {
+            must: [
+              {
+                bool: {
+                  should: [
+                    { exists: { field: "result_id" } },
+                    { exists: { field: "id" } },
+                  ],
+                  minimum_should_match: 1,
+                },
+              },
+            ],
+          },
+        },
+      };
+
+      let scrollId = null;
+      let hasMore = true;
+
+      while (hasMore) {
+        const scrollPath = scrollId
+          ? `/_search/scroll`
+          : `/${aliasName}/_search?scroll=1m`;
+        
+        const scrollBody = scrollId
+          ? { scroll: "1m", scroll_id: scrollId }
+          : query;
+
+        const response = await this.makeRequest("POST", scrollPath, scrollBody);
+        
+        scrollId = response._scroll_id;
+        const hits = response?.hits?.hits || [];
+
+        for (const hit of hits) {
+          const source = hit._source || {};
+          const resultId = this.parseNumericId(
+            source.result_id ?? source.id ?? source.data?.result_id ?? source.data?.id
+          );
+          if (resultId !== undefined) {
+            resultIds.add(resultId);
+          }
+        }
+
+        hasMore = hits.length > 0 && hits.length === query.size;
+      }
+
+      // Clear scroll context
+      if (scrollId) {
+        try {
+          await this.makeRequest("DELETE", `/_search/scroll`, {
+            scroll_id: [scrollId],
+          });
+        } catch (e) {
+          console.warn("[OpenSearchClient] Failed to clear scroll context", e);
+        }
+      }
+
+      console.log(
+        `[OpenSearchClient] Found ${resultIds.size} unique result_ids in OpenSearch`
+      );
+
+      return resultIds;
+    } catch (error) {
+      if (error?.status === 404 || error?.message?.includes("404")) {
+        console.warn(
+          `[OpenSearchClient] No alias/index found, returning empty set`
+        );
+        return new Set();
+      }
+      console.error(`[OpenSearchClient] Failed to get all result_ids:`, error);
+      throw error;
+    }
+  }
 }
