@@ -407,7 +407,8 @@ export class ExternalApiClient {
 
     const base = this.baseUrl.replace(/\/+$/, "");
     // Endpoint for bilateral results synchronization
-    let url = `${base}/api/bilateral/results`;
+    // baseUrl already includes /api/bilateral, so we only add /results
+    let url = `${base}/results`;
     
     const queryParams = new URLSearchParams();
     if (options.bilateral) {
