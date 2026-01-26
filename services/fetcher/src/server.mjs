@@ -1176,19 +1176,20 @@ app.post("/sync", async (req, res) => {
       dryRun,
     });
 
-    const toDelete = Array.from(existingResultIds).filter(
-      (id) => !externalResultIds.has(id)
-    );
+    // TODO: Re-enable deletion functionality when needed
+    // const toDelete = Array.from(existingResultIds).filter(
+    //   (id) => !externalResultIds.has(id)
+    // );
 
-    const deleteResults = await deleteOrphanedResults(
-      toDelete,
-      dryRun,
-      externalApiClient,
-      openSearchClient,
-      logger
-    );
-    results.deleted.push(...deleteResults.deleted);
-    results.errors.push(...deleteResults.errors);
+    // const deleteResults = await deleteOrphanedResults(
+    //   toDelete,
+    //   dryRun,
+    //   externalApiClient,
+    //   openSearchClient,
+    //   logger
+    // );
+    // results.deleted.push(...deleteResults.deleted);
+    // results.errors.push(...deleteResults.errors);
 
     const processingTimeMs = Date.now() - startTime;
 
