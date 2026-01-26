@@ -763,13 +763,10 @@ const extractResultId = (externalResult, externalApiClient) => {
   );
 };
 
-const extractAndNormalizeData = (externalResult) => {
-  let data = externalResult.data || externalResult;
-  if (data === externalResult && externalResult.type) {
-    const { type, result_id, id, ...rest } = data;
-    data = rest;
-  }
-  return normalizeCommon ? normalizeCommon({ ...data }) : { ...data };
+const extractDataFromExternalResult = (externalResult) => {
+  // Extract data directly from externalResult.data as-is
+  // Data comes in internal DB format, no transformation needed
+  return externalResult.data || externalResult;
 };
 
 const processExternalResult = async (params) => {
@@ -778,7 +775,6 @@ const processExternalResult = async (params) => {
     index,
     tenant,
     existingResultIds,
-    processorFactory,
     externalApiClient,
     openSearchClient,
     dryRun,
@@ -798,36 +794,9 @@ const processExternalResult = async (params) => {
     };
   }
 
-  let normalized;
-  try {
-    normalized = extractAndNormalizeData(externalResult);
-  } catch (error) {
-    return {
-      error: {
-        index,
-        resultId,
-        type,
-        error: `Normalization failed: ${error?.message}`,
-        result: externalResult,
-      },
-    };
-  }
-
-  const validation = validateByType(type, normalized);
-  if (!validation.ok) {
-    return {
-      error: {
-        index,
-        resultId,
-        type,
-        error: "Validation failed",
-        validationErrors: validation.errors,
-        result: externalResult,
-      },
-    };
-  }
-
-  const enrichedData = applyFixedFieldsForType(type, normalized);
+  // Extract data as-is from external API (internal DB format)
+  // No validation or complex normalization - save directly to OpenSearch
+  const resultData = extractDataFromExternalResult(externalResult);
   const shouldCreate = resultId === undefined || !existingResultIds.has(resultId);
 
   if (dryRun) {
@@ -843,88 +812,74 @@ const processExternalResult = async (params) => {
   }
 
   if (shouldCreate) {
-    return await createResult(
+    return await createResult({
       resultId,
       type,
       tenant,
-      enrichedData,
-      processorFactory,
-      index,
-      externalResult
-    );
-  } else {
-    return await updateResult(
-      resultId,
-      type,
-      tenant,
-      enrichedData,
-      externalApiClient,
+      resultData,
       openSearchClient,
-      index
-    );
+      index,
+      externalResult,
+    });
+  } else {
+    return await updateResult({
+      resultId,
+      type,
+      tenant,
+      resultData,
+      openSearchClient,
+      index,
+    });
   }
 };
 
-const createResult = async (
-  resultId,
-  type,
-  tenant,
-  enrichedData,
-  processorFactory,
-  index,
-  externalResult
-) => {
+const createResult = async (params) => {
+  const {
+    resultId,
+    type,
+    tenant,
+    resultData,
+    openSearchClient,
+    index,
+    externalResult,
+  } = params;
   try {
     const nowIso = new Date().toISOString();
     const idempotencyKey = resultId
       ? `${tenant}:${type}:create:${resultId}`
       : `${tenant}:${type}:create:${nowIso}`;
 
+    // Build payload with the complete externalResult object (same as /ingest)
     const resultPayload = {
       type,
       received_at: nowIso,
       idempotencyKey,
       tenant,
       op: "create",
-      ...enrichedData,
-      data: enrichedData,
+      ...resultData,
     };
 
-    if (!processorFactory.isTypeSupported(type)) {
-      return {
-        error: {
-          index,
-          resultId,
-          type,
-          error: `Unsupported result type: ${type}`,
-          result: externalResult,
-        },
-      };
-    }
+    // Ensure index exists
+    await openSearchClient.ensureIndex(type);
 
-    const processor = processorFactory.getProcessor(type);
-    const processingResult = await processor.process(resultPayload);
+    // Store original payload for reference (same structure as /ingest)
+    const documentToIndex = {
+      ...resultPayload,
+      result_id: resultId,
+      payload: resultPayload, // Store payload same as /ingest
+    };
 
-    if (processingResult.success) {
-      return {
-        created: {
-          index,
-          resultId: processingResult.result?.result_id ?? resultId,
-          type,
-          action: "create",
-        },
-      };
-    } else {
-      return {
-        error: {
-          index,
-          resultId,
-          type,
-          error: processingResult.error || "Processing failed",
-          result: externalResult,
-        },
-      };
-    }
+    // Index directly to OpenSearch without processor
+    await openSearchClient.indexResult(documentToIndex);
+
+    return {
+      created: {
+        index,
+        resultId,
+        type,
+        action: "create",
+      },
+    };
   } catch (error) {
     return {
       error: {
@@ -938,30 +893,29 @@ const createResult = async (
   }
 };
 
-const updateResult = async (
-  resultId,
-  type,
-  tenant,
-  enrichedData,
-  externalApiClient,
-  openSearchClient,
-  index
-) => {
+const updateResult = async (params) => {
+  const {
+    resultId,
+    type,
+    tenant,
+    resultData,
+    openSearchClient,
+    index,
+  } = params;
   try {
-    const updatePayload = {
-      type,
-      data: enrichedData,
-      tenant,
-    };
-
-    await externalApiClient.updateResult(resultId, updatePayload);
-
+    // Update in external API (if needed)
+    // Note: We may not need to call updateResult if we're syncing from external API
+    // But keeping it for consistency with /update endpoint behavior
+    
+    // Build document with data as-is from external API
+    // Payload will be preserved automatically by updateDocumentsByResultId
     const baseDocument = {
-      ...enrichedData,
+      ...resultData,
       type,
       tenant,
       result_id: resultId,
       received_at: new Date().toISOString(),
+      // DO NOT include payload here - it will be preserved from existing document
     };
 
     await openSearchClient.updateDocumentsByResultId(resultId, baseDocument);
@@ -1051,7 +1005,6 @@ const processSingleExternalResult = async (params) => {
     index,
     tenant,
     existingResultIds,
-    processorFactory,
     externalApiClient,
     openSearchClient,
     dryRun,
@@ -1064,7 +1017,6 @@ const processSingleExternalResult = async (params) => {
       index,
       tenant,
       existingResultIds,
-      processorFactory,
       externalApiClient,
       openSearchClient,
       dryRun,
@@ -1089,7 +1041,6 @@ const processAllExternalResults = async (params) => {
     externalResults,
     tenant,
     existingResultIds,
-    processorFactory,
     externalApiClient,
     openSearchClient,
     dryRun,
@@ -1111,7 +1062,6 @@ const processAllExternalResults = async (params) => {
       index: i,
       tenant,
       existingResultIds,
-      processorFactory,
       externalApiClient,
       openSearchClient,
       dryRun,
@@ -1166,7 +1116,6 @@ app.post("/sync", async (req, res) => {
   const requestId =
     req.headers["x-amzn-trace-id"] || req.headers["x-request-id"];
   const logger = new Logger();
-  const processorFactory = new ProcessorFactory(logger);
   const body = req.body || {};
 
   const tenant = String(body.tenant || "unknown").toLowerCase();
@@ -1222,7 +1171,6 @@ app.post("/sync", async (req, res) => {
       externalResults,
       tenant,
       existingResultIds,
-      processorFactory,
       externalApiClient,
       openSearchClient,
       dryRun,
