@@ -1257,15 +1257,29 @@
                               }
                             ]
                           },
-                          "contributing_center": [],
-                          "contributing_partners": [],
+                          "contributing_center": [
+                            {
+                              "institution_id": 115,
+                              "acronym": "CIAT"
+                            }
+                          ],
+                          "contributing_partners": [
+                            {
+                              "institution_id": 10,
+                              "acronym": "FAO"
+                            }
+                          ],
                           "evidence": [
                             {
                               "link": "https://example.org/regulatory-framework",
                               "description": "Regulatory framework document"
                             }
                           ],
-                          "contributing_bilateral_projects": [],
+                          "contributing_bilateral_projects": [
+                            {
+                              "grant_title": "Policy Development Initiative"
+                            }
+                          ],
                           "contributing_programs": [
                             {
                               "science_program_id": "SP02",
@@ -1877,7 +1891,7 @@
                   "enum": ["create", "update", "delete"]
                 },
                 "data": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ResultData"
                 }
               }
             }
@@ -1913,7 +1927,7 @@
             "description": "Override for the received timestamp stored in OpenSearch"
           },
           "data": {
-            "type": "object",
+            "$ref": "#/components/schemas/ResultData",
             "description": "Partial payload with the fields to update"
           }
         }
@@ -1949,6 +1963,275 @@
             "type": "boolean",
             "description": "If true, preview changes without applying them",
             "default": false
+          }
+        }
+      },
+      "ResultData": {
+        "type": "object",
+        "description": "Common fields shared by all result types",
+        "required": [
+          "created_date",
+          "created_by",
+          "lead_center",
+          "title",
+          "description",
+          "toc_mapping",
+          "geo_focus",
+          "contributing_center",
+          "contributing_partners",
+          "contributing_bilateral_projects"
+        ],
+        "properties": {
+          "result_id": {
+            "description": "Identifier of the result in the source system (optional)",
+            "oneOf": [
+              { "type": "number" },
+              { "type": "string" }
+            ]
+          },
+          "created_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date when the result was created"
+          },
+          "created_by": {
+            "type": "object",
+            "description": "Information about the user who created the result",
+            "required": ["email", "name"],
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "submitted_by": {
+            "type": "object",
+            "description": "Information about the user who submitted the result",
+            "required": ["email", "name", "submitted_date"],
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "name": {
+                "type": "string"
+              },
+              "comment": {
+                "type": "string"
+              },
+              "submitted_date": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          "lead_center": {
+            "type": "object",
+            "description": "Main center responsible for the result",
+            "anyOf": [
+              { "required": ["name"] },
+              { "required": ["acronym"] },
+              { "required": ["institution_id"] }
+            ],
+            "properties": {
+              "name": { "type": "string" },
+              "acronym": { "type": "string" },
+              "institution_id": { "type": "number" }
+            }
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "toc_mapping": {
+            "type": "object",
+            "description": "TOC mapping to a single Science Program",
+            "required": ["science_program_id"],
+            "properties": {
+              "science_program_id": { "type": "string" },
+              "aow_compose_code": { "type": "string" },
+              "result_title": { "type": "string" },
+              "result_indicator_description": { "type": "string" },
+              "result_indicator_type_name": { "type": "string" }
+            }
+          },
+          "geo_focus": {
+            "type": "object",
+            "description": "Geographic focus of the result",
+            "anyOf": [
+              { "required": ["scope_code"] },
+              { "required": ["scope_label"] }
+            ],
+            "properties": {
+              "scope_code": {
+                "type": "number",
+                "enum": [1, 2, 3, 4, 5, 50]
+              },
+              "scope_label": {
+                "type": "string",
+                "enum": [
+                  "Global",
+                  "Regional",
+                  "Multi-national",
+                  "National",
+                  "Sub-national",
+                  "This is yet to be determined"
+                ]
+              },
+              "regions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "anyOf": [
+                    { "required": ["um49code"] },
+                    { "required": ["name"] }
+                  ],
+                  "properties": {
+                    "um49code": { "type": "number" },
+                    "name": { "type": "string" }
+                  }
+                }
+              },
+              "countries": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "anyOf": [
+                    { "required": ["id"] },
+                    { "required": ["name"] },
+                    { "required": ["iso_alpha_3"] },
+                    { "required": ["iso_alpha_2"] }
+                  ],
+                  "properties": {
+                    "id": { "type": "number" },
+                    "name": { "type": "string" },
+                    "iso_alpha_3": {
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 3
+                    },
+                    "iso_alpha_2": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 2
+                    }
+                  }
+                }
+              },
+              "subnational_areas": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "anyOf": [
+                    { "required": ["id"] },
+                    { "required": ["name"] }
+                  ],
+                  "properties": {
+                    "id": { "type": "number" },
+                    "name": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "contributing_center": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Array of contributing centers (required, must have at least one item)",
+            "items": {
+              "type": "object",
+              "anyOf": [
+                { "required": ["institution_id"] },
+                { "required": ["acronym"] },
+                { "required": ["name"] }
+              ],
+              "properties": {
+                "institution_id": { "type": "number" },
+                "acronym": { "type": "string" },
+                "name": { "type": "string" }
+              }
+            }
+          },
+          "contributing_partners": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Array of contributing partners (required, must have at least one item)",
+            "items": {
+              "type": "object",
+              "anyOf": [
+                { "required": ["institution_id"] },
+                { "required": ["acronym"] },
+                { "required": ["name"] }
+              ],
+              "properties": {
+                "institution_id": { "type": "number" },
+                "acronym": { "type": "string" },
+                "name": { "type": "string" }
+              }
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Array of evidence links (optional, but if provided must have at least one item)",
+            "items": {
+              "type": "object",
+              "required": ["link"],
+              "properties": {
+                "link": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "contributing_bilateral_projects": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Array of bilateral project grants that contributed to this result (required, must have at least one item)",
+            "items": {
+              "type": "object",
+              "required": ["grant_title"],
+              "properties": {
+                "grant_title": {
+                  "type": "string",
+                  "description": "Title of the bilateral grant/project"
+                },
+                "is_lead": {
+                  "type": "boolean",
+                  "description": "Indicates if this bilateral project is the lead project"
+                }
+              }
+            }
+          },
+          "contributing_programs": {
+            "type": "array",
+            "description": "Array of science programs contributing to the result",
+            "items": {
+              "type": "object",
+              "required": [
+                "science_program_id",
+                "aow_compose_code",
+                "result_title",
+                "result_indicator_description",
+                "result_indicator_type_name"
+              ],
+              "properties": {
+                "science_program_id": { "type": "string" },
+                "aow_compose_code": { "type": "string" },
+                "result_title": { "type": "string" },
+                "result_indicator_description": { "type": "string" },
+                "result_indicator_type_name": { "type": "string" }
+              }
+            }
           }
         }
       }
