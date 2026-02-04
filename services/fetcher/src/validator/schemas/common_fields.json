@@ -36,7 +36,6 @@
       "properties": {
         "email": {
           "type": "string",
-          "format": "email",
           "description": "Email address of the user who created the result."
         },
         "name": {
@@ -53,7 +52,6 @@
       "properties": {
         "email": {
           "type": "string",
-          "format": "email",
           "description": "Email address of the user who submitted the result."
         },
         "name": {

@@ -127,7 +127,7 @@ export class CapacitySharingProcessor  {
     const enriched = { ...result };
     enriched.data = {
       ...(enriched.data || {}),
-      result_type_id: 3,
+      result_type_id: 5,
       result_level_id: 4,
     };
     return enriched;
