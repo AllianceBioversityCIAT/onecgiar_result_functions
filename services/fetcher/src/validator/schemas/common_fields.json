@@ -275,12 +275,16 @@
         "anyOf": [
           { "required": ["institution_id"] },
           { "required": ["acronym"] },
-          { "required": ["name"] }
+          { "required": ["name"] },
+          { "optional": ["usd_budget"] },
+          { "optional": ["is_determined"] }
         ],
         "properties": {
           "institution_id": { "type": "number" },
           "acronym": { "type": "string" },
-          "name": { "type": "string" }
+          "name": { "type": "string" },
+          "usd_budget": { "type": "number" },
+          "is_determined": { "type": "boolean" }
         },
         "additionalProperties": false
       }
@@ -315,6 +319,14 @@
           "is_lead": {
             "type": "boolean",
             "description": "Indicates if this bilateral project is the lead project"
+          },
+          "usd_budget": {
+            "type": "number",
+            "description": "Budget in USD allocated from this bilateral project"
+          },
+          "is_determined": {
+            "type": "boolean",
+            "description": "Indicates whether the budget amount has been determined"
           }
         },
         "additionalProperties": false
@@ -338,7 +350,15 @@
           "aow_compose_code": { "type": "string" },
           "result_title": { "type": "string" },
           "result_indicator_description": { "type": "string" },
-          "result_indicator_type_name": { "type": "string" }
+          "result_indicator_type_name": { "type": "string" },
+          "usd_budget": {
+            "type": "number",
+            "description": "Budget in USD allocated from this contributing science program"
+          },
+          "is_determined": {
+            "type": "boolean",
+            "description": "Indicates whether the budget amount has been determined"
+          }
         },
         "additionalProperties": false,
         "examples": [
@@ -348,14 +368,18 @@
               "aow_compose_code": "SP02-AOW03",
               "result_title": "Nutrition outcomes improved",
               "result_indicator_description": "Households reached with nutrition interventions",
-              "result_indicator_type_name": "Outcome"
+              "result_indicator_type_name": "Outcome",
+              "usd_budget": 150000,
+              "is_determined": true
             },
             {
               "science_program_id": "SP09",
               "aow_compose_code": "SP09.AOW01",
               "result_title": "Climate-resilient crop systems adopted",
               "result_indicator_description": "Number of climate resilient practices documented",
-              "result_indicator_type_name": "Output"
+              "result_indicator_type_name": "Output",
+              "usd_budget": null,
+              "is_determined": false
             }
           ]
         ]
