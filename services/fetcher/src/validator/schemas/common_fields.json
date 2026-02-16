@@ -275,9 +275,7 @@
         "anyOf": [
           { "required": ["institution_id"] },
           { "required": ["acronym"] },
-          { "required": ["name"] },
-          { "optional": ["usd_budget"] },
-          { "optional": ["is_determined"] }
+          { "required": ["name"] }
         ],
         "properties": {
           "institution_id": { "type": "number" },
@@ -370,7 +368,7 @@
               "result_indicator_description": "Households reached with nutrition interventions",
               "result_indicator_type_name": "Outcome",
               "usd_budget": 150000,
-              "is_determined": true
+              "is_determined": false
             },
             {
               "science_program_id": "SP09",
@@ -379,7 +377,7 @@
               "result_indicator_description": "Number of climate resilient practices documented",
               "result_indicator_type_name": "Output",
               "usd_budget": null,
-              "is_determined": false
+              "is_determined": true
             }
           ]
         ]
