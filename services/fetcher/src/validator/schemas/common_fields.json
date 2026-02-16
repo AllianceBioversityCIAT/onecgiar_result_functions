@@ -324,7 +324,7 @@
           },
           "is_determined": {
             "type": "boolean",
-            "description": "Indicates whether the budget amount has been determined"
+            "description": "Indicates whether the budget amount is YET TO BE determined"
           }
         },
         "additionalProperties": false
@@ -355,7 +355,7 @@
           },
           "is_determined": {
             "type": "boolean",
-            "description": "Indicates whether the budget amount has been determined"
+            "description": "Indicates whether the budget amount is YET TO BE determined"
           }
         },
         "additionalProperties": false,
