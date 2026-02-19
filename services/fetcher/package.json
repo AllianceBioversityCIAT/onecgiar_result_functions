@@ -8,6 +8,8 @@
     "node": ">=20"
   },
   "scripts": {
+    "start": "node src/local.mjs",
+    "dev": "node src/local.mjs",
     "build": "rm -rf dist && npx esbuild src/lambda.mjs --bundle --platform=node --target=node20 --format=cjs --outfile=dist/lambda.cjs --keep-names --log-level=info",
     "zip": "npm run build && (cd dist && zip -qr ../normalizer.zip .) && echo 'ZIP listo: normalizer.zip'"
   },
@@ -22,6 +24,7 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "dotenv": "^16.4.5",
     "esbuild": "^0.23.1"
   }
 }
