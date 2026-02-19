@@ -11,6 +11,74 @@
     }
   ],
   "paths": {
+    "/result": {
+      "get": {
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Page number",
+            "example": 1
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Page size",
+            "example": 50
+          }
+        ],
+        "summary": "Get all results",
+        "description": "Get all results",
+        "responses": {
+          "200": {
+            "description": "Results found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/result/{code}": {
+      "get": {
+        "summary": "Get all results",
+        "description": "Get all results",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Results found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ingest": {
       "post": {
         "summary": "Ingest 1..n results",
@@ -1966,6 +2034,165 @@
           }
         }
       },
+      "ResultResponse": {
+        "type": "object",
+        "description": "Respuesta de un resultado (ResultResponseMapper)",
+        "properties": {
+          "result_code": {
+            "type": "string",
+            "description": "Código del resultado"
+          },
+          "year": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Año (pendiente de versión)"
+          },
+          "pdf_link": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL del reporte PDF"
+          },
+          "prms_link": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL de PRMS (general-information)"
+          },
+          "last_update_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Última actualización en ISO 8601"
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Si el resultado está activo"
+          },
+          "result_title": {
+            "type": "string",
+            "description": "Título del resultado"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Descripción del resultado"
+          },
+          "result_level": {
+            "nullable": true,
+            "type": "object",
+            "description": "Nivel del resultado",
+            "properties": {
+              "code": { "type": "number", "nullable": true },
+              "name": { "type": "string", "nullable": true },
+              "description": { "type": "string", "nullable": true }
+            }
+          },
+          "indicator_category": {
+            "nullable": true,
+            "type": "object",
+            "description": "Categoría indicador (result_type)",
+            "properties": {
+              "code": { "type": "number", "nullable": true },
+              "name": { "type": "string", "nullable": true }
+            }
+          },
+          "toc_alignment": {
+            "type": "array",
+            "description": "Alineación ToC",
+            "items": {}
+          },
+          "geographic_focus": {
+            "nullable": true,
+            "type": "object",
+            "description": "Alcance geográfico",
+            "properties": {
+              "code": { "type": "number", "nullable": true },
+              "description": { "type": "string", "nullable": true }
+            }
+          },
+          "regions": {
+            "type": "array",
+            "description": "Regiones",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": { "type": "number", "nullable": true },
+                "name": { "type": "string", "nullable": true }
+              }
+            }
+          },
+          "countries": {
+            "type": "array",
+            "description": "Países",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": { "type": "string", "nullable": true },
+                "name": { "type": "string", "nullable": true }
+              }
+            }
+          },
+          "contributing_centers": {
+            "type": "array",
+            "description": "Centros contribuyentes",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": { "type": "number", "nullable": true },
+                "name": { "type": "string", "nullable": true },
+                "acronym": { "type": "string", "nullable": true }
+              }
+            }
+          },
+          "contributing_partners": {
+            "type": "array",
+            "description": "Socios contribuyentes",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": { "type": "number", "nullable": true },
+                "name": { "type": "string", "nullable": true },
+                "acronym": { "type": "string", "nullable": true }
+              }
+            }
+          },
+          "evidences": {
+            "type": "array",
+            "description": "Evidencias",
+            "items": {
+              "type": "object",
+              "properties": {
+                "link": { "type": "string", "format": "uri", "nullable": true },
+                "description": { "type": "string", "nullable": true }
+              }
+            }
+          },
+          "primary_entity": {
+            "nullable": true,
+            "type": "object",
+            "description": "Entidad principal (iniciativa Primary submitter)",
+            "properties": {
+              "official_code": { "type": "string", "nullable": true },
+              "name": { "type": "string", "nullable": true }
+            }
+          }
+        }
+      },
+      "ResultListResponse": {
+        "type": "object",
+        "description": "Respuesta paginada de lista de resultados (GET /result)",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "Lista de resultados",
+            "items": {
+              "$ref": "#/components/schemas/ResultResponse"
+            }
+          },
+          "total": { "type": "integer", "description": "Total de documentos" },
+          "page": { "type": "integer", "description": "Página actual" },
+          "size": { "type": "integer", "description": "Tamaño de página" },
+          "totalPages": { "type": "integer", "description": "Total de páginas" }
+        }
+      },
       "ResultData": {
         "type": "object",
         "description": "Common fields shared by all result types",
@@ -1984,10 +2211,7 @@
         "properties": {
           "result_id": {
             "description": "Identifier of the result in the source system (optional)",
-            "oneOf": [
-              { "type": "number" },
-              { "type": "string" }
-            ]
+            "oneOf": [{ "type": "number" }, { "type": "string" }]
           },
           "created_date": {
             "type": "string",
@@ -2128,10 +2352,7 @@
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "anyOf": [
-                    { "required": ["id"] },
-                    { "required": ["name"] }
-                  ],
+                  "anyOf": [{ "required": ["id"] }, { "required": ["name"] }],
                   "properties": {
                     "id": { "type": "number" },
                     "name": { "type": "string" }

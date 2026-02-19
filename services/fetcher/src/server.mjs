@@ -1,12 +1,13 @@
 import express from "express";
-import { normalizeCommon } from "./normalizer.mjs"; 
-import { validateByType } from "./validator/registry.js"; 
-import { offloadRequestBody } from "./utils.js"; 
+import { normalizeCommon } from "./normalizer.mjs";
+import { validateByType } from "./validator/registry.js";
+import { offloadRequestBody } from "./utils.js";
 import { ProcessorFactory } from "./processors/factory.mjs";
 import { Logger } from "./utils/logger.mjs";
 import { S3Utils } from "./utils/s3.mjs";
 import { ExternalApiClient } from "./clients/external-api.mjs";
 import { OpenSearchClient } from "./clients/opensearch.mjs";
+import resultsRouter from "./controllers/results.controllers.mjs";
 
 import openapi from "./docs/openapi.json" with { type: "json" };
 
@@ -119,7 +120,7 @@ app.post("/ingest", async (req, res) => {
   const s3Utils = new S3Utils();
   const processorFactory = new ProcessorFactory(logger);
 
-  console.log('[ingest] request received', {
+  console.log("[ingest] request received", {
     requestId,
     hasBody: !!body,
     rawKeys: Object.keys(body || {}),
@@ -135,10 +136,10 @@ app.post("/ingest", async (req, res) => {
   const list = Array.isArray(body.results)
     ? body.results
     : body.results
-    ? [body.results]
-    : [];
+      ? [body.results]
+      : [];
   if (!list.length) {
-    console.warn('[ingest] empty results list', { requestId });
+    console.warn("[ingest] empty results list", { requestId });
     return res.status(400).json({
       ok: false,
       error: "results_missing",
@@ -148,10 +149,10 @@ app.post("/ingest", async (req, res) => {
   }
 
   if (list.length > 100) {
-    console.warn('[ingest] batch too large', { requestId, count: list.length });
+    console.warn("[ingest] batch too large", { requestId, count: list.length });
     return res.status(413).json({
       ok: false,
-      error: 'results_too_many',
+      error: "results_too_many",
       message: `Maximum 100 results allowed per request. Received ${list.length}. Nothing processed.`,
       limit: 100,
       received: list.length,
@@ -182,22 +183,26 @@ app.post("/ingest", async (req, res) => {
     try {
       normalized = normalizeCommon ? normalizeCommon({ ...data }) : { ...data };
     } catch (normErr) {
-      console.error('[ingest] normalizeCommon failed', {
+      console.error("[ingest] normalizeCommon failed", {
         index: i,
         type,
         error: normErr?.message,
         stack: normErr?.stack,
-        requestId
+        requestId,
       });
-      rejected.push({ index: i, type, reason: `normalization_error: ${normErr?.message}` });
+      rejected.push({
+        index: i,
+        type,
+        reason: `normalization_error: ${normErr?.message}`,
+      });
       continue;
     }
 
     const v = validateByType(type, normalized);
     if (!v.ok) {
-      rejected.push({ 
-        index: i, 
-        type, 
+      rejected.push({
+        index: i,
+        type,
         errors: v.errors,
         // Include detailed errors if available for better debugging
         ...(v.detailedErrors ? { detailedErrors: v.detailedErrors } : {}),
@@ -205,24 +210,30 @@ app.post("/ingest", async (req, res) => {
       continue;
     }
 
-    const normalizedData = normalized && typeof normalized === "object" ? normalized : {};
-    const crypto = await import('crypto');
+    const normalizedData =
+      normalized && typeof normalized === "object" ? normalized : {};
+    const crypto = await import("crypto");
     const handle = normalizedData?.knowledge_product?.handle;
-    const resultId = normalizedData?.result_id !== undefined ? normalizedData.result_id : normalizedData?.id;
+    const resultId =
+      normalizedData?.result_id !== undefined
+        ? normalizedData.result_id
+        : normalizedData?.id;
     let uniqueId = resultId ?? handle;
-    
+
     if (!uniqueId) {
       const contentHash = crypto
-        .createHash('sha256')
+        .createHash("sha256")
         .update(JSON.stringify(normalizedData))
-        .digest('hex')
+        .digest("hex")
         .slice(0, 16);
       uniqueId = `auto-${contentHash}`;
     }
-    
+
     const idempotencyKey = `${tenant}:${type}:${op}:${uniqueId}`;
     const payloadData =
-      normalizedData?.data && typeof normalizedData.data === "object" && Object.keys(normalizedData.data).length
+      normalizedData?.data &&
+      typeof normalizedData.data === "object" &&
+      Object.keys(normalizedData.data).length
         ? { ...normalizedData.data }
         : { ...normalizedData };
 
@@ -264,13 +275,15 @@ app.post("/ingest", async (req, res) => {
 
   try {
     pointer = await offloadRequestBody(ingestionEnvelope);
-    console.log('[ingest] Data offloaded to S3', { 
-      bucket: pointer.s3.bucket, 
+    console.log("[ingest] Data offloaded to S3", {
+      bucket: pointer.s3.bucket,
       key: pointer.s3.key,
-      correlationId: pointer.correlationId 
+      correlationId: pointer.correlationId,
     });
   } catch (err) {
-    console.error('[ingest] failed full body offload', { message: err?.message });
+    console.error("[ingest] failed full body offload", {
+      message: err?.message,
+    });
   }
 
   const resultsByType = new Map();
@@ -287,7 +300,9 @@ app.post("/ingest", async (req, res) => {
   let totalFailed = 0;
 
   for (const [type, typeResults] of resultsByType) {
-    console.log(`[ingest] Processing ${typeResults.length} results of type: ${type}`);
+    console.log(
+      `[ingest] Processing ${typeResults.length} results of type: ${type}`,
+    );
 
     try {
       if (!processorFactory.isTypeSupported(type)) {
@@ -320,7 +335,7 @@ app.post("/ingest", async (req, res) => {
               const processingResult = await processor.process(result);
               logger.logProcessingResult(
                 processingResult,
-                processingResult.result
+                processingResult.result,
               );
 
               if (processingResult.success) {
@@ -336,9 +351,8 @@ app.post("/ingest", async (req, res) => {
                     {
                       stage: "processing",
                       externalError: processingResult.externalError,
-                      externalApiResponse:
-                        processingResult.externalApiResponse,
-                    }
+                      externalApiResponse: processingResult.externalApiResponse,
+                    },
                   );
                 }
               }
@@ -357,7 +371,9 @@ app.post("/ingest", async (req, res) => {
                   externalError: processingResult.externalError,
                   externalApiResponse: processingResult.externalApiResponse,
                   // Include validation errors if present
-                  ...(processingResult.validationErrors ? { validationErrors: processingResult.validationErrors } : {}),
+                  ...(processingResult.validationErrors
+                    ? { validationErrors: processingResult.validationErrors }
+                    : {}),
                 };
               }
 
@@ -365,7 +381,11 @@ app.post("/ingest", async (req, res) => {
             } catch (error) {
               const errorMessage =
                 error instanceof Error ? error.message : "Unknown error";
-              console.error('[ingest] Processing failed', result.idempotencyKey, error);
+              console.error(
+                "[ingest] Processing failed",
+                result.idempotencyKey,
+                error,
+              );
               totalFailed++;
 
               if (result.jobId) {
@@ -381,11 +401,16 @@ app.post("/ingest", async (req, res) => {
                 ...(error && typeof error === "object" && "apiResponse" in error
                   ? { externalApiResponse: error.apiResponse }
                   : {}),
-                ...(error && typeof error === "object" && "responseBody" in error
+                ...(error &&
+                typeof error === "object" &&
+                "responseBody" in error
                   ? { externalResponseBody: error.responseBody }
                   : {}),
                 ...(error && typeof error === "object" && "status" in error
-                  ? { httpStatus: error.status, httpStatusText: error.statusText }
+                  ? {
+                      httpStatus: error.status,
+                      httpStatusText: error.statusText,
+                    }
                   : {}),
               };
 
@@ -397,7 +422,7 @@ app.post("/ingest", async (req, res) => {
                 resultType: result.type,
               };
             }
-          })
+          }),
         );
 
         allProcessingResults.push(...batchResults);
@@ -413,7 +438,8 @@ app.post("/ingest", async (req, res) => {
           });
         }
 
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
         allProcessingResults.push({
           success: false,
           error: errorMessage,
@@ -433,16 +459,14 @@ app.post("/ingest", async (req, res) => {
   }
 
   const successfulResults = allProcessingResults
-    .filter(
-      (r) => r.success && "result" in r && r.result !== undefined
-    )
+    .filter((r) => r.success && "result" in r && r.result !== undefined)
     .map((r) => r.result);
 
   if (successfulResults.length > 0) {
     try {
       await s3Utils.saveProcessedResults(successfulResults, "final");
     } catch (error) {
-      console.error('[ingest] Failed to save processed results to S3', error);
+      console.error("[ingest] Failed to save processed results to S3", error);
     }
   }
 
@@ -451,7 +475,7 @@ app.post("/ingest", async (req, res) => {
     acceptedResults.length,
     totalSuccessful,
     totalFailed,
-    processingTimeMs
+    processingTimeMs,
   );
 
   return res.status(totalFailed === 0 ? 200 : 207).json({
@@ -469,10 +493,12 @@ app.post("/ingest", async (req, res) => {
     processingTimeMs,
     logs: logger.getLogsSummary(),
     requestId,
-    ...(pointer ? { 
-      offload: pointer.s3,
-      correlationId: pointer.correlationId 
-    } : {}),
+    ...(pointer
+      ? {
+          offload: pointer.s3,
+          correlationId: pointer.correlationId,
+        }
+      : {}),
     timestamp: new Date().toISOString(),
   });
 });
@@ -500,8 +526,8 @@ app.patch("/update/:id", async (req, res) => {
   const resultList = Array.isArray(body.results)
     ? body.results
     : body.results
-    ? [body.results]
-    : [];
+      ? [body.results]
+      : [];
   const firstResult = resultList[0];
 
   if ((!type || !type.length) && firstResult?.type) {
@@ -537,23 +563,23 @@ app.patch("/update/:id", async (req, res) => {
     body.tenant !== undefined && body.tenant !== null
       ? String(body.tenant).trim()
       : firstResult?.tenant && typeof firstResult.tenant === "string"
-      ? String(firstResult.tenant).trim()
-      : undefined;
+        ? String(firstResult.tenant).trim()
+        : undefined;
   const tenant = tenantRaw ? tenantRaw.toLowerCase() : undefined;
   const jobIdRaw =
     body.jobId !== undefined && body.jobId !== null
       ? String(body.jobId).trim()
       : firstResult?.jobId !== undefined && firstResult?.jobId !== null
-      ? String(firstResult.jobId).trim()
-      : undefined;
+        ? String(firstResult.jobId).trim()
+        : undefined;
   const jobId = jobIdRaw || undefined;
   const providedIdempotencyKeyRaw =
     body.idempotencyKey !== undefined && body.idempotencyKey !== null
       ? String(body.idempotencyKey).trim()
       : firstResult?.idempotencyKey !== undefined &&
-        firstResult?.idempotencyKey !== null
-      ? String(firstResult.idempotencyKey).trim()
-      : undefined;
+          firstResult?.idempotencyKey !== null
+        ? String(firstResult.idempotencyKey).trim()
+        : undefined;
   const providedIdempotencyKey = providedIdempotencyKeyRaw || undefined;
 
   let receivedAt =
@@ -613,7 +639,9 @@ app.patch("/update/:id", async (req, res) => {
         received_at: responsePayload?.received_at || receivedAt,
         result_id: responsePayload?.result_id ?? resultId,
         // Include payload from request body if provided
-        ...(body.payload || firstResult ? { payload: body.payload || firstResult || body } : {}),
+        ...(body.payload || firstResult
+          ? { payload: body.payload || firstResult || body }
+          : {}),
       };
 
       if (fixedFields) {
@@ -631,14 +659,14 @@ app.patch("/update/:id", async (req, res) => {
 
       const updateResponse = await openSearchClient.updateDocumentsByResultId(
         resultId,
-        baseDocument
+        baseDocument,
       );
 
       if (!updateResponse.updated) {
         logger.warn(
           "No OpenSearch documents matched for update, indexing fallback document",
           resultId,
-          { type }
+          { type },
         );
         await openSearchClient.ensureIndex(type);
         const indexResponse = await openSearchClient.indexResult(baseDocument);
@@ -655,7 +683,7 @@ app.patch("/update/:id", async (req, res) => {
     } else {
       logger.warn(
         "External API did not return payload to update OpenSearch",
-        resultId
+        resultId,
       );
     }
 
@@ -714,7 +742,8 @@ app.delete("/delete/:id", async (req, res) => {
     const externalResponse = await externalApiClient.deleteResult(resultId);
 
     logger.info("Deleting result documents in OpenSearch", resultId);
-    const opensearchDeletion = await openSearchClient.deleteByResultId(resultId);
+    const opensearchDeletion =
+      await openSearchClient.deleteByResultId(resultId);
 
     logger.success("Result deletion completed", resultId, {
       opensearchDeleted: opensearchDeletion.deleted,
@@ -753,13 +782,15 @@ app.delete("/delete/:id", async (req, res) => {
   }
 });
 
+app.use("/result", resultsRouter);
+
 // Helper functions for sync endpoint
 const extractResultId = (externalResult, externalApiClient) => {
   return externalApiClient.parseNumeric(
     externalResult.result_id ??
       externalResult.id ??
       externalResult?.data?.result_id ??
-      externalResult?.data?.id
+      externalResult?.data?.id,
   );
 };
 
@@ -781,7 +812,7 @@ const processExternalResult = async (params) => {
   } = params;
   const resultId = extractResultId(externalResult, externalApiClient);
   const type = resolveCanonicalResultType(
-    externalResult.type ?? externalResult?.data?.type
+    externalResult.type ?? externalResult?.data?.type,
   );
 
   if (!type) {
@@ -797,7 +828,8 @@ const processExternalResult = async (params) => {
   // Extract data as-is from external API (internal DB format)
   // No validation or complex normalization - save directly to OpenSearch
   const resultData = extractDataFromExternalResult(externalResult);
-  const shouldCreate = resultId === undefined || !existingResultIds.has(resultId);
+  const shouldCreate =
+    resultId === undefined || !existingResultIds.has(resultId);
 
   if (dryRun) {
     return {
@@ -894,19 +926,13 @@ const createResult = async (params) => {
 };
 
 const updateResult = async (params) => {
-  const {
-    resultId,
-    type,
-    tenant,
-    resultData,
-    openSearchClient,
-    index,
-  } = params;
+  const { resultId, type, tenant, resultData, openSearchClient, index } =
+    params;
   try {
     // Update in external API (if needed)
     // Note: We may not need to call updateResult if we're syncing from external API
     // But keeping it for consistency with /update endpoint behavior
-    
+
     // Build document with data as-is from external API
     // Payload will be preserved automatically by updateDocumentsByResultId
     const baseDocument = {
@@ -945,7 +971,7 @@ const deleteOrphanedResults = async (
   dryRun,
   externalApiClient,
   openSearchClient,
-  logger
+  logger,
 ) => {
   const deleted = [];
   const errors = [];
@@ -965,7 +991,10 @@ const deleteOrphanedResults = async (
     return { deleted: [], errors: [] };
   }
 
-  logger.info(`Deleting ${toDelete.length} results not found in external API`, null);
+  logger.info(
+    `Deleting ${toDelete.length} results not found in external API`,
+    null,
+  );
 
   for (const resultId of toDelete) {
     try {
@@ -1078,13 +1107,8 @@ const processAllExternalResults = async (params) => {
 };
 
 const buildSyncResponse = (params) => {
-  const {
-    results,
-    externalResults,
-    processingTimeMs,
-    requestId,
-    dryRun,
-  } = params;
+  const { results, externalResults, processingTimeMs, requestId, dryRun } =
+    params;
 
   return {
     ok: results.errors.length === 0,
@@ -1158,13 +1182,13 @@ app.post("/sync", async (req, res) => {
     }
 
     console.log(
-      `[sync] Fetched ${externalResults.length} results from external API`
+      `[sync] Fetched ${externalResults.length} results from external API`,
     );
 
     logger.info("Fetching existing result IDs from OpenSearch", null);
     const existingResultIds = await openSearchClient.getAllResultIds();
     console.log(
-      `[sync] Found ${existingResultIds.size} existing result_ids in OpenSearch`
+      `[sync] Found ${existingResultIds.size} existing result_ids in OpenSearch`,
     );
 
     const { results, externalResultIds } = await processAllExternalResults({
@@ -1197,7 +1221,7 @@ app.post("/sync", async (req, res) => {
       externalResults.length,
       results.created.length + results.updated.length,
       results.errors.length,
-      processingTimeMs
+      processingTimeMs,
     );
 
     const response = buildSyncResponse({
