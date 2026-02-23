@@ -65,7 +65,8 @@ export class RegionMapper {
     if (isEmpty(regionObjects)) return [];
     return regionObjects
       .filter((el) => !isEmpty(el?.region_object))
-      .map((regionObject) => RegionMapper.from(regionObject.region_object));
+      .map((regionObject) => RegionMapper.from(regionObject.region_object))
+      .filter((el) => !isEmpty(el));
   }
 }
 
@@ -83,7 +84,8 @@ export class CountryMapper {
     if (isEmpty(countryObjects)) return [];
     return countryObjects
       .filter((el) => !isEmpty(el?.country_object))
-      .map((countryObject) => CountryMapper.from(countryObject.country_object));
+      .map((countryObject) => CountryMapper.from(countryObject.country_object))
+      .filter((el) => !isEmpty(el));
   }
 }
 
@@ -108,7 +110,8 @@ export class ContributingCenterMapper {
         ContributingCenterMapper.from(
           contributingCenterObject.clarisa_center_object,
         ),
-      );
+      )
+      .filter((el) => !isEmpty(el));
   }
 }
 
@@ -133,7 +136,8 @@ export class ContributingPartnerMapper {
         ContributingPartnerMapper.from(
           contributingPartnerObject.contributing_partner_object,
         ),
-      );
+      )
+      .filter((el) => !isEmpty(el));
   }
 }
 
@@ -151,9 +155,9 @@ export class EvidencesMapper {
 
   static fromArray(evidenceObjects) {
     if (isEmpty(evidenceObjects)) return [];
-    return evidenceObjects.map((evidenceObject) =>
-      EvidencesMapper.from(evidenceObject),
-    );
+    return evidenceObjects
+      .map((evidenceObject) => EvidencesMapper.from(evidenceObject))
+      .filter((el) => !isEmpty(el));
   }
 }
 
