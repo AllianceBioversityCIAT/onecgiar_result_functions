@@ -419,6 +419,24 @@ export class OpenSearchClient {
       try {
         await this.makeRequest("HEAD", `/${indexName}`);
         console.log(`[OpenSearchClient] Index ${indexName} already exists`);
+
+        // Ensure that existing indices have a higher total_fields limit
+        // to prevent the "Limit of total fields [1000] has been exceeded" error
+        try {
+          await this.makeRequest("PUT", `/${indexName}/_settings`, {
+            index: {
+              mapping: {
+                total_fields: {
+                  limit: 5000
+                }
+              }
+            }
+          });
+          console.log(`[OpenSearchClient] Successfully increased total_fields limit for ${indexName}`);
+        } catch (settingsErr) {
+          console.warn(`[OpenSearchClient] Settings update for ${indexName} returned a non-200. It might already be applied or lacks permissions.`, settingsErr.message);
+        }
+
         await this.ensureAlias(indexName);
         return;
       } catch (error) {
@@ -446,22 +464,43 @@ export class OpenSearchClient {
             title: { type: "text", analyzer: "standard" },
             description: { type: "text", analyzer: "standard" },
 
+            created_by: {
+              type: "object",
+              enabled: false
+            },
+            last_updated_by: {
+              type: "object",
+              enabled: false
+            },
             submitted_by: {
               type: "object",
-              properties: {
-                email: { type: "keyword" },
-                name: { type: "text" },
-              },
+              enabled: false
             },
             payload: {
               type: "object",
               enabled: true,
+              dynamic: false,
+              properties: {
+                created_by: {
+                  type: "object",
+                  enabled: false
+                },
+                last_updated_by: {
+                  type: "object",
+                  enabled: false
+                }
+              }
             },
           },
         },
         settings: {
           number_of_shards: 1,
           number_of_replicas: 0,
+          mapping: {
+            total_fields: {
+              limit: 5000
+            }
+          }
         },
       };
 

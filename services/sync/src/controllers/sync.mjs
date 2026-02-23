@@ -60,18 +60,26 @@ export class SyncController {
             // Since mapping is fast, we construct the results first
             const osResults = items.map(async (item) => {
                 // Construct the expected schema for OpenSearch mapping
-                // Similar to the fetcher implementation
                 const idempotencyKey = `prms.result-management.api:${item.result_type_id}:${item.id}`;
 
+                // Sanitize fields that might come as strings/numbers from external API but OpenSearch expects as objects natively
+                const sanitizedPayload = { ...item };
+
+                // Remove the fields that cause mapper_parsing_exception entirely from the raw payload
+                // The main resulting index properties (like type, code, id) are outside of this payload scope
+                delete sanitizedPayload.created_by;
+                delete sanitizedPayload.last_updated_by;
+                delete sanitizedPayload.submitted_by;
+
                 const openSearchRecord = {
-                    ...item,
+                    ...sanitizedPayload,
                     type: result_type,
                     idempotencyKey,
                     received_at: timestamp,
                     // Since tenant depends on the environment setup in fetcher, we assume default or extract if available
                     tenant: "prms",
-                    // Store original payload for reference exactly as specified
-                    payload: item,
+                    // Store original payload for reference exactly as specified (but sanitized for OpenSearch strict mapping avoiding index 400s)
+                    payload: sanitizedPayload,
                 };
 
                 try {
