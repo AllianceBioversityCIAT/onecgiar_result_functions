@@ -1,4 +1,4 @@
-const isEmpty = (v) => {
+export const isEmpty = (v) => {
   return (
     v === null ||
     v === "" ||

@@ -1,5 +1,6 @@
 import { OpenSearchClient } from "../clients/opensearch.mjs";
 import { ResultResponseMapper } from "../mappers/response-result.mjs";
+import { isEmpty } from "../mappers/response-result.mjs";
 
 const responseFormat = (data, status) => ({
   results: data,
@@ -7,7 +8,27 @@ const responseFormat = (data, status) => ({
 });
 const openCli = new OpenSearchClient();
 
-export const getResult = async (page, size) => {
+const buildFilters = (filters) => {
+  const keys = {
+    centerAcronym:
+      "result_center_array.clarisa_center_object.clarisa_institution.acronym.keyword",
+    resultCode: "result_code",
+    fundingType: "source.keyword",
+  };
+
+  const processedFilters = [];
+  for (const filterKey in filters) {
+    if (isEmpty(keys[filterKey]) || isEmpty(filters[filterKey])) {
+      continue;
+    }
+    processedFilters.push({
+      term: { [keys[filterKey]]: filters[filterKey] },
+    });
+  }
+  return processedFilters;
+};
+
+export const getResult = async (page, size, filters) => {
   try {
     if (page < 1 || size < 1) {
       return responseFormat(
@@ -21,6 +42,20 @@ export const getResult = async (page, size) => {
         400,
       );
     }
+    const processedFilters = buildFilters(filters);
+    let query = {};
+    if (processedFilters.length > 0) {
+      query = {
+        bool: {
+          must: processedFilters,
+        },
+      };
+    } else {
+      query = {
+        match_all: {},
+      };
+    }
+
     const response = await openCli.makeRequest(
       "POST",
       "/prms-results-*/_search",
@@ -34,9 +69,7 @@ export const getResult = async (page, size) => {
             },
           },
         ],
-        query: {
-          match_all: {},
-        },
+        query,
       },
     );
     const results = response.hits.hits.map(

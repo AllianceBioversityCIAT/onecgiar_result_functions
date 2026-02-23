@@ -33,6 +33,36 @@
             },
             "description": "Page size",
             "example": 50
+          },
+          {
+            "name": "centerAcronym",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Center acronym",
+            "example": "CIAT"
+          },
+          {
+            "name": "resultCode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Result code",
+            "example": "123456"
+          },
+          {
+            "name": "fundingType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Funding type",
+            "example": "GRP"
           }
         ],
         "summary": "Get all results",
