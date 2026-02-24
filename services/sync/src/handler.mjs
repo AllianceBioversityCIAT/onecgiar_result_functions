@@ -8,37 +8,61 @@
 import { createRequire } from "module";
 import { fileURLToPath } from "url";
 import { dirname, resolve, join } from "path";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, readdirSync } from "fs";
 
-// createRequire needs a real filename/URL; import.meta.url is undefined in CJS bundles
-const require = createRequire(
-  typeof __filename !== "undefined" ? __filename : import.meta.url
-);
-
-// Get __dirname equivalent (esbuild will transform import.meta.url correctly for CommonJS)
+// Get __dirname - works in both ESM and CJS after esbuild bundling
 let __dirname;
 try {
-  const __filename = fileURLToPath(import.meta.url);
-  __dirname = dirname(__filename);
+  // Try to get __dirname from CommonJS (after esbuild bundling)
+  if (typeof __dirname !== "undefined") {
+    // Already available in CJS
+  } else if (typeof __filename !== "undefined") {
+    // __filename available, get dirname
+    const { dirname: dirnameFn } = require("path");
+    __dirname = dirnameFn(__filename);
+  } else {
+    // Try ESM way
+    const __filename = fileURLToPath(import.meta.url);
+    __dirname = dirname(__filename);
+  }
 } catch (e) {
-  // Fallback if import.meta.url is not available (shouldn't happen, but safe)
+  // Fallback to process.cwd()
   __dirname = process.cwd();
 }
 
+// Debug logging (safe - no secrets)
+console.log("[handler] Initializing env loader...");
+console.log(`[handler] __dirname: ${__dirname}`);
+console.log(`[handler] process.cwd(): ${process.cwd()}`);
+
 // Try multiple possible paths for .env file
-// SAM packages CodeUri: services/sync/, so .env could be at different locations
+// SAM packages CodeUri: services/sync/, so .env should be at root of package
 const possiblePaths = [
   resolve(__dirname, "../.env"),        // From dist-cron/ to root (most likely)
-  resolve(__dirname, "../../.env"),     // If nested deeper
+  resolve(__dirname, "../../.env"),      // If nested deeper
   join(process.cwd(), ".env"),          // From Lambda task root (/var/task/.env)
   resolve(process.cwd(), ".env"),       // Absolute from cwd
+  "/var/task/.env",                      // Direct Lambda path
 ];
 
 let envLoaded = false;
+let loadedPath = null;
+let envVarsLoaded = 0;
+
+// Debug: List directory structure
+try {
+  console.log(`[handler] Files in __dirname: ${readdirSync(__dirname).slice(0, 5).join(", ")}`);
+  if (existsSync(resolve(__dirname, ".."))) {
+    console.log(`[handler] Files in parent: ${readdirSync(resolve(__dirname, "..")).slice(0, 5).join(", ")}`);
+  }
+} catch (e) {
+  // Ignore errors in debug
+}
 
 for (const envPath of possiblePaths) {
   if (existsSync(envPath)) {
     try {
+      console.log(`[handler] Found .env at: ${envPath}`);
       // Load .env manually to avoid dotenv dependency issues
       const envContent = readFileSync(envPath, "utf8");
       const lines = envContent.split("\n");
@@ -58,12 +82,21 @@ for (const envPath of possiblePaths) {
           // Only set if not already in process.env (override: false behavior)
           if (!process.env[key]) {
             process.env[key] = cleanValue;
+            envVarsLoaded++;
           }
         }
       }
 
       envLoaded = true;
-      console.log(`[handler] Loaded .env file from: ${envPath}`);
+      loadedPath = envPath;
+      console.log(`[handler] ✅ Loaded .env file from: ${envPath}`);
+      console.log(`[handler] ✅ Loaded ${envVarsLoaded} environment variables`);
+      // Log which keys were loaded (safe - just keys, not values)
+      const loadedKeys = Object.keys(process.env).filter(k =>
+        possiblePaths.some(p => existsSync(p)) &&
+        !["PATH", "LANG", "LD_LIBRARY_PATH", "NODE_PATH"].includes(k)
+      );
+      console.log(`[handler] Environment variables available: ${loadedKeys.slice(0, 10).join(", ")}...`);
       break;
     } catch (error) {
       console.warn(`[handler] Failed to load .env from ${envPath}:`, error.message);
@@ -73,7 +106,10 @@ for (const envPath of possiblePaths) {
 
 if (!envLoaded) {
   // Log warning but don't fail - Lambda env vars from SAM template will still work
-  console.warn("[handler] .env file not found, using Lambda environment variables only");
+  console.warn("[handler] ⚠️ .env file not found in any of these paths:");
+  possiblePaths.forEach(p => console.warn(`[handler]   - ${p}`));
+  console.warn("[handler] Using Lambda environment variables only");
+  console.warn(`[handler] Current process.env keys: ${Object.keys(process.env).slice(0, 10).join(", ")}`);
 }
 
 import { runSyncJob } from "./job.mjs";
