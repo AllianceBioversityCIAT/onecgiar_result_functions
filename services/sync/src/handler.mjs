@@ -47,7 +47,7 @@ const possiblePaths = [
 
 let envLoaded = false;
 let loadedPath = null;
-let envVarsLoaded = 0;
+const loadedEnvKeys = []; // Track which keys we loaded from .env
 
 // Debug: List directory structure
 try {
@@ -74,15 +74,25 @@ for (const envPath of possiblePaths) {
 
         const equalIndex = trimmed.indexOf("=");
         if (equalIndex > 0) {
-          const key = trimmed.substring(0, equalIndex).trim();
-          const value = trimmed.substring(equalIndex + 1).trim();
+          // Extract key and value, handling inline comments
+          let key = trimmed.substring(0, equalIndex).trim();
+          let value = trimmed.substring(equalIndex + 1).trim();
+          
+          // Remove inline comments (everything after #)
+          const commentIndex = value.indexOf("#");
+          if (commentIndex > 0) {
+            value = value.substring(0, commentIndex).trim();
+          }
+          
           // Remove quotes if present
           const cleanValue = value.replace(/^["']|["']$/g, "");
 
           // Only set if not already in process.env (override: false behavior)
           if (!process.env[key]) {
             process.env[key] = cleanValue;
-            envVarsLoaded++;
+            loadedEnvKeys.push(key);
+          } else {
+            console.log(`[handler] Skipped ${key} (already in process.env)`);
           }
         }
       }
@@ -90,13 +100,21 @@ for (const envPath of possiblePaths) {
       envLoaded = true;
       loadedPath = envPath;
       console.log(`[handler] ✅ Loaded .env file from: ${envPath}`);
-      console.log(`[handler] ✅ Loaded ${envVarsLoaded} environment variables`);
-      // Log which keys were loaded (safe - just keys, not values)
-      const loadedKeys = Object.keys(process.env).filter(k =>
-        possiblePaths.some(p => existsSync(p)) &&
-        !["PATH", "LANG", "LD_LIBRARY_PATH", "NODE_PATH"].includes(k)
-      );
-      console.log(`[handler] Environment variables available: ${loadedKeys.slice(0, 10).join(", ")}...`);
+      console.log(`[handler] ✅ Loaded ${loadedEnvKeys.length} environment variables from .env`);
+      
+      // Log which keys were loaded from .env (safe - just keys, not values)
+      if (loadedEnvKeys.length > 0) {
+        console.log(`[handler] Variables loaded from .env: ${loadedEnvKeys.join(", ")}`);
+        
+        // Verify critical variables are available
+        const criticalVars = ["EXTERNAL_API_URL", "OPENSEARCH_ENDPOINT", "OPENSEARCH_USERNAME", "OPENSEARCH_PASSWORD"];
+        const missingVars = criticalVars.filter(v => !process.env[v]);
+        if (missingVars.length > 0) {
+          console.warn(`[handler] ⚠️ Missing critical variables: ${missingVars.join(", ")}`);
+        } else {
+          console.log(`[handler] ✅ All critical variables are available`);
+        }
+      }
       break;
     } catch (error) {
       console.warn(`[handler] Failed to load .env from ${envPath}:`, error.message);
@@ -109,7 +127,14 @@ if (!envLoaded) {
   console.warn("[handler] ⚠️ .env file not found in any of these paths:");
   possiblePaths.forEach(p => console.warn(`[handler]   - ${p}`));
   console.warn("[handler] Using Lambda environment variables only");
-  console.warn(`[handler] Current process.env keys: ${Object.keys(process.env).slice(0, 10).join(", ")}`);
+  
+  // Check if critical variables are missing
+  const criticalVars = ["EXTERNAL_API_URL", "OPENSEARCH_ENDPOINT"];
+  const missingVars = criticalVars.filter(v => !process.env[v]);
+  if (missingVars.length > 0) {
+    console.error(`[handler] ❌ Missing critical variables: ${missingVars.join(", ")}`);
+    console.error(`[handler] This will cause runtime errors!`);
+  }
 }
 
 import { runSyncJob } from "./job.mjs";
