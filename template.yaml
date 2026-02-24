@@ -15,7 +15,7 @@ Parameters:
   ScheduleExpression:
     Type: String
     Default: rate(15 minutes)
-    Description: EventBridge schedule expression. Valid formats: rate(5 minutes), rate(1 hour), cron(0 12 * * ? *)
+    Description: "EventBridge schedule expression. Valid formats: rate(5 minutes), rate(1 hour), cron(0 12 * * ? *)"
     MinLength: 1
   
   ResultType:
