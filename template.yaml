@@ -23,6 +23,46 @@ Parameters:
     Type: String
     Default: knowledge_product
     Description: Result type to sync (e.g., knowledge_product, innovation_development, etc.)
+  
+  CronJobLimit:
+    Type: Number
+    Default: 100
+    Description: "Limit of items per page for cron job (1-500)"
+  
+  CronJobPortfolio:
+    Type: String
+    Default: ""
+    Description: "Portfolio filter (e.g., P22, P25). Leave empty to not filter."
+  
+  CronJobPhaseYear:
+    Type: Number
+    Default: 0
+    Description: "Phase year filter. Set to 0 to not filter by phase year."
+  
+  CronJobStatus:
+    Type: String
+    Default: ""
+    Description: "Status filter (e.g., 'Pending Review'). Leave empty to not filter."
+  
+  CronJobLastUpdatedFrom:
+    Type: String
+    Default: ""
+    Description: "Last updated date from (YYYY-MM-DD). Leave empty to not filter."
+  
+  CronJobLastUpdatedTo:
+    Type: String
+    Default: ""
+    Description: "Last updated date to (YYYY-MM-DD). Leave empty to not filter."
+  
+  CronJobCreatedFrom:
+    Type: String
+    Default: ""
+    Description: "Created date from (YYYY-MM-DD). Leave empty to not filter."
+  
+  CronJobCreatedTo:
+    Type: String
+    Default: ""
+    Description: "Created date to (YYYY-MM-DD). Leave empty to not filter."
 
 Globals:
   Function:
@@ -96,7 +136,15 @@ Resources:
               {
                 "job": "sync-cron",
                 "env": "${Environment}",
-                "result_type": "${ResultType}"
+                "result_type": "${ResultType}",
+                "limit": ${CronJobLimit},
+                "portfolio": "${CronJobPortfolio}",
+                "phase_year": ${CronJobPhaseYear},
+                "status": "${CronJobStatus}",
+                "last_updated_from": "${CronJobLastUpdatedFrom}",
+                "last_updated_to": "${CronJobLastUpdatedTo}",
+                "created_from": "${CronJobCreatedFrom}",
+                "created_to": "${CronJobCreatedTo}"
               }
 
   SyncApiLambdaRole:
