@@ -152,27 +152,58 @@ export const handler = async (event, context) => {
   const startTime = Date.now();
   const requestId = context?.requestId || context?.awsRequestId || `cron-${Date.now()}`;
 
-  // Log start marker (sanitize event to avoid logging sensitive data)
-  const sanitizedEvent = {
-    job: event?.job || event?.payload?.job,
-    env: event?.env || event?.payload?.env,
-    result_type: event?.result_type || event?.payload?.result_type,
-    // Only log non-sensitive fields
-  };
-
+  // Log raw event structure for debugging (safe - no sensitive data)
   logger.info("=== CRON JOB START ===", requestId, {
     job: "sync-cron",
-    event: sanitizedEvent,
+    eventType: typeof event,
+    eventIsString: typeof event === "string",
+    eventIsObject: typeof event === "object" && event !== null,
+    eventKeys: event && typeof event === "object" ? Object.keys(event).slice(0, 10) : [],
     timestamp: new Date().toISOString(),
     requestId,
   });
 
   try {
-    // Extract payload from EventBridge Scheduler
-    // EventBridge Scheduler sends the payload in event.payload or event
-    const payload = event?.payload || event || {};
+    // Extract payload from EventBridge Rule
+    // EventBridge Rules send Input in different formats:
+    // 1. Directly as object: event = { job: "...", env: "..." }
+    // 2. As string JSON: event = "{\"job\":\"...\",\"env\":\"...\"}"
+    // 3. Wrapped in detail: event.detail = { ... }
+    let payload = {};
+
+    // Try to parse if it's a string (EventBridge sometimes sends Input as JSON string)
+    if (typeof event === "string") {
+      try {
+        payload = JSON.parse(event);
+      } catch (e) {
+        logger.warn("Failed to parse event as JSON string, using as-is", requestId);
+        payload = {};
+      }
+    } else if (event && typeof event === "object") {
+      // Check if Input is in event.detail (some EventBridge formats)
+      if (event.detail) {
+        payload = event.detail;
+      } else if (event.payload) {
+        // EventBridge Scheduler format
+        payload = event.payload;
+      } else {
+        // Input is directly in event object
+        payload = event;
+      }
+    }
+
+    // Extract values with defaults
     const env = payload.env || process.env.ENVIRONMENT || "testing";
     const jobType = payload.job || "sync-cron";
+    const resultType = payload.result_type || process.env.RESULT_TYPE || "knowledge_product";
+
+    // Log the actual event structure for debugging
+    logger.info("Event structure", requestId, {
+      eventType: typeof event,
+      hasDetail: !!event?.detail,
+      hasPayload: !!event?.payload,
+      eventKeys: event && typeof event === "object" ? Object.keys(event).slice(0, 10) : [],
+    });
 
     // Log only non-sensitive payload fields
     const sanitizedPayload = {
@@ -187,6 +218,7 @@ export const handler = async (event, context) => {
     logger.info("Processing cron job", requestId, {
       jobType,
       env,
+      resultType,
       payload: sanitizedPayload,
     });
 
