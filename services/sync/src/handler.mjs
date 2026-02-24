@@ -10,7 +10,10 @@ import { fileURLToPath } from "url";
 import { dirname, resolve, join } from "path";
 import { existsSync, readFileSync } from "fs";
 
-const require = createRequire(import.meta.url);
+// createRequire needs a real filename/URL; import.meta.url is undefined in CJS bundles
+const require = createRequire(
+  typeof __filename !== "undefined" ? __filename : import.meta.url
+);
 
 // Get __dirname equivalent (esbuild will transform import.meta.url correctly for CommonJS)
 let __dirname;
