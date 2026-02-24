@@ -17,7 +17,7 @@ export class SyncController {
         try {
             this.logger.info("Received sync request with query parameters", req.query);
 
-            const { result_type, ...otherFilters } = req.query;
+            const { result_type, page: queryPage, limit: queryLimit, ...otherFilters } = req.query;
 
             // Ensure result_type is provided as it is mandatory
             if (!result_type) {
@@ -30,14 +30,41 @@ export class SyncController {
 
             this.logger.info(`Valid result_type provided: ${result_type}. Fetching results...`);
 
-            // 1. Fetch data from External API
-            const apiResponse = await this.externalApiClient.fetchResultsList({
-                result_type,
-                ...otherFilters,
-            });
+            const pageSize = Math.min(Math.max(Number.parseInt(queryLimit, 10) || 100, 1), 500);
+            const singlePage = queryPage !== undefined && queryPage !== null && queryPage !== "";
 
-            const items = apiResponse?.response?.items || [];
-            const meta = apiResponse?.response?.meta || {};
+            let items = [];
+            let meta = {};
+
+            if (singlePage) {
+                // Single page: same as before (e.g. component sends page=2&limit=50)
+                const apiResponse = await this.externalApiClient.fetchResultsList({
+                    result_type,
+                    page: queryPage,
+                    limit: pageSize,
+                    ...otherFilters,
+                });
+                items = apiResponse?.response?.items || [];
+                meta = apiResponse?.response?.meta || {};
+            } else {
+                // No page specified: fetch all pages from external API and concatenate
+                let page = 1;
+                let hasMore = true;
+                while (hasMore) {
+                    const apiResponse = await this.externalApiClient.fetchResultsList({
+                        result_type,
+                        page,
+                        limit: pageSize,
+                        ...otherFilters,
+                    });
+                    const pageItems = apiResponse?.response?.items || [];
+                    if (page === 1) meta = apiResponse?.response?.meta || {};
+                    items = items.concat(pageItems);
+                    this.logger.info(`Fetched page ${page}: ${pageItems.length} items (total so far: ${items.length})`);
+                    if (pageItems.length < pageSize) hasMore = false;
+                    else page += 1;
+                }
+            }
 
             this.logger.info(`Fetched ${items.length} items from external API for result_type ${result_type}`);
 
@@ -53,7 +80,6 @@ export class SyncController {
             await this.openSearchClient.ensureIndex(result_type);
 
             // 3. Process and index items into OpenSearch
-            const indexResults = [];
             const timestamp = new Date().toISOString();
 
             // We use Promise.all to map them concurrently (with small batches to avoid overwhelming OS)

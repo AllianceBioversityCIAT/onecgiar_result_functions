@@ -43,15 +43,15 @@ export const swaggerDocument = {
                         name: "page",
                         in: "query",
                         required: false,
-                        schema: { type: "integer", default: 1 },
-                        example: 1
+                        schema: { type: "integer" },
+                        description: "If omitted, the service fetches all pages from the external API and syncs every result. If provided, only that page is fetched and synced (e.g. for UI pagination)."
                     },
                     {
                         name: "limit",
                         in: "query",
                         required: false,
-                        schema: { type: "integer", default: 10 },
-                        example: 10
+                        schema: { type: "integer", default: 100 },
+                        description: "Page size for the external API. When fetching all pages, used as the size of each request (max 500). When using a single page, this is the number of items for that page."
                     },
                     {
                         name: "source",
