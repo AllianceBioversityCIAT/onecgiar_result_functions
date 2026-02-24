@@ -1,0 +1,16 @@
+# SAM ignore file - explicitly include .env
+# This overrides .gitignore to ensure .env is included in Lambda package
+
+# Include .env file (even though it's in .gitignore)
+!.env
+
+# Exclude other files that shouldn't be in Lambda
+node_modules/
+.git/
+*.log
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
