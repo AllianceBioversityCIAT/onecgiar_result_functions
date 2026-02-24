@@ -9,7 +9,7 @@ cached = true
 parallel = true
 
 [default.deploy.parameters]
-capabilities = "CAPABILITY_IAM"
+capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
 region = "us-east-1"
 resolve_s3 = true
 parameter_overrides = "Environment=testing ScheduleExpression=\"rate(15 minutes)\" ResultType=knowledge_product"
