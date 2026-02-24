@@ -67,7 +67,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: secretsmanager:GetSecretValue
-                Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Environment}/app/lambdas/prms/result-management/sync*'
+                Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:dev/app/lambdas/prms/result-management/sync*'
               - Effect: Allow
                 Action: sqs:SendMessage
                 Resource: !GetAtt SyncCronDLQ.Arn
