@@ -77,13 +77,13 @@ for (const envPath of possiblePaths) {
           // Extract key and value, handling inline comments
           let key = trimmed.substring(0, equalIndex).trim();
           let value = trimmed.substring(equalIndex + 1).trim();
-          
+
           // Remove inline comments (everything after #)
           const commentIndex = value.indexOf("#");
           if (commentIndex > 0) {
             value = value.substring(0, commentIndex).trim();
           }
-          
+
           // Remove quotes if present
           const cleanValue = value.replace(/^["']|["']$/g, "");
 
@@ -101,11 +101,11 @@ for (const envPath of possiblePaths) {
       loadedPath = envPath;
       console.log(`[handler] ✅ Loaded .env file from: ${envPath}`);
       console.log(`[handler] ✅ Loaded ${loadedEnvKeys.length} environment variables from .env`);
-      
+
       // Log which keys were loaded from .env (safe - just keys, not values)
       if (loadedEnvKeys.length > 0) {
         console.log(`[handler] Variables loaded from .env: ${loadedEnvKeys.join(", ")}`);
-        
+
         // Verify critical variables are available
         const criticalVars = ["EXTERNAL_API_URL", "OPENSEARCH_ENDPOINT", "OPENSEARCH_USERNAME", "OPENSEARCH_PASSWORD"];
         const missingVars = criticalVars.filter(v => !process.env[v]);
@@ -127,7 +127,7 @@ if (!envLoaded) {
   console.warn("[handler] ⚠️ .env file not found in any of these paths:");
   possiblePaths.forEach(p => console.warn(`[handler]   - ${p}`));
   console.warn("[handler] Using Lambda environment variables only");
-  
+
   // Check if critical variables are missing
   const criticalVars = ["EXTERNAL_API_URL", "OPENSEARCH_ENDPOINT"];
   const missingVars = criticalVars.filter(v => !process.env[v]);
