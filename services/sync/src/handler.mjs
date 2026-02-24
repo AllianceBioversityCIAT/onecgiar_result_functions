@@ -2,6 +2,36 @@
  * Lambda handler for scheduled sync cron job
  * Invoked by EventBridge Scheduler with a JSON payload
  */
+
+// Load environment variables from .env file at the very top (before any imports that use process.env)
+// This runs synchronously before any other imports to ensure env vars are available
+import { createRequire } from "module";
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
+import { existsSync } from "fs";
+
+const require = createRequire(import.meta.url);
+
+// Get __dirname equivalent (esbuild will transform import.meta.url correctly for CommonJS)
+let __dirname;
+try {
+  const __filename = fileURLToPath(import.meta.url);
+  __dirname = dirname(__filename);
+} catch (e) {
+  // Fallback if import.meta.url is not available (shouldn't happen, but safe)
+  __dirname = process.cwd();
+}
+
+// Resolve .env path: at runtime, handler.cjs is in dist-cron/, so .env is one level up at ../.env
+// SAM packages CodeUri: services/sync/, so .env will be at the root of the package
+const envPath = resolve(__dirname, "../.env");
+
+// Load .env file if it exists (fail gracefully if not found)
+// override: false ensures existing process.env variables (from Lambda env vars) are not overwritten
+if (existsSync(envPath)) {
+  require("dotenv").config({ path: envPath, override: false });
+}
+
 import { runSyncJob } from "./job.mjs";
 import { Logger } from "./utils/logger.mjs";
 
@@ -16,7 +46,7 @@ const logger = new Logger("CronHandler");
 export const handler = async (event, context) => {
   const startTime = Date.now();
   const requestId = context?.requestId || context?.awsRequestId || `cron-${Date.now()}`;
-  
+
   // Log start marker (sanitize event to avoid logging sensitive data)
   const sanitizedEvent = {
     job: event?.job || event?.payload?.job,
@@ -24,7 +54,7 @@ export const handler = async (event, context) => {
     result_type: event?.result_type || event?.payload?.result_type,
     // Only log non-sensitive fields
   };
-  
+
   logger.info("=== CRON JOB START ===", requestId, {
     job: "sync-cron",
     event: sanitizedEvent,
@@ -48,7 +78,7 @@ export const handler = async (event, context) => {
       limit: payload.limit,
       // Exclude any potential sensitive fields
     };
-    
+
     logger.info("Processing cron job", requestId, {
       jobType,
       env,
