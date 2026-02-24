@@ -17,6 +17,8 @@ Parameters:
     Default: rate(15 minutes)
     Description: "EventBridge schedule expression. Valid formats: rate(5 minutes), rate(1 hour), cron(0 12 * * ? *)"
     MinLength: 1
+    AllowedPattern: "^(rate\\([0-9]+ (minute|minutes|hour|hours|day|days)\\)|cron\\([^)]{3,}\\))$"
+    ConstraintDescription: "Use rate(x minutes|hours|days) or 6-field cron(0 12 * * ? *); do not wrap in quotes."
   
   ResultType:
     Type: String
