@@ -12,6 +12,6 @@ parallel = true
 capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
 region = "us-east-1"
 resolve_s3 = true
-parameter_overrides = "Environment=testing ScheduleExpression=rate(15 minutes) ResultType=knowledge_product"
+parameter_overrides = "Environment=testing \"ScheduleExpression=rate(15 minutes)\" ResultType=knowledge_product"
 no_confirm_changeset = true
 no_fail_on_empty_changeset = true
