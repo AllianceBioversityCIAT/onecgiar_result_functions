@@ -91,8 +91,11 @@ Resources:
     Properties:
       FunctionName: !Sub '${Environment}-sync-cron'
       CodeUri: services/sync/
-      Handler: src/handler.handler
+      Handler: dist-cron/handler.handler
       Role: !GetAtt SyncCronLambdaRole.Arn
+      Runtime: nodejs20.x
+      Timeout: 600
+      MemorySize: 512
       ReservedConcurrentExecutions: 1
       DeadLetterQueue:
         Type: SQS
@@ -114,15 +117,6 @@ Resources:
                 "result_type": "${ResultType}"
               }
             Enabled: true
-      Metadata:
-        BuildMethod: esbuild
-        BuildProperties:
-          Minify: false
-          Target: es2020
-          Sourcemap: true
-          EntryPoints:
-            - src/handler.mjs
-          Format: cjs
 
 Outputs:
   SyncCronFunctionArn:
