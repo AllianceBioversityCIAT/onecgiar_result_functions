@@ -7,8 +7,8 @@
 // This runs synchronously before any other imports to ensure env vars are available
 import { createRequire } from "module";
 import { fileURLToPath } from "url";
-import { dirname, resolve } from "path";
-import { existsSync } from "fs";
+import { dirname, resolve, join } from "path";
+import { existsSync, readFileSync } from "fs";
 
 const require = createRequire(import.meta.url);
 
@@ -22,14 +22,55 @@ try {
   __dirname = process.cwd();
 }
 
-// Resolve .env path: at runtime, handler.cjs is in dist-cron/, so .env is one level up at ../.env
-// SAM packages CodeUri: services/sync/, so .env will be at the root of the package
-const envPath = resolve(__dirname, "../.env");
+// Try multiple possible paths for .env file
+// SAM packages CodeUri: services/sync/, so .env could be at different locations
+const possiblePaths = [
+  resolve(__dirname, "../.env"),        // From dist-cron/ to root (most likely)
+  resolve(__dirname, "../../.env"),     // If nested deeper
+  join(process.cwd(), ".env"),          // From Lambda task root (/var/task/.env)
+  resolve(process.cwd(), ".env"),       // Absolute from cwd
+];
 
-// Load .env file if it exists (fail gracefully if not found)
-// override: false ensures existing process.env variables (from Lambda env vars) are not overwritten
-if (existsSync(envPath)) {
-  require("dotenv").config({ path: envPath, override: false });
+let envLoaded = false;
+
+for (const envPath of possiblePaths) {
+  if (existsSync(envPath)) {
+    try {
+      // Load .env manually to avoid dotenv dependency issues
+      const envContent = readFileSync(envPath, "utf8");
+      const lines = envContent.split("\n");
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        // Skip comments and empty lines
+        if (!trimmed || trimmed.startsWith("#")) continue;
+
+        const equalIndex = trimmed.indexOf("=");
+        if (equalIndex > 0) {
+          const key = trimmed.substring(0, equalIndex).trim();
+          const value = trimmed.substring(equalIndex + 1).trim();
+          // Remove quotes if present
+          const cleanValue = value.replace(/^["']|["']$/g, "");
+
+          // Only set if not already in process.env (override: false behavior)
+          if (!process.env[key]) {
+            process.env[key] = cleanValue;
+          }
+        }
+      }
+
+      envLoaded = true;
+      console.log(`[handler] Loaded .env file from: ${envPath}`);
+      break;
+    } catch (error) {
+      console.warn(`[handler] Failed to load .env from ${envPath}:`, error.message);
+    }
+  }
+}
+
+if (!envLoaded) {
+  // Log warning but don't fail - Lambda env vars from SAM template will still work
+  console.warn("[handler] .env file not found, using Lambda environment variables only");
 }
 
 import { runSyncJob } from "./job.mjs";
