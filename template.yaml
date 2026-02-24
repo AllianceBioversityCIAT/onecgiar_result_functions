@@ -15,7 +15,6 @@ Parameters:
   ScheduleExpression:
     Type: String
     Default: rate(15 minutes)
-    AllowedPattern: ^(rate\([0-9]+\s+(minute|minutes|hour|hours|day|days)\)|cron\([^\\)]+\\))$
     Description: EventBridge schedule expression (e.g., rate(15 minutes), cron(0 2 * * ? *))
   
   ResultType:
