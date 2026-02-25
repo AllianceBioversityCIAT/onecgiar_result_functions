@@ -98,7 +98,8 @@
         "aow_compose_code": { "type": "string" },
         "result_title": { "type": "string" },
         "result_indicator_description": { "type": "string" },
-        "result_indicator_type_name": { "type": "string" }
+        "result_indicator_type_name": { "type": "string" },
+        "target_contribution": { "type": "integer" }
       },
       "additionalProperties": false
     },

@@ -136,6 +136,9 @@
         },
         "result_indicator_type_name": {
           "type": "string"
+        },
+        "target_contribution": {
+          "type": "integer"
         }
       },
       "additionalProperties": false
