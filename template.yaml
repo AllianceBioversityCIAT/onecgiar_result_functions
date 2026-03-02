@@ -68,7 +68,7 @@ Globals:
   Function:
     Timeout: 600
     MemorySize: 512
-    Runtime: nodejs20.x
+    Runtime: nodejs22.x
     Environment:
       Variables:
         ENVIRONMENT: !Ref Environment
@@ -176,7 +176,7 @@ Resources:
       CodeUri: services/sync/
       Handler: dist/lambda.handler
       Role: !GetAtt SyncApiLambdaRole.Arn
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Timeout: 30
       MemorySize: 512
       Environment:

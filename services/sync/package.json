@@ -5,13 +5,13 @@
   "type": "module",
   "main": "dist/lambda.cjs",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "start": "node --watch src/local.mjs",
     "dev": "node  --watch src/local.mjs",
-    "build": "rm -rf dist && npx esbuild src/lambda.mjs --bundle --platform=node --target=node20 --format=cjs --outfile=dist/lambda.cjs --keep-names --log-level=info",
-    "build:cron": "rm -rf dist-cron && npx esbuild src/handler.mjs --bundle --platform=node --target=node20 --format=cjs --outfile=dist-cron/handler.cjs --keep-names --log-level=info",
+    "build": "rm -rf dist && npx esbuild src/lambda.mjs --bundle --platform=node --target=node22 --format=cjs --outfile=dist/lambda.cjs --keep-names --log-level=info",
+    "build:cron": "rm -rf dist-cron && npx esbuild src/handler.mjs --bundle --platform=node --target=node22 --format=cjs --outfile=dist-cron/handler.cjs --keep-names --log-level=info",
     "zip": "npm run build && (cd dist && zip -qr ../sync.zip .) && echo 'ZIP listo: sync.zip'"
   },
   "dependencies": {
