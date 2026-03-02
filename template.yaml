@@ -1,0 +1,226 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: PRMS Sync Cron Job - Scheduled Lambda function for syncing results
+
+Parameters:
+  Environment:
+    Type: String
+    Default: testing
+    AllowedValues: [testing, staging, production]
+    Description: Deployment environment
+
+  # IMPORTANT: This will NOT be overridden from Jenkins (avoid truncation issues)
+  ScheduleExpression:
+    Type: String
+    Default: rate(15 minutes)
+    MinLength: 1
+    Description: "EventBridge schedule expression. Examples: rate(15 minutes), cron(0 8 * * ? *). Do not wrap in quotes."
+    # Keep validation simple to avoid false negatives; AWS will enforce correctness anyway.
+    AllowedPattern: "^(rate\\([0-9]+ (minute|minutes|hour|hours|day|days)\\)|cron\\(.+\\))$"
+    ConstraintDescription: "Use rate(x minutes|hours|days) or 6-field cron(0 12 * * ? *); do not wrap in quotes."
+
+  ResultType:
+    Type: String
+    Default: knowledge_product
+    Description: Result type to sync (e.g., knowledge_product, innovation_development, etc.)
+  
+  CronJobLimit:
+    Type: Number
+    Default: 100
+    Description: "Limit of items per page for cron job (1-500)"
+  
+  CronJobPortfolio:
+    Type: String
+    Default: ""
+    Description: "Portfolio filter (e.g., P22, P25). Leave empty to not filter."
+  
+  CronJobPhaseYear:
+    Type: Number
+    Default: 0
+    Description: "Phase year filter. Set to 0 to not filter by phase year."
+  
+  CronJobStatus:
+    Type: String
+    Default: ""
+    Description: "Status filter (e.g., 'Pending Review'). Leave empty to not filter."
+  
+  CronJobLastUpdatedFrom:
+    Type: String
+    Default: ""
+    Description: "Last updated date from (YYYY-MM-DD). Leave empty to not filter."
+  
+  CronJobLastUpdatedTo:
+    Type: String
+    Default: ""
+    Description: "Last updated date to (YYYY-MM-DD). Leave empty to not filter."
+  
+  CronJobCreatedFrom:
+    Type: String
+    Default: ""
+    Description: "Created date from (YYYY-MM-DD). Leave empty to not filter."
+  
+  CronJobCreatedTo:
+    Type: String
+    Default: ""
+    Description: "Created date to (YYYY-MM-DD). Leave empty to not filter."
+
+Globals:
+  Function:
+    Timeout: 600
+    MemorySize: 512
+    Runtime: nodejs20.x
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        NODE_ENV: production
+
+Resources:
+  SyncCronDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${Environment}-sync-cron-dlq'
+      MessageRetentionPeriod: 1209600 # 14 days
+
+  SyncCronLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${Environment}-sync-cron'
+      RetentionInDays: 30
+
+  SyncCronLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      # REMOVE RoleName to avoid collisions across stacks/accounts
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SyncCronLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:dev/app/lambdas/prms/result-management/sync*'
+              - Effect: Allow
+                Action: sqs:SendMessage
+                Resource: !GetAtt SyncCronDLQ.Arn
+
+  SyncCronFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-sync-cron'
+      CodeUri: services/sync/
+      Handler: dist-cron/handler.handler
+      Role: !GetAtt SyncCronLambdaRole.Arn
+      ReservedConcurrentExecutions: 1
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt SyncCronDLQ.Arn
+      Environment:
+        Variables:
+          RESULT_TYPE: !Ref ResultType
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: !Ref ScheduleExpression
+            Enabled: true
+            Input: !Sub |
+              {
+                "job": "sync-cron",
+                "env": "${Environment}",
+                "result_type": "${ResultType}",
+                "limit": ${CronJobLimit},
+                "portfolio": "${CronJobPortfolio}",
+                "phase_year": ${CronJobPhaseYear},
+                "status": "${CronJobStatus}",
+                "last_updated_from": "${CronJobLastUpdatedFrom}",
+                "last_updated_to": "${CronJobLastUpdatedTo}",
+                "created_from": "${CronJobCreatedFrom}",
+                "created_to": "${CronJobCreatedTo}"
+              }
+
+  SyncApiLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      # REMOVE RoleName to avoid collisions across stacks/accounts
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SyncApiLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:dev/app/lambdas/prms/result-management/sync*'
+
+  SyncApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-sync-api'
+      CodeUri: services/sync/
+      Handler: dist/lambda.handler
+      Role: !GetAtt SyncApiLambdaRole.Arn
+      Runtime: nodejs20.x
+      Timeout: 30
+      MemorySize: 512
+      Environment:
+        Variables:
+          RESULT_TYPE: !Ref ResultType
+      Events:
+        HttpApiRoot:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: ANY
+        HttpApiProxy:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+
+Outputs:
+  SyncCronFunctionArn:
+    Description: ARN of the Sync Cron Lambda function
+    Value: !GetAtt SyncCronFunction.Arn
+    Export:
+      Name: !Sub '${Environment}-sync-cron-arn'
+
+  SyncCronFunctionName:
+    Description: Name of the Sync Cron Lambda function
+    Value: !Ref SyncCronFunction
+    Export:
+      Name: !Sub '${Environment}-sync-cron-name'
+
+  SyncCronDLQUrl:
+    Description: URL of the Dead Letter Queue
+    Value: !Ref SyncCronDLQ
+    Export:
+      Name: !Sub '${Environment}-sync-cron-dlq-url'
+
+  SyncCronSchedule:
+    Description: EventBridge Schedule expression
+    Value: !Ref ScheduleExpression
+    Export:
+      Name: !Sub '${Environment}-sync-cron-schedule'
+
+  SyncApiUrl:
+    Description: HTTP API base URL for Sync service
+    Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com'
+    Export:
+      Name: !Sub '${Environment}-sync-api-url'

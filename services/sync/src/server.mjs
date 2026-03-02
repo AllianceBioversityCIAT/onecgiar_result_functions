@@ -1,5 +1,4 @@
 import express from "express";
-import swaggerUi from "swagger-ui-express";
 import { Logger } from "./utils/logger.mjs";
 import { SyncController } from "./controllers/sync.mjs";
 import { swaggerDocument } from "./docs/swagger.mjs";
@@ -21,7 +20,32 @@ export function createApp() {
     const syncController = new SyncController();
 
     // Routes
-    app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+    app.get("/openapi.json", (_req, res) => res.json(swaggerDocument));
+
+    const swaggerHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Sync Service API</title>
+      <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui.css" />
+    </head>
+    <body>
+      <div id="swagger-ui"></div>
+      <script src="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui-bundle.js"></script>
+      <script>
+        SwaggerUIBundle({
+          url: '/openapi.json',
+          dom_id: '#swagger-ui',
+          presets: [
+            SwaggerUIBundle.presets.apis,
+            SwaggerUIBundle.presets.standalone
+          ]
+        });
+      </script>
+    </body>
+    </html>`;
+
+    app.get("/docs", (_req, res) => res.send(swaggerHtml));
     app.get("/sync", (req, res) => syncController.syncResults(req, res));
     app.get("/api/sync", (req, res) => syncController.syncResults(req, res));
 

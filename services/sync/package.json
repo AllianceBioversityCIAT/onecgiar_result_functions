@@ -11,6 +11,7 @@
     "start": "node --watch src/local.mjs",
     "dev": "node  --watch src/local.mjs",
     "build": "rm -rf dist && npx esbuild src/lambda.mjs --bundle --platform=node --target=node20 --format=cjs --outfile=dist/lambda.cjs --keep-names --log-level=info",
+    "build:cron": "rm -rf dist-cron && npx esbuild src/handler.mjs --bundle --platform=node --target=node20 --format=cjs --outfile=dist-cron/handler.cjs --keep-names --log-level=info",
     "zip": "npm run build && (cd dist && zip -qr ../sync.zip .) && echo 'ZIP listo: sync.zip'"
   },
   "dependencies": {
@@ -19,12 +20,12 @@
     "@vendia/serverless-express": "^4.12.6",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
+    "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "node-fetch": "^3.3.2",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "dotenv": "^16.4.5",
     "esbuild": "^0.23.1"
   }
 }
