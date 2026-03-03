@@ -891,14 +891,31 @@ const createResult = async (params) => {
       ...resultData,
     };
 
+    // Only index to OpenSearch if ENV is PROD
+    const env = process.env.ENV || "";
+    if (env !== "PROD") {
+      console.log(`[sync/createResult] Skipping OpenSearch indexing (ENV is not PROD)`, {
+        env,
+        resultId,
+        type,
+      });
+      return {
+        created: {
+          index,
+          resultId,
+          type,
+          action: "create",
+          skippedOpenSearch: true,
+        },
+      };
+    }
+
     // Ensure index exists
     await openSearchClient.ensureIndex(type);
 
-    // Store original payload for reference (same structure as /ingest)
     const documentToIndex = {
       ...resultPayload,
       result_id: resultId,
-      payload: resultPayload, // Store payload same as /ingest
     };
 
     // Index directly to OpenSearch without processor
@@ -932,6 +949,25 @@ const updateResult = async (params) => {
     // Update in external API (if needed)
     // Note: We may not need to call updateResult if we're syncing from external API
     // But keeping it for consistency with /update endpoint behavior
+
+    // Only update OpenSearch if ENV is PROD
+    const env = process.env.ENV || "";
+    if (env !== "PROD") {
+      console.log(`[sync/updateResult] Skipping OpenSearch update (ENV is not PROD)`, {
+        env,
+        resultId,
+        type,
+      });
+      return {
+        updated: {
+          index,
+          resultId,
+          type,
+          action: "update",
+          skippedOpenSearch: true,
+        },
+      };
+    }
 
     // Build document with data as-is from external API
     // Payload will be preserved automatically by updateDocumentsByResultId

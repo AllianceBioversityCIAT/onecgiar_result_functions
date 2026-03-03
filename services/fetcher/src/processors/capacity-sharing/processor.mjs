@@ -68,6 +68,20 @@ export class CapacitySharingProcessor  {
         );
       }
 
+      // Only index to OpenSearch if ENV is PROD
+      const env = process.env.ENV || "";
+      if (env !== "PROD") {
+        this.logger.info("Skipping OpenSearch indexing (ENV is not PROD)", resultId, {
+          env,
+        });
+        return {
+          success: true,
+          result: externallyEnrichedResult,
+          externalApiResponse,
+          opensearchResponse: null,
+        };
+      }
+
       await this.openSearchClient.ensureIndex(result.type);
 
       this.logger.info("Indexing in OpenSearch", resultId);
@@ -89,8 +103,6 @@ export class CapacitySharingProcessor  {
         idempotencyKey: result.idempotencyKey,
         received_at: result.received_at,
         tenant: result.tenant,
-        // Store original payload for reference
-        payload: result,
       });
 
       this.logger.success("Capacity sharing processed successfully", resultId, {

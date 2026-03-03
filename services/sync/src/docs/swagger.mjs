@@ -50,7 +50,7 @@ export const swaggerDocument = {
                         name: "limit",
                         in: "query",
                         required: false,
-                        schema: { type: "integer", default: 100 },
+                        schema: { type: "integer", default: 500 },
                         description: "Page size for the external API. When fetching all pages, used as the size of each request (max 500). When using a single page, this is the number of items for that page."
                     },
                     {

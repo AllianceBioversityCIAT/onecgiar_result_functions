@@ -30,7 +30,7 @@ export class SyncController {
 
             this.logger.info(`Valid result_type provided: ${result_type}. Fetching results...`);
 
-            const pageSize = Math.min(Math.max(Number.parseInt(queryLimit, 10) || 100, 1), 500);
+            const pageSize = Math.min(Math.max(Number.parseInt(queryLimit, 10) || 500, 1), 500);
             const singlePage = queryPage !== undefined && queryPage !== null && queryPage !== "";
 
             let items = [];
