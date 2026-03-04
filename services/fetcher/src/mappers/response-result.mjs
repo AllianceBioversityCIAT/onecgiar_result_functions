@@ -257,6 +257,8 @@ export class TocMapper {
 }
 export class ResultResponseMapper {
   constructor(rawData) {
+    this.created_date = new Date(rawData.created_date)?.toISOString();
+    this.last_updated_date = new Date(rawData.last_updated_date)?.toISOString();
     this.result_code = rawData.result_code;
     this.year = null;
     this.pdf_link = `${process.env.REPORTING_BASE_URL}/reports/result-details/${this.result_code}?phase=${"6"}`;
