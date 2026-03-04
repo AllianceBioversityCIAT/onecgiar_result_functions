@@ -182,6 +182,79 @@ export class PrimaryEntityMapper {
   }
 }
 
+export class EntityMapper {
+  constructor(entityObject) {
+    this.official_code = entityObject?.official_code;
+    this.name = entityObject?.name;
+  }
+
+  static from(entityObject) {
+    return !isEmpty(entityObject) ? new EntityMapper(entityObject) : null;
+  }
+}
+
+export class SubEntityMapper {
+  constructor(subEntityObject) {
+    this.official_code = subEntityObject?.official_code;
+    this.description = null; //TODO: data not found
+  }
+
+  static from(subEntityObject) {
+    return !isEmpty(subEntityObject)
+      ? new SubEntityMapper(subEntityObject)
+      : null;
+  }
+}
+
+export class TocResultMapper {
+  constructor(tocResultObject) {
+    this.level = tocResultObject?.level;
+    this.sub_entity = SubEntityMapper.from(tocResultObject);
+    this.result_name = tocResultObject?.title;
+  }
+
+  static from(tocResultObject) {
+    return !isEmpty(tocResultObject)
+      ? new TocResultMapper(tocResultObject)
+      : null;
+  }
+
+  static fromArray(tocResultObjects) {
+    if (isEmpty(tocResultObjects)) return [];
+    const dataList = [];
+    for (const tocResultObject of tocResultObjects) {
+      const tocResult = TocResultMapper.from(tocResultObject);
+      if (!isEmpty(tocResult)) {
+        dataList.push(tocResult);
+      }
+    }
+    return dataList;
+  }
+}
+
+export class TocMapper {
+  constructor(tocObject) {
+    this.entity = EntityMapper.from(tocObject);
+    this.initiative_role = tocObject?.initiative_role;
+    this.toc_results = TocResultMapper.fromArray(tocObject?.toc_mappings);
+  }
+
+  static from(tocObject) {
+    return !isEmpty(tocObject) ? new TocMapper(tocObject) : null;
+  }
+
+  static fromArray(tocObjects) {
+    if (isEmpty(tocObjects)) return [];
+    const dataList = [];
+    for (const tocObject of tocObjects) {
+      const toc = TocMapper.from(tocObject);
+      if (!isEmpty(toc)) {
+        dataList.push(toc);
+      }
+    }
+    return dataList;
+  }
+}
 export class ResultResponseMapper {
   constructor(rawData) {
     this.result_code = rawData.result_code;
@@ -196,7 +269,7 @@ export class ResultResponseMapper {
     this.indicator_category = IndicatorCategoryMapper.from(
       rawData?.obj_result_type,
     );
-    this.toc_alignment = [];
+    this.toc_alignment = TocMapper.fromArray(rawData?.obj_results_toc_result);
     this.geographic_focus = GeographicFocusMapper.from(
       rawData?.obj_geographic_scope,
     );
@@ -208,7 +281,7 @@ export class ResultResponseMapper {
     this.contributing_partners = ContributingPartnerMapper.fromArray(
       rawData?.result_by_institution_array,
     );
-    this.evidences = EvidencesMapper.fromArray(rawData?.result_evidence_array);
+    this.evidences = EvidencesMapper.fromArray(rawData?.evidence_array);
     this.primary_entity = PrimaryEntityMapper.fromArray(
       rawData?.obj_result_by_initiatives,
     );
