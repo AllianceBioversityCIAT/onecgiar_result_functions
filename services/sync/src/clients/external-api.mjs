@@ -4,9 +4,10 @@ export class ExternalApiClient {
   baseUrl;
   timeout;
 
-  constructor(baseUrl, timeout = 30000) {
+  constructor(baseUrl, timeout) {
     this.baseUrl = baseUrl || process.env.EXTERNAL_API_URL || "";
-    this.timeout = timeout;
+    // Timeout configurable via EXTERNAL_API_TIMEOUT_MS env var, default 30000ms (30s)
+    this.timeout = timeout ?? Number(process.env.EXTERNAL_API_TIMEOUT_MS || 30000);
   }
 
   /**
@@ -24,12 +25,12 @@ export class ExternalApiClient {
     let url = `${base}/list`;
 
     const queryParams = new URLSearchParams();
-    
+
     // Append all allowed query parameters
     const allowedParams = [
-      'page', 'limit', 'source', 'portfolio', 'phase_year', 
-      'result_type', 'status_id', 'status', 'last_updated_from', 
-      'last_updated_to', 'created_from', 'created_to', 'center', 
+      'page', 'limit', 'source', 'portfolio', 'phase_year',
+      'result_type', 'status_id', 'status', 'last_updated_from',
+      'last_updated_to', 'created_from', 'created_to', 'center',
       'initiative_lead_code', 'search'
     ];
 
@@ -82,9 +83,9 @@ export class ExternalApiClient {
       }
 
       const data = await response.json();
-      
+
       console.log(`[ExternalApiClient] Successfully fetched results list. Total items: ${data?.response?.items?.length || 0}`);
-      
+
       return data;
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
