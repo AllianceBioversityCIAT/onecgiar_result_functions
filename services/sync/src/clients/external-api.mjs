@@ -7,7 +7,7 @@ export class ExternalApiClient {
   constructor(baseUrl, timeout) {
     this.baseUrl = baseUrl || process.env.EXTERNAL_API_URL || "";
     // Timeout configurable via EXTERNAL_API_TIMEOUT_MS env var, default 30000ms (30s)
-    this.timeout = timeout ?? Number(process.env.EXTERNAL_API_TIMEOUT_MS || 30000);
+    this.timeout = timeout ?? Number(process.env.EXTERNAL_API_TIMEOUT_MS || 90000);
   }
 
   /**
