@@ -102,10 +102,7 @@ export class SyncController {
                     type: result_type,
                     idempotencyKey,
                     received_at: timestamp,
-                    // Since tenant depends on the environment setup in fetcher, we assume default or extract if available
                     tenant: "prms",
-                    // Store original payload for reference exactly as specified (but sanitized for OpenSearch strict mapping avoiding index 400s)
-                    payload: sanitizedPayload,
                 };
 
                 try {
