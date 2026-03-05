@@ -91,9 +91,12 @@ export class CountryMapper {
 
 export class ContributingCenterMapper {
   constructor(contributingCenterObject) {
-    this.code = contributingCenterObject?.code;
-    this.name = contributingCenterObject?.clarisa_institution?.name;
-    this.acronym = contributingCenterObject?.clarisa_institution.acronym;
+    this.code = contributingCenterObject?.clarisa_center_object?.code;
+    this.name =
+      contributingCenterObject?.clarisa_center_object?.clarisa_institution?.name;
+    this.acronym =
+      contributingCenterObject?.clarisa_center_object?.clarisa_institution?.acronym;
+    this.is_lead = contributingCenterObject?.is_leading_result;
   }
 
   static from(contributingCenterObject) {
@@ -105,11 +108,9 @@ export class ContributingCenterMapper {
   static fromArray(contributingCenterObjects) {
     if (isEmpty(contributingCenterObjects)) return [];
     return contributingCenterObjects
-      .filter((el) => !isEmpty(el?.clarisa_center_object))
+      .filter((el) => !isEmpty(el))
       .map((contributingCenterObject) =>
-        ContributingCenterMapper.from(
-          contributingCenterObject.clarisa_center_object,
-        ),
+        ContributingCenterMapper.from(contributingCenterObject),
       )
       .filter((el) => !isEmpty(el));
   }
