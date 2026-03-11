@@ -1,17 +1,27 @@
 import express from "express";
 import { getResult, getResultByCode } from "../services/results.service.mjs";
+import { queryParam } from "../utils/query.mjs";
+import { arrayFormat } from "../pipe/arrayFormat.mjs";
 
 const router = express.Router();
 
 router.get("/", async (req, res) => {
-  const page = Number(req.query.page);
-  const size = Number(req.query.size);
-  const { centerAcronym, resultCode, fundingType } = req.query;
-
+  const query = queryParam(req);
+  const page = query("page", Number);
+  const size = query("size", Number);
+  const centerAcronym = query("centerAcronym", (value) =>
+    arrayFormat(value).map((item) => item.toUpperCase()),
+  );
+  const resultCode = query("resultCode", (value) =>
+    arrayFormat(value).map((item) => item.toUpperCase()),
+  );
+  const fundingType = query("fundingType", (value) =>
+    arrayFormat(value).map((item) => item.toLowerCase()),
+  );
   const filters = {
-    centerAcronym: centerAcronym?.toUpperCase(),
+    centerAcronym,
     resultCode,
-    fundingType: fundingType?.toUpperCase(),
+    fundingType,
   };
 
   const results = await getResult(page, size, filters);

@@ -10,10 +10,21 @@ const openCli = new OpenSearchClient();
 
 const buildFilters = (filters) => {
   const keys = {
-    centerAcronym:
-      "result_center_array.clarisa_center_object.clarisa_institution.acronym.keyword",
-    resultCode: "result_code",
-    fundingType: "source.keyword",
+    centerAcronym: {
+      terms: {
+        "leading_result.acronym.keyword": filters.centerAcronym,
+      },
+    },
+    resultCode: {
+      terms: {
+        result_code: filters.resultCode,
+      },
+    },
+    fundingType: {
+      terms: {
+        source: filters.fundingType,
+      },
+    },
   };
 
   const processedFilters = [];
@@ -21,9 +32,7 @@ const buildFilters = (filters) => {
     if (isEmpty(keys[filterKey]) || isEmpty(filters[filterKey])) {
       continue;
     }
-    processedFilters.push({
-      term: { [keys[filterKey]]: filters[filterKey] },
-    });
+    processedFilters.push(keys[filterKey]);
   }
   return processedFilters;
 };
