@@ -260,9 +260,9 @@ export class ResultResponseMapper {
   constructor(rawData) {
     this.created_date = new Date(rawData.created_date)?.toISOString();
     this.last_updated_date = new Date(rawData.last_updated_date)?.toISOString();
-    this.result_code = rawData.result_code;
-    this.status_id = rawData.status_id;
-    this.year = null;
+    this.result_code = Number(rawData?.result_code);
+    this.status_id = Number(rawData?.status_id);
+    this.year = rawData?.obj_version?.phase_year;
     this.pdf_link = `${process.env.REPORTING_BASE_URL}/reports/result-details/${this.result_code}?phase=${"6"}`;
     this.prms_link = `${process.env.REPORTING_BASE_URL}/result/result-detail/${this.result_code}/general-information?phase=${"6"}`;
     this.last_update_at = new Date(rawData.last_updated_date).toISOString();
