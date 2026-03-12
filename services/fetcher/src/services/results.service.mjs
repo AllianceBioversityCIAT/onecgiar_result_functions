@@ -25,6 +25,11 @@ const buildFilters = (filters) => {
         source: filters.fundingType,
       },
     },
+    year: {
+      term: {
+        "obj_version.phase_year": filters.year,
+      },
+    },
   };
 
   const processedFilters = [];
