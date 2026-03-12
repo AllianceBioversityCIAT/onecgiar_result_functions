@@ -256,6 +256,21 @@ export class TocMapper {
     return dataList;
   }
 }
+
+export class CreatedByMapper {
+  constructor(createdByObject) {
+    this.first_name = createdByObject?.first_name;
+    this.last_name = createdByObject?.last_name;
+    this.email = createdByObject?.email;
+  }
+
+  static from(createdByObject) {
+    return !isEmpty(createdByObject)
+      ? new CreatedByMapper(createdByObject)
+      : null;
+  }
+}
+
 export class ResultResponseMapper {
   constructor(rawData) {
     this.created_date = new Date(rawData.created_date)?.toISOString();
@@ -289,5 +304,6 @@ export class ResultResponseMapper {
     this.primary_entity = PrimaryEntityMapper.fromArray(
       rawData?.obj_result_by_initiatives,
     );
+    this.created_by = CreatedByMapper.from(rawData?.obj_created);
   }
 }
