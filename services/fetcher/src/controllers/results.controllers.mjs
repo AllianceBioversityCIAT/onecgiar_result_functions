@@ -9,6 +9,7 @@ router.get("/", async (req, res) => {
   const query = queryParam(req);
   const page = query("page", Number);
   const size = query("size", Number);
+  const year = query("year", Number);
   const centerAcronym = query("centerAcronym", (value) =>
     arrayFormat(value).map((item) => item.toUpperCase()),
   );
@@ -22,6 +23,7 @@ router.get("/", async (req, res) => {
     centerAcronym,
     resultCode,
     fundingType,
+    year,
   };
 
   const results = await getResult(page, size, filters);

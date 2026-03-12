@@ -45,6 +45,16 @@
             "example": "CIAT"
           },
           {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Year",
+            "example": 2025
+          },
+          {
             "name": "resultCode",
             "in": "query",
             "required": false,
