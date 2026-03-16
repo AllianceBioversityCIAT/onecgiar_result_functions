@@ -80,12 +80,18 @@ Resources:
     Properties:
       QueueName: !Sub '${Environment}-sync-cron-dlq'
       MessageRetentionPeriod: 1209600 # 14 days
+      Tags:
+        - Key: Project
+          Value: PRMS
+        - Key: Functionality
+          Value: sync-result
 
   SyncCronLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub '/aws/lambda/${Environment}-sync-cron'
       RetentionInDays: 30
+      # Note: AWS::Logs::LogGroup does not support Tags property in CloudFormation
 
   SyncCronLambdaRole:
     Type: AWS::IAM::Role
@@ -111,6 +117,11 @@ Resources:
               - Effect: Allow
                 Action: sqs:SendMessage
                 Resource: !GetAtt SyncCronDLQ.Arn
+      Tags:
+        - Key: Project
+          Value: PRMS
+        - Key: Functionality
+          Value: sync-result
 
   SyncCronFunction:
     Type: AWS::Serverless::Function
@@ -126,6 +137,9 @@ Resources:
       Environment:
         Variables:
           RESULT_TYPE: !Ref ResultType
+      Tags:
+        Project: PRMS
+        Functionality: sync-result
       Events:
         Schedule:
           Type: Schedule
@@ -168,6 +182,11 @@ Resources:
               - Effect: Allow
                 Action: secretsmanager:GetSecretValue
                 Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:dev/app/lambdas/prms/result-management/sync*'
+      Tags:
+        - Key: Project
+          Value: PRMS
+        - Key: Functionality
+          Value: sync-result
 
   SyncApiFunction:
     Type: AWS::Serverless::Function
@@ -182,6 +201,9 @@ Resources:
       Environment:
         Variables:
           RESULT_TYPE: !Ref ResultType
+      Tags:
+        Project: PRMS
+        Functionality: sync-result
       Events:
         HttpApiRoot:
           Type: HttpApi
