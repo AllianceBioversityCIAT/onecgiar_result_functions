@@ -78,7 +78,12 @@ export const getResult = async (page, size, filters) => {
         from: (page - 1) * size,
         sort: [
           {
-            result_id: {
+            result_code: {
+              order: "desc",
+            },
+          },
+          {
+            "obj_version.phase_year": {
               order: "desc",
             },
           },
