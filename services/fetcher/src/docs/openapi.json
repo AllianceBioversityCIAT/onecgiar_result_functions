@@ -45,6 +45,30 @@
             "example": "CIAT"
           },
           {
+            "name": "resultType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Result type (comma separated) \n\nSupported values: policy_change, innovation_use, capacity_change, other_outcome, capacity_sharing_for_development, knowledge_product, innovation_development, other_output, impact_contribution, innovation_use_ipsr, complementary_innovation",
+            "example": "knowledge_product,policy_change",
+            "enum": [
+              "policy_change",
+              "innovation_use",
+              "capacity_change",
+              "other_outcome",
+              "capacity_sharing_for_development",
+              "knowledge_product",
+              "innovation_development",
+              "other_output",
+              "impact_contribution",
+              "innovation_use_ipsr",
+              "complementary_innovation"
+            ]
+          },
+
+          {
             "name": "year",
             "in": "query",
             "required": false,

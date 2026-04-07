@@ -5,7 +5,15 @@ export const arrayFormat = (value) => {
     return value;
   }
   if (typeof value === "string") {
-    return value.split(",").map((item) => item.trim());
+    const result = [];
+    const rawValues = value.split(",").map((item) => item.trim());
+    for (const rawValue of rawValues) {
+      if (isEmpty(rawValue)) {
+        continue;
+      }
+      result.push(rawValue);
+    }
+    return result;
   }
 
   if (Array.isArray(value)) {
