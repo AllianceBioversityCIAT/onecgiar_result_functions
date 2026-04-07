@@ -8,11 +8,32 @@ const responseFormat = (data, status) => ({
 });
 const openCli = new OpenSearchClient();
 
+export const RESULT_TYPES_MAP = {
+  policy_change: "Policy change",
+  innovation_use: "Innovation use",
+  capacity_change: "Capacity change",
+  other_outcome: "Other outcome",
+  capacity_sharing_for_development: "Capacity sharing for development",
+  knowledge_product: "Knowledge product",
+  innovation_development: "Innovation development",
+  other_output: "Other output",
+  impact_contribution: "Impact contribution",
+  innovation_use_ipsr: "Innovation Use(IPSR)",
+  complementary_innovation: "Complementary innovation",
+};
+
 const buildFilters = (filters) => {
   const keys = {
     centerAcronym: {
       terms: {
         "leading_result.acronym.keyword": filters.centerAcronym,
+      },
+    },
+    resultType: {
+      terms: {
+        "obj_result_type.name.keyword": filters.resultType
+          ?.map((type) => RESULT_TYPES_MAP?.[type] ?? null)
+          .filter((type) => !isEmpty(type)),
       },
     },
     resultCode: {

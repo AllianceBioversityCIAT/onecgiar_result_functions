@@ -19,11 +19,15 @@ router.get("/", async (req, res) => {
   const fundingType = query("fundingType", (value) =>
     arrayFormat(value).map((item) => item.toLowerCase()),
   );
+  const resultType = query("resultType", (value) =>
+    arrayFormat(value).map((item) => item.toLowerCase()),
+  );
   const filters = {
     centerAcronym,
     resultCode,
     fundingType,
     year,
+    resultType,
   };
 
   const results = await getResult(page, size, filters);
