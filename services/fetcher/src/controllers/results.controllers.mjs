@@ -22,12 +22,16 @@ router.get("/", async (req, res) => {
   const resultType = query("resultType", (value) =>
     arrayFormat(value).map((item) => item.toLowerCase()),
   );
+  const statusId = query("statusId", (value) =>
+    arrayFormat(value).map(Number).filter((n) => Number.isFinite(n)),
+  );
   const filters = {
     centerAcronym,
     resultCode,
     fundingType,
     year,
     resultType,
+    statusId,
   };
 
   const results = await getResult(page, size, filters);

@@ -118,7 +118,8 @@ export class ContributingCenterMapper {
 
 export class ContributingPartnerMapper {
   constructor(contributingPartnerObject) {
-    this.code = contributingPartnerObject?.id;
+    this.code =
+      contributingPartnerObject?.institutions_id ?? contributingPartnerObject?.id;
     this.name = contributingPartnerObject?.name;
     this.acronym = contributingPartnerObject?.acronym;
   }
@@ -132,12 +133,15 @@ export class ContributingPartnerMapper {
   static fromArray(contributingPartnerObjects) {
     if (isEmpty(contributingPartnerObjects)) return [];
     return contributingPartnerObjects
-      .filter((el) => !isEmpty(el?.obj_institutions))
-      .map((contributingPartnerObject) =>
-        ContributingPartnerMapper.from(
-          contributingPartnerObject.contributing_partner_object,
-        ),
-      )
+      .filter((el) => !isEmpty(el))
+      .map((el) => {
+        const source =
+          el?.contributing_partner_object !== undefined &&
+          el?.contributing_partner_object !== null
+            ? el.contributing_partner_object
+            : el;
+        return ContributingPartnerMapper.from(source);
+      })
       .filter((el) => !isEmpty(el));
   }
 }
@@ -265,9 +269,9 @@ export class CreatedByMapper {
   }
 
   static from(createdByObject) {
-    return !isEmpty(createdByObject)
-      ? new CreatedByMapper(createdByObject)
-      : null;
+    return isEmpty(createdByObject)
+      ? null
+      : new CreatedByMapper(createdByObject);
   }
 }
 
@@ -300,6 +304,11 @@ export class ResultResponseMapper {
     this.contributing_partners = ContributingPartnerMapper.fromArray(
       rawData?.result_by_institution_array,
     );
+    this.dac_scores = isEmpty(rawData?.dac_scores) ? null : rawData.dac_scores;
+    this.obj_status = isEmpty(rawData?.obj_status) ? null : rawData.obj_status;
+    this.bilateral_projects = Array.isArray(rawData?.bilateral_projects)
+      ? rawData.bilateral_projects
+      : [];
     this.evidences = EvidencesMapper.fromArray(rawData?.evidence_array);
     this.primary_entity = PrimaryEntityMapper.fromArray(
       rawData?.obj_result_by_initiatives,

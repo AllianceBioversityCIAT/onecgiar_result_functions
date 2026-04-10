@@ -1,6 +1,5 @@
 import { OpenSearchClient } from "../clients/opensearch.mjs";
-import { ResultResponseMapper } from "../mappers/response-result.mjs";
-import { isEmpty } from "../mappers/response-result.mjs";
+import { ResultResponseMapper, isEmpty } from "../mappers/response-result.mjs";
 
 const responseFormat = (data, status) => ({
   results: data,
@@ -20,6 +19,17 @@ export const RESULT_TYPES_MAP = {
   impact_contribution: "Impact contribution",
   innovation_use_ipsr: "Innovation Use(IPSR)",
   complementary_innovation: "Complementary innovation",
+};
+
+/** Maps PRMS `status_id` (numeric) to display name. */
+export const RESULT_STATUS_BY_ID = {
+  1: "Editing",
+  2: "Quality Assessed",
+  3: "Submitted",
+  4: "Discontinued",
+  5: "Pending Review",
+  6: "Approved",
+  7: "Rejected",
 };
 
 const buildFilters = (filters) => {
@@ -49,6 +59,11 @@ const buildFilters = (filters) => {
     year: {
       term: {
         "obj_version.phase_year": filters.year,
+      },
+    },
+    statusId: {
+      terms: {
+        status_id: filters.statusId,
       },
     },
   };
