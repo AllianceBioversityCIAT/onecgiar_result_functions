@@ -16,6 +16,7 @@ import {
   paramExample,
 } from "../lib/openapi-helpers";
 import type { HttpMethod, ListedOperation, OpenApiDocument } from "../lib/openapi-types";
+import { CgiarLogo } from "./CgiarLogo";
 
 function methodColor(method: HttpMethod): string {
   switch (method) {
@@ -229,20 +230,28 @@ export function ApiReference() {
         <p className="text-sm font-medium tracking-wide text-[var(--accent)]">
           CGIAR · PRMS
         </p>
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-[var(--ink)] sm:text-4xl">
-          API reference
-        </h1>
-        <p className="max-w-2xl text-base text-[var(--ink-muted)]">
-          {doc.info?.title ?? "API"} {doc.info?.version ? `· v${doc.info.version}` : null}
-          . Generated from the fetcher OpenAPI document. Requests use{" "}
-          <code className="text-sm text-[var(--accent)]">/api/proxy</code> (same
-          origin as this app).
-        </p>
-        {doc.info?.description ? (
-          <p className="max-w-3xl whitespace-pre-wrap text-sm text-[var(--ink-muted)]">
-            {doc.info.description}
-          </p>
-        ) : null}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+          <CgiarLogo className="sm:mt-0.5" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-[var(--ink)] sm:text-4xl">
+              API reference
+            </h1>
+            <p className="max-w-2xl text-base text-[var(--ink-muted)]">
+              {doc.info?.title ?? "API"}
+              {doc.info?.version ? ` · v${doc.info.version}` : ""}. Generated
+              from the fetcher OpenAPI document. Requests use{" "}
+              <code className="rounded-md bg-[var(--bg-elevated)] px-1.5 py-0.5 text-sm text-[var(--accent)]">
+                /api/proxy
+              </code>{" "}
+              (same origin as this app).
+            </p>
+            {doc.info?.description ? (
+              <p className="max-w-3xl whitespace-pre-wrap text-sm text-[var(--ink-muted)]">
+                {doc.info.description}
+              </p>
+            ) : null}
+          </div>
+        </div>
       </header>
 
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start">

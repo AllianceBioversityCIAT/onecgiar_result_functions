@@ -16,6 +16,7 @@ import {
   STATUS_OPTIONS,
 } from "../lib/result-constants";
 import { buildResultQueryString, type FilterState } from "../lib/build-query";
+import { CgiarLogo } from "./CgiarLogo";
 import { ResultDetailModal } from "./ResultDetailModal";
 import type { ResultListPayload, ResultRow } from "../lib/types";
 
@@ -31,25 +32,52 @@ const defaultFilters = (): FilterState => ({
   source: [],
 });
 
-function formatDate(iso?: string) {
-  if (!iso) return "—";
-  try {
-    return new Intl.DateTimeFormat("en", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
-}
+function rowLeadingAndPrimary(row: ResultRow): {
+  acronym: string;
+  acronymTitle: string;
+  spCode: string;
+  spTitle: string;
+} {
+  const lr = row.leading_result;
+  const ac =
+    lr != null &&
+    typeof lr === "object" &&
+    typeof lr.acronym === "string" &&
+    lr.acronym.trim() !== ""
+      ? lr.acronym.trim()
+      : "";
+  const lrName =
+    lr != null &&
+    typeof lr === "object" &&
+    typeof lr.name === "string" &&
+    lr.name.trim() !== ""
+      ? lr.name.trim()
+      : "";
+  const pe = row.primary_entity;
+  const sp =
+    pe != null &&
+    typeof pe === "object" &&
+    typeof pe.official_code === "string" &&
+    pe.official_code.trim() !== ""
+      ? pe.official_code.trim()
+      : "";
+  const peName =
+    pe != null &&
+    typeof pe === "object" &&
+    typeof pe.name === "string" &&
+    pe.name.trim() !== ""
+      ? pe.name.trim()
+      : "";
 
-function formatLeadingResult(lr: ResultRow["leading_result"]): string {
-  if (lr == null || typeof lr !== "object") return "Not defined";
-  const ac = typeof lr.acronym === "string" ? lr.acronym.trim() : "";
-  const nm = typeof lr.name === "string" ? lr.name.trim() : "";
-  if (!ac && !nm) return "Not defined";
-  if (ac && nm) return `${ac} · ${nm}`;
-  return ac || nm;
+  const acronym = ac || "—";
+  const acronymTitle =
+    ac && lrName ? `${ac} — ${lrName}` : ac || lrName || "—";
+
+  const spCode = sp || "—";
+  const spTitle =
+    sp && peName ? `${sp} — ${peName}` : sp || peName || "—";
+
+  return { acronym, acronymTitle, spCode, spTitle };
 }
 
 /** Avoid String(object) → "[object Object]" for API error payloads */
@@ -228,7 +256,9 @@ export function ResultsExplorer() {
         </tr>
       );
     }
-    return payload.data.map((row: ResultRow, i: number) => (
+    return payload.data.map((row: ResultRow, i: number) => {
+      const lp = rowLeadingAndPrimary(row);
+      return (
       <tr
         key={`${row.result_code ?? i}-${i}`}
         className="border-b border-[var(--border)]/70 transition hover:bg-[var(--bg-elevated)]/50"
@@ -241,13 +271,11 @@ export function ResultsExplorer() {
             {row.result_title ?? "—"}
           </span>
         </td>
-        <td className="max-w-[200px] px-4 py-3 text-[var(--ink-muted)]">
-          <span
-            className="line-clamp-2 text-sm"
-            title={formatLeadingResult(row.leading_result)}
-          >
-            {formatLeadingResult(row.leading_result)}
-          </span>
+        <td className="whitespace-nowrap px-4 py-3 text-sm text-[var(--ink-muted)]">
+          <span title={lp.acronymTitle}>{lp.acronym}</span>
+        </td>
+        <td className="whitespace-nowrap px-4 py-3 font-mono text-sm text-[var(--ink-muted)]">
+          <span title={lp.spTitle}>{lp.spCode}</span>
         </td>
         <td className="whitespace-nowrap px-4 py-3 text-[var(--ink-muted)]">
           {row.indicator_category?.name ?? "—"}
@@ -269,9 +297,6 @@ export function ResultsExplorer() {
         </td>
         <td className="whitespace-nowrap px-4 py-3 text-[var(--ink-muted)]">
           {row.obj_status?.status_name ?? statusLabel(row.status_id)}
-        </td>
-        <td className="whitespace-nowrap px-4 py-3 text-xs text-[var(--ink-muted)]">
-          {formatDate(row.last_update_at)}
         </td>
         <td className="px-4 py-3">
           {row.prms_link ? (
@@ -301,7 +326,8 @@ export function ResultsExplorer() {
           )}
         </td>
       </tr>
-    ));
+      );
+    });
   };
 
   return (
@@ -318,21 +344,33 @@ export function ResultsExplorer() {
             API reference
           </Link>
         </div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-[var(--ink)] sm:text-4xl">
-          Results explorer
-        </h1>
-        <p className="max-w-2xl text-base text-[var(--ink-muted)]">
-          Live query against the fetcher{" "}
-          <code className="rounded-md bg-[var(--accent-soft)] px-1.5 py-0.5 text-sm text-[var(--accent)]">
-            GET /result
-          </code>{" "}
-          endpoint (proxied via{" "}
-          <code className="text-sm text-[var(--ink-muted)]">/api/proxy</code>
-          ). Start the fetcher service and set{" "}
-          <code className="text-sm">FETCHER_PROXY_TARGET</code> if it is not
-          running at{" "}
-          <code className="text-sm">127.0.0.1:3000</code>.
-        </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+          <CgiarLogo className="sm:mt-0.5" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-[var(--ink)] sm:text-4xl">
+              Results explorer
+            </h1>
+            <p className="max-w-2xl text-base text-[var(--ink-muted)]">
+              Live query against the fetcher{" "}
+              <code className="rounded-md bg-[var(--accent-soft)] px-1.5 py-0.5 text-sm text-[var(--accent)]">
+                GET /result
+              </code>{" "}
+              endpoint (proxied via{" "}
+              <code className="rounded-md bg-[var(--bg-elevated)] px-1.5 py-0.5 text-sm text-[var(--ink)]">
+                /api/proxy
+              </code>
+              ). Start the fetcher service and set{" "}
+              <code className="rounded-md bg-[var(--bg-elevated)] px-1.5 py-0.5 text-sm text-[var(--ink)]">
+                FETCHER_PROXY_TARGET
+              </code>{" "}
+              if it is not running at{" "}
+              <code className="rounded-md bg-[var(--bg-elevated)] px-1.5 py-0.5 text-sm text-[var(--ink)]">
+                127.0.0.1:3000
+              </code>
+              .
+            </p>
+          </div>
+        </div>
       </header>
 
       <section
@@ -536,7 +574,7 @@ export function ResultsExplorer() {
         ) : null}
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[940px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--bg-elevated)]/80">
                 <th className="px-4 py-3 font-semibold text-[var(--ink-muted)]">
@@ -547,6 +585,12 @@ export function ResultsExplorer() {
                 </th>
                 <th className="px-4 py-3 font-semibold text-[var(--ink-muted)]">
                   Leading result
+                </th>
+                <th
+                  className="px-4 py-3 font-semibold text-[var(--ink-muted)]"
+                  title="Primary submitter initiative (official_code, e.g. SP09)"
+                >
+                  SP/A
                 </th>
                 <th className="px-4 py-3 font-semibold text-[var(--ink-muted)]">
                   Type
@@ -559,9 +603,6 @@ export function ResultsExplorer() {
                 </th>
                 <th className="px-4 py-3 font-semibold text-[var(--ink-muted)]">
                   Status
-                </th>
-                <th className="px-4 py-3 font-semibold text-[var(--ink-muted)]">
-                  Updated
                 </th>
                 <th className="px-4 py-3 font-semibold text-[var(--ink-muted)]">
                   PRMS
