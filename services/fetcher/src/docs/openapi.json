@@ -3,7 +3,7 @@
   "info": {
     "title": "PRMS Normalizer API",
     "version": "1.2.0",
-    "description": "Validates, normalizes and publishes results to EventBridge. Supports: Knowledge Products, Capacity Sharing, Innovation Development, Innovation Use, Other Output, Other Outcome, and Policy Change."
+    "description": "Read PRMS results from OpenSearch (GET /result, GET /result/{code}), ingest via POST /ingest (validate, process, external API, OpenSearch). Update, delete, and bulk sync are handled elsewhere. Supports Knowledge Products, Capacity Sharing, Innovation Development, Innovation Use, Other Output, Other Outcome, and Policy Change."
   },
   "servers": [
     {
@@ -42,7 +42,7 @@
               "type": "string"
             },
             "description": "Center acronym",
-            "example": "CIAT"
+            "example": "ABC"
           },
           {
             "name": "resultType",
@@ -67,7 +67,6 @@
               "complementary_innovation"
             ]
           },
-
           {
             "name": "year",
             "in": "query",
@@ -195,7 +194,7 @@
                             "submitted_date": "2025-10-09T12:00:00Z"
                           },
                           "lead_center": {
-                            "name": "Alliance of Bioversity International and CIAT",
+                            "name": "Alliance of Bioversity International and ABC",
                             "acronym": "Alliance"
                           },
                           "title": "Improved seed varieties adoption in drylands",
@@ -308,7 +307,7 @@
                             "submitted_date": "2025-10-10T10:30:00Z"
                           },
                           "lead_center": {
-                            "acronym": "CIAT"
+                            "acronym": "ABC"
                           },
                           "title": "National varietal release guidelines",
                           "description": "Guidelines to streamline varietal release at national level.",
@@ -381,7 +380,10 @@
                               "issue_year": 2025
                             },
                             "licence": "CC-BY 4.0",
-                            "agrovoc_keywords": ["Policy", "Agriculture"]
+                            "agrovoc_keywords": [
+                              "Policy",
+                              "Agriculture"
+                            ]
                           }
                         }
                       }
@@ -407,7 +409,7 @@
                             "submitted_date": "2025-10-10T11:15:00Z"
                           },
                           "lead_center": {
-                            "acronym": "CIAT"
+                            "acronym": "ABC"
                           },
                           "title": "County-level varietal adoption",
                           "description": "Dataset on varietal adoption at sub-national level.",
@@ -486,7 +488,10 @@
                               "issue_year": 2025
                             },
                             "licence": "CC-BY 4.0",
-                            "agrovoc_keywords": ["Datasets", "Adoption"]
+                            "agrovoc_keywords": [
+                              "Datasets",
+                              "Adoption"
+                            ]
                           }
                         }
                       }
@@ -577,7 +582,10 @@
                               "issue_year": 2025
                             },
                             "licence": "CC-BY 4.0",
-                            "agrovoc_keywords": ["Global", "Seeds"]
+                            "agrovoc_keywords": [
+                              "Global",
+                              "Seeds"
+                            ]
                           }
                         }
                       }
@@ -603,7 +611,7 @@
                             "submitted_date": "2025-10-10T09:00:00Z"
                           },
                           "lead_center": {
-                            "acronym": "CIAT"
+                            "acronym": "ABC"
                           },
                           "title": "Minimal KP",
                           "description": "Short description.",
@@ -668,7 +676,9 @@
                               "issue_year": 2025
                             },
                             "licence": "CC-BY 4.0",
-                            "agrovoc_keywords": ["Test"]
+                            "agrovoc_keywords": [
+                              "Test"
+                            ]
                           }
                         }
                       }
@@ -910,7 +920,7 @@
                             "submitted_date": "2025-11-18T20:00:00Z"
                           },
                           "lead_center": {
-                            "acronym": "CIAT"
+                            "acronym": "ABC"
                           },
                           "title": "Adoption of Climate-Resilient Seed Varieties",
                           "description": "Tracking the use and adoption of climate-resilient seed varieties among different actor types.",
@@ -1277,7 +1287,7 @@
                             "submitted_date": "2025-11-19T14:05:00Z"
                           },
                           "lead_center": {
-                            "acronym": "CIAT",
+                            "acronym": "ABC",
                             "name": "International Center for Tropical Agriculture"
                           },
                           "title": "New Agricultural Policy Implementation in Kenya",
@@ -1389,7 +1399,7 @@
                             "submitted_date": "2025-11-19T14:05:00Z"
                           },
                           "lead_center": {
-                            "acronym": "CIAT"
+                            "acronym": "ABC"
                           },
                           "title": "Regulatory Framework for Seed Distribution",
                           "description": "Policy change for improved seed certification and distribution across the region.",
@@ -1412,7 +1422,7 @@
                           "contributing_center": [
                             {
                               "institution_id": 115,
-                              "acronym": "CIAT"
+                              "acronym": "ABC"
                             }
                           ],
                           "contributing_partners": [
@@ -1488,7 +1498,7 @@
                             "submitted_date": "2025-11-06T10:00:00Z"
                           },
                           "lead_center": {
-                            "acronym": "CIAT"
+                            "acronym": "ABC"
                           },
                           "title": "Miscellaneous Research Output",
                           "description": "A general research output that doesn't fit other categories.",
@@ -1646,7 +1656,7 @@
                             "submitted_date": "2025-10-10T16:45:00Z"
                           },
                           "lead_center": {
-                            "acronym": "CIAT"
+                            "acronym": "ABC"
                           },
                           "title": "Invalid KP",
                           "description": "Missing geo_focus and evidence, will fail.",
@@ -1710,289 +1720,6 @@
         }
       }
     },
-    "/update/{id}": {
-      "patch": {
-        "summary": "Update a result by ID",
-        "description": "Calls the upstream API to update the result and then synchronizes the OpenSearch documents. If no documents exist, a new one is indexed with the updated payload.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            },
-            "description": "Result identifier provided by the external API"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateResultRequest"
-              },
-              "examples": {
-                "flatPayload": {
-                  "summary": "Direct update payload",
-                  "value": {
-                    "type": "knowledge_product",
-                    "tenant": "prms.result-management.api",
-                    "jobId": "sync-123",
-                    "idempotencyKey": "prms.result-management.api:knowledge_product:result:12345",
-                    "data": {
-                      "title": "Updated knowledge product title",
-                      "description": "Short description for the updated record."
-                    }
-                  }
-                },
-                "ingestCompatibleWrapper": {
-                  "summary": "Wrapper compatible with ingest payloads",
-                  "value": {
-                    "tenant": "prms.result-management.api",
-                    "op": "dataset.ingest.requested",
-                    "results": [
-                      {
-                        "type": "knowledge_product",
-                        "jobId": "sync-123",
-                        "idempotencyKey": "prms.result-management.api:knowledge_product:result:12345",
-                        "data": {
-                          "title": "Updated knowledge product title",
-                          "description": "Short description for the updated record."
-                        }
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Result updated",
-            "content": {
-              "application/json": {
-                "example": {
-                  "ok": true,
-                  "message": "Result updated",
-                  "resultId": 12345,
-                  "type": "knowledge_product",
-                  "external": {
-                    "status": true,
-                    "message": "Result updated successfully",
-                    "response": {
-                      "result_id": 12345,
-                      "code": 9876
-                    }
-                  },
-                  "opensearch": {
-                    "action": "updated",
-                    "updated": 1,
-                    "attempts": 1,
-                    "results": [
-                      {
-                        "index": "prms-results-knowledge_product",
-                        "id": "12345",
-                        "success": true
-                      }
-                    ]
-                  },
-                  "timestamp": "2025-10-10T12:00:00Z"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid ID or request payload"
-          },
-          "500": {
-            "description": "Failed to update the result"
-          }
-        }
-      }
-    },
-    "/delete/{id}": {
-      "delete": {
-        "summary": "Delete a result by ID",
-        "description": "Calls the upstream API to delete the result and then removes it from OpenSearch indices.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            },
-            "description": "Result identifier provided by the external API"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Result deleted",
-            "content": {
-              "application/json": {
-                "example": {
-                  "ok": true,
-                  "message": "Result deleted",
-                  "resultId": 12345,
-                  "external": {
-                    "status": 200,
-                    "statusText": "OK",
-                    "response": {
-                      "status": true,
-                      "message": "Result deleted"
-                    }
-                  },
-                  "opensearch": {
-                    "deleted": 1,
-                    "attempts": 1,
-                    "results": [
-                      {
-                        "index": "prms-results-knowledge_product",
-                        "id": "12345",
-                        "success": true
-                      }
-                    ]
-                  },
-                  "timestamp": "2025-10-10T12:00:00Z"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid or missing result ID"
-          },
-          "500": {
-            "description": "Failed to delete the result"
-          }
-        }
-      }
-    },
-    "/sync": {
-      "post": {
-        "summary": "Synchronize results with external API",
-        "description": "Fetches all results from the external API, compares with OpenSearch, and performs create/update/delete operations as needed. Validates all results before processing.",
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SyncRequest"
-              },
-              "examples": {
-                "bilateralSync": {
-                  "summary": "Sync bilateral results only",
-                  "value": {
-                    "tenant": "prms.result-management.api",
-                    "bilateral": true,
-                    "dryRun": false
-                  }
-                },
-                "dryRun": {
-                  "summary": "Dry run - preview changes without applying",
-                  "value": {
-                    "tenant": "prms.result-management.api",
-                    "bilateral": false,
-                    "dryRun": true
-                  }
-                },
-                "typeFilter": {
-                  "summary": "Sync specific result type only",
-                  "value": {
-                    "tenant": "prms.result-management.api",
-                    "type": "knowledge_product",
-                    "dryRun": false
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Synchronization completed successfully",
-            "content": {
-              "application/json": {
-                "example": {
-                  "ok": true,
-                  "message": "Synchronization completed",
-                  "processed": 150,
-                  "created": 25,
-                  "updated": 100,
-                  "deleted": 5,
-                  "skipped": 10,
-                  "errors": 10,
-                  "details": {
-                    "created": [
-                      {
-                        "index": 0,
-                        "resultId": 12345,
-                        "type": "knowledge_product",
-                        "action": "create"
-                      }
-                    ],
-                    "updated": [
-                      {
-                        "index": 1,
-                        "resultId": 12346,
-                        "type": "capacity_sharing",
-                        "action": "update"
-                      }
-                    ],
-                    "deleted": [
-                      {
-                        "resultId": 99999,
-                        "action": "delete"
-                      }
-                    ],
-                    "skipped": [],
-                    "errors": []
-                  },
-                  "processingTimeMs": 12500,
-                  "dryRun": false,
-                  "timestamp": "2025-10-10T12:00:00Z"
-                }
-              }
-            }
-          },
-          "207": {
-            "description": "Synchronization completed with errors",
-            "content": {
-              "application/json": {
-                "example": {
-                  "ok": false,
-                  "message": "Synchronization completed",
-                  "processed": 150,
-                  "created": 20,
-                  "updated": 95,
-                  "deleted": 5,
-                  "skipped": 10,
-                  "errors": 20,
-                  "details": {
-                    "errors": [
-                      {
-                        "index": 5,
-                        "resultId": 12350,
-                        "type": "knowledge_product",
-                        "error": "Validation failed",
-                        "validationErrors": []
-                      }
-                    ]
-                  },
-                  "processingTimeMs": 12500,
-                  "dryRun": false,
-                  "timestamp": "2025-10-10T12:00:00Z"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Synchronization failed"
-          }
-        }
-      }
-    },
     "/health": {
       "get": {
         "summary": "Healthcheck",
@@ -2008,7 +1735,9 @@
     "schemas": {
       "IngestRequest": {
         "type": "object",
-        "required": ["results"],
+        "required": [
+          "results"
+        ],
         "properties": {
           "tenant": {
             "type": "string",
@@ -2016,14 +1745,21 @@
           },
           "op": {
             "type": "string",
-            "enum": ["dataset.ingest.requested", "update", "delete"],
+            "enum": [
+              "dataset.ingest.requested",
+              "update",
+              "delete"
+            ],
             "default": "dataset.ingest.requested"
           },
           "results": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["type", "data"],
+              "required": [
+                "type",
+                "data"
+              ],
               "properties": {
                 "type": {
                   "type": "string",
@@ -2040,81 +1776,17 @@
                 },
                 "op": {
                   "type": "string",
-                  "enum": ["create", "update", "delete"]
+                  "enum": [
+                    "create",
+                    "update",
+                    "delete"
+                  ]
                 },
                 "data": {
                   "$ref": "#/components/schemas/ResultData"
                 }
               }
             }
-          }
-        }
-      },
-      "UpdateResultRequest": {
-        "type": "object",
-        "required": ["type", "data"],
-        "properties": {
-          "type": {
-            "type": "string",
-            "description": "Result type to update",
-            "example": "knowledge_product"
-          },
-          "tenant": {
-            "type": "string",
-            "description": "Tenant identifier responsible for the result",
-            "example": "prms.result-management.api"
-          },
-          "jobId": {
-            "type": "string",
-            "description": "Optional job identifier to correlate updates",
-            "example": "sync-123"
-          },
-          "idempotencyKey": {
-            "type": "string",
-            "description": "Optional idempotency key override"
-          },
-          "received_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Override for the received timestamp stored in OpenSearch"
-          },
-          "data": {
-            "$ref": "#/components/schemas/ResultData",
-            "description": "Partial payload with the fields to update"
-          }
-        }
-      },
-      "SyncRequest": {
-        "type": "object",
-        "properties": {
-          "tenant": {
-            "type": "string",
-            "description": "Tenant identifier",
-            "example": "prms.result-management.api",
-            "default": "unknown"
-          },
-          "bilateral": {
-            "type": "boolean",
-            "description": "If true, only fetch bilateral results from external API",
-            "default": false
-          },
-          "type": {
-            "type": "string",
-            "description": "Optional result type filter (e.g., 'knowledge_product')",
-            "enum": [
-              "knowledge_product",
-              "capacity_sharing",
-              "innovation_development",
-              "innovation_use",
-              "other_output",
-              "other_outcome",
-              "policy_change"
-            ]
-          },
-          "dryRun": {
-            "type": "boolean",
-            "description": "If true, preview changes without applying them",
-            "default": false
           }
         }
       },
@@ -2164,9 +1836,18 @@
             "type": "object",
             "description": "Nivel del resultado",
             "properties": {
-              "code": { "type": "number", "nullable": true },
-              "name": { "type": "string", "nullable": true },
-              "description": { "type": "string", "nullable": true }
+              "code": {
+                "type": "number",
+                "nullable": true
+              },
+              "name": {
+                "type": "string",
+                "nullable": true
+              },
+              "description": {
+                "type": "string",
+                "nullable": true
+              }
             }
           },
           "indicator_category": {
@@ -2174,8 +1855,14 @@
             "type": "object",
             "description": "Categoría indicador (result_type)",
             "properties": {
-              "code": { "type": "number", "nullable": true },
-              "name": { "type": "string", "nullable": true }
+              "code": {
+                "type": "number",
+                "nullable": true
+              },
+              "name": {
+                "type": "string",
+                "nullable": true
+              }
             }
           },
           "toc_alignment": {
@@ -2188,8 +1875,14 @@
             "type": "object",
             "description": "Alcance geográfico",
             "properties": {
-              "code": { "type": "number", "nullable": true },
-              "description": { "type": "string", "nullable": true }
+              "code": {
+                "type": "number",
+                "nullable": true
+              },
+              "description": {
+                "type": "string",
+                "nullable": true
+              }
             }
           },
           "regions": {
@@ -2198,8 +1891,14 @@
             "items": {
               "type": "object",
               "properties": {
-                "code": { "type": "number", "nullable": true },
-                "name": { "type": "string", "nullable": true }
+                "code": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "name": {
+                  "type": "string",
+                  "nullable": true
+                }
               }
             }
           },
@@ -2209,8 +1908,14 @@
             "items": {
               "type": "object",
               "properties": {
-                "code": { "type": "string", "nullable": true },
-                "name": { "type": "string", "nullable": true }
+                "code": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "name": {
+                  "type": "string",
+                  "nullable": true
+                }
               }
             }
           },
@@ -2220,9 +1925,18 @@
             "items": {
               "type": "object",
               "properties": {
-                "code": { "type": "number", "nullable": true },
-                "name": { "type": "string", "nullable": true },
-                "acronym": { "type": "string", "nullable": true }
+                "code": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "name": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "acronym": {
+                  "type": "string",
+                  "nullable": true
+                }
               }
             }
           },
@@ -2232,9 +1946,18 @@
             "items": {
               "type": "object",
               "properties": {
-                "code": { "type": "number", "nullable": true },
-                "name": { "type": "string", "nullable": true },
-                "acronym": { "type": "string", "nullable": true }
+                "code": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "name": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "acronym": {
+                  "type": "string",
+                  "nullable": true
+                }
               }
             }
           },
@@ -2254,8 +1977,14 @@
             "items": {
               "type": "object",
               "properties": {
-                "short_name": { "type": "string", "nullable": true },
-                "organization_code": { "type": "string", "nullable": true }
+                "short_name": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "organization_code": {
+                  "type": "string",
+                  "nullable": true
+                }
               }
             }
           },
@@ -2265,31 +1994,50 @@
             "items": {
               "type": "object",
               "properties": {
-                "link": { "type": "string", "format": "uri", "nullable": true },
-                "description": { "type": "string", "nullable": true }
+                "link": {
+                  "type": "string",
+                  "format": "uri",
+                  "nullable": true
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                }
               }
             }
           },
           "primary_entity": {
             "nullable": true,
             "type": "object",
-            "description": "Entidad principal (iniciativa Primary submitter)",
+            "description": "Entidad principal (iniABCiva Primary submitter)",
             "properties": {
-              "official_code": { "type": "string", "nullable": true },
-              "name": { "type": "string", "nullable": true }
+              "official_code": {
+                "type": "string",
+                "nullable": true
+              },
+              "name": {
+                "type": "string",
+                "nullable": true
+              }
             }
           },
           "source": {
             "type": "string",
             "nullable": true,
             "description": "Stored funding route from PRMS / OpenSearch: Result (W1/W2) or API (W3/Bilateral)",
-            "enum": ["Result", "API"]
+            "enum": [
+              "Result",
+              "API"
+            ]
           },
           "source_definition": {
             "type": "string",
             "nullable": true,
             "description": "Human-readable label for `source`: W1/W2 or W3/Bilateral",
-            "enum": ["W1/W2", "W3/Bilateral"]
+            "enum": [
+              "W1/W2",
+              "W3/Bilateral"
+            ]
           }
         }
       },
@@ -2304,10 +2052,22 @@
               "$ref": "#/components/schemas/ResultResponse"
             }
           },
-          "total": { "type": "integer", "description": "Total de documentos" },
-          "page": { "type": "integer", "description": "Página actual" },
-          "size": { "type": "integer", "description": "Tamaño de página" },
-          "totalPages": { "type": "integer", "description": "Total de páginas" }
+          "total": {
+            "type": "integer",
+            "description": "Total de documentos"
+          },
+          "page": {
+            "type": "integer",
+            "description": "Página actual"
+          },
+          "size": {
+            "type": "integer",
+            "description": "Tamaño de página"
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "Total de páginas"
+          }
         }
       },
       "ResultData": {
@@ -2328,7 +2088,14 @@
         "properties": {
           "result_id": {
             "description": "Identifier of the result in the source system (optional)",
-            "oneOf": [{ "type": "number" }, { "type": "string" }]
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
           },
           "created_date": {
             "type": "string",
@@ -2338,7 +2105,10 @@
           "created_by": {
             "type": "object",
             "description": "Information about the user who created the result",
-            "required": ["email", "name"],
+            "required": [
+              "email",
+              "name"
+            ],
             "properties": {
               "email": {
                 "type": "string",
@@ -2352,7 +2122,11 @@
           "submitted_by": {
             "type": "object",
             "description": "Information about the user who submitted the result",
-            "required": ["email", "name", "submitted_date"],
+            "required": [
+              "email",
+              "name",
+              "submitted_date"
+            ],
             "properties": {
               "email": {
                 "type": "string",
@@ -2374,14 +2148,32 @@
             "type": "object",
             "description": "Main center responsible for the result",
             "anyOf": [
-              { "required": ["name"] },
-              { "required": ["acronym"] },
-              { "required": ["institution_id"] }
+              {
+                "required": [
+                  "name"
+                ]
+              },
+              {
+                "required": [
+                  "acronym"
+                ]
+              },
+              {
+                "required": [
+                  "institution_id"
+                ]
+              }
             ],
             "properties": {
-              "name": { "type": "string" },
-              "acronym": { "type": "string" },
-              "institution_id": { "type": "number" }
+              "name": {
+                "type": "string"
+              },
+              "acronym": {
+                "type": "string"
+              },
+              "institution_id": {
+                "type": "number"
+              }
             }
           },
           "title": {
@@ -2393,26 +2185,53 @@
           "toc_mapping": {
             "type": "object",
             "description": "TOC mapping to a single Science Program",
-            "required": ["science_program_id"],
+            "required": [
+              "science_program_id"
+            ],
             "properties": {
-              "science_program_id": { "type": "string" },
-              "aow_compose_code": { "type": "string" },
-              "result_title": { "type": "string" },
-              "result_indicator_description": { "type": "string" },
-              "result_indicator_type_name": { "type": "string" }
+              "science_program_id": {
+                "type": "string"
+              },
+              "aow_compose_code": {
+                "type": "string"
+              },
+              "result_title": {
+                "type": "string"
+              },
+              "result_indicator_description": {
+                "type": "string"
+              },
+              "result_indicator_type_name": {
+                "type": "string"
+              }
             }
           },
           "geo_focus": {
             "type": "object",
             "description": "Geographic focus of the result",
             "anyOf": [
-              { "required": ["scope_code"] },
-              { "required": ["scope_label"] }
+              {
+                "required": [
+                  "scope_code"
+                ]
+              },
+              {
+                "required": [
+                  "scope_label"
+                ]
+              }
             ],
             "properties": {
               "scope_code": {
                 "type": "number",
-                "enum": [1, 2, 3, 4, 5, 50]
+                "enum": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  50
+                ]
               },
               "scope_label": {
                 "type": "string",
@@ -2430,12 +2249,24 @@
                 "items": {
                   "type": "object",
                   "anyOf": [
-                    { "required": ["um49code"] },
-                    { "required": ["name"] }
+                    {
+                      "required": [
+                        "um49code"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "name"
+                      ]
+                    }
                   ],
                   "properties": {
-                    "um49code": { "type": "number" },
-                    "name": { "type": "string" }
+                    "um49code": {
+                      "type": "number"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
                   }
                 }
               },
@@ -2444,14 +2275,34 @@
                 "items": {
                   "type": "object",
                   "anyOf": [
-                    { "required": ["id"] },
-                    { "required": ["name"] },
-                    { "required": ["iso_alpha_3"] },
-                    { "required": ["iso_alpha_2"] }
+                    {
+                      "required": [
+                        "id"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "name"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "iso_alpha_3"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "iso_alpha_2"
+                      ]
+                    }
                   ],
                   "properties": {
-                    "id": { "type": "number" },
-                    "name": { "type": "string" },
+                    "id": {
+                      "type": "number"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
                     "iso_alpha_3": {
                       "type": "string",
                       "minLength": 3,
@@ -2469,10 +2320,25 @@
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "anyOf": [{ "required": ["id"] }, { "required": ["name"] }],
+                  "anyOf": [
+                    {
+                      "required": [
+                        "id"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "name"
+                      ]
+                    }
+                  ],
                   "properties": {
-                    "id": { "type": "number" },
-                    "name": { "type": "string" }
+                    "id": {
+                      "type": "number"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
                   }
                 }
               }
@@ -2485,14 +2351,32 @@
             "items": {
               "type": "object",
               "anyOf": [
-                { "required": ["institution_id"] },
-                { "required": ["acronym"] },
-                { "required": ["name"] }
+                {
+                  "required": [
+                    "institution_id"
+                  ]
+                },
+                {
+                  "required": [
+                    "acronym"
+                  ]
+                },
+                {
+                  "required": [
+                    "name"
+                  ]
+                }
               ],
               "properties": {
-                "institution_id": { "type": "number" },
-                "acronym": { "type": "string" },
-                "name": { "type": "string" }
+                "institution_id": {
+                  "type": "number"
+                },
+                "acronym": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -2503,14 +2387,32 @@
             "items": {
               "type": "object",
               "anyOf": [
-                { "required": ["institution_id"] },
-                { "required": ["acronym"] },
-                { "required": ["name"] }
+                {
+                  "required": [
+                    "institution_id"
+                  ]
+                },
+                {
+                  "required": [
+                    "acronym"
+                  ]
+                },
+                {
+                  "required": [
+                    "name"
+                  ]
+                }
               ],
               "properties": {
-                "institution_id": { "type": "number" },
-                "acronym": { "type": "string" },
-                "name": { "type": "string" }
+                "institution_id": {
+                  "type": "number"
+                },
+                "acronym": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -2520,7 +2422,9 @@
             "description": "Array of evidence links (optional, but if provided must have at least one item)",
             "items": {
               "type": "object",
-              "required": ["link"],
+              "required": [
+                "link"
+              ],
               "properties": {
                 "link": {
                   "type": "string"
@@ -2537,7 +2441,9 @@
             "description": "Array of bilateral project grants that contributed to this result (required, must have at least one item)",
             "items": {
               "type": "object",
-              "required": ["grant_title"],
+              "required": [
+                "grant_title"
+              ],
               "properties": {
                 "grant_title": {
                   "type": "string",
@@ -2563,11 +2469,21 @@
                 "result_indicator_type_name"
               ],
               "properties": {
-                "science_program_id": { "type": "string" },
-                "aow_compose_code": { "type": "string" },
-                "result_title": { "type": "string" },
-                "result_indicator_description": { "type": "string" },
-                "result_indicator_type_name": { "type": "string" }
+                "science_program_id": {
+                  "type": "string"
+                },
+                "aow_compose_code": {
+                  "type": "string"
+                },
+                "result_title": {
+                  "type": "string"
+                },
+                "result_indicator_description": {
+                  "type": "string"
+                },
+                "result_indicator_type_name": {
+                  "type": "string"
+                }
               }
             }
           }

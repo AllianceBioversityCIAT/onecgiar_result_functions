@@ -26,6 +26,15 @@ POST /ingest → Validate → EventBridge → 202 Accepted
 POST /ingest → Validate → Process → External API → OpenSearch → 200 OK
 ```
 
+**HTTP surface (this service):**
+```
+GET  /result, GET /result/{code}  → OpenSearch
+POST /ingest                      → validate, process, external API, OpenSearch
+GET  /health, GET /openapi.json, GET /docs
+```
+
+Bulk sync, single-result PATCH update, and DELETE are **not** exposed here (use the separate sync/other services).
+
 ---
 
 For complete documentation, including:
