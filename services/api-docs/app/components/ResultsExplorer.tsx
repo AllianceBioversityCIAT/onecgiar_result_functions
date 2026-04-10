@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -291,9 +292,17 @@ export function ResultsExplorer() {
   return (
     <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
       <header className="flex flex-col gap-2 border-b border-[var(--border)] pb-8">
-        <p className="text-sm font-medium tracking-wide text-[var(--accent)]">
-          CGIAR · PRMS
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-medium tracking-wide text-[var(--accent)]">
+            CGIAR · PRMS
+          </p>
+          <Link
+            href="/reference"
+            className="text-sm font-medium text-[var(--accent)] underline-offset-2 hover:underline"
+          >
+            API reference
+          </Link>
+        </div>
         <h1 className="font-display text-3xl font-semibold tracking-tight text-[var(--ink)] sm:text-4xl">
           Results explorer
         </h1>
