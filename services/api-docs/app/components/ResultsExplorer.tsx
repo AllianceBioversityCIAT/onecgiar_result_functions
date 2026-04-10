@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type SubmitEventHandler,
+} from "react";
 import {
   DEFAULT_PHASE_YEAR,
   PHASE_YEAR_OPTIONS,
@@ -44,6 +50,31 @@ function formatLeadingResult(lr: ResultRow["leading_result"]): string {
   return ac || nm;
 }
 
+/** Avoid String(object) → "[object Object]" for API error payloads */
+function serializeApiMessage(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value === "string") {
+    const t = value.trim();
+    return t.length > 0 ? t : null;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return null;
+    }
+  }
+  if (typeof value === "bigint") return value.toString();
+  if (typeof value === "symbol") return value.description ?? value.toString();
+  if (typeof value === "function") {
+    return value.name ? `Function: ${value.name}` : "Function";
+  }
+  return null;
+}
+
 export function ResultsExplorer() {
   const [filters, setFilters] = useState<FilterState>(() => defaultFilters());
   const [payload, setPayload] = useState<ResultListPayload | null>(null);
@@ -72,10 +103,13 @@ export function ResultsExplorer() {
         );
       }
       if (!res.ok) {
-        const msg =
-          typeof json === "object" && json !== null && "message" in json
-            ? String((json as { message: unknown }).message)
-            : `HTTP ${res.status}`;
+        let msg = `HTTP ${res.status}`;
+        if (typeof json === "object" && json !== null && "message" in json) {
+          const fromBody = serializeApiMessage(
+            (json as { message: unknown }).message,
+          );
+          if (fromBody !== null) msg = fromBody;
+        }
         throw new Error(msg);
       }
       const body = json as Partial<ResultListPayload>;
@@ -98,7 +132,7 @@ export function ResultsExplorer() {
     void fetchResults(defaultFilters());
   }, [fetchResults]);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit: SubmitEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
     const next = { ...filters, page: 1 };
     setFilters(next);
@@ -162,6 +196,97 @@ export function ResultsExplorer() {
     const to = Math.min(page * size, total);
     return { page, totalPages, total, from, to };
   }, [payload]);
+
+  const renderTableBody = () => {
+    if (loading) {
+      return (
+        <tr>
+          <td colSpan={9} className="px-4 py-16 text-center">
+            <span className="inline-flex items-center gap-2 text-[var(--ink-muted)]">
+              <span
+                className="size-4 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent"
+                aria-hidden
+              /> Loading results…
+            </span>
+          </td>
+        </tr>
+      );
+    }
+    if (!payload || payload.data.length === 0) {
+      return (
+        <tr>
+          <td
+            colSpan={9}
+            className="px-4 py-14 text-center text-[var(--ink-muted)]"
+          >
+            No data to show. Adjust filters or ensure the fetcher service is
+            running.
+          </td>
+        </tr>
+      );
+    }
+    return payload.data.map((row: ResultRow, i: number) => (
+      <tr
+        key={`${row.result_code ?? i}-${i}`}
+        className="border-b border-[var(--border)]/70 transition hover:bg-[var(--bg-elevated)]/50"
+      >
+        <td className="whitespace-nowrap px-4 py-3 font-mono text-xs font-medium text-[var(--accent)]">
+          {row.result_code ?? "—"}
+        </td>
+        <td className="max-w-xs px-4 py-3 text-[var(--ink)]">
+          <span className="line-clamp-2" title={row.result_title ?? ""}>
+            {row.result_title ?? "—"}
+          </span>
+        </td>
+        <td className="max-w-[200px] px-4 py-3 text-[var(--ink-muted)]">
+          <span
+            className="line-clamp-2 text-sm"
+            title={formatLeadingResult(row.leading_result)}
+          >
+            {formatLeadingResult(row.leading_result)}
+          </span>
+        </td>
+        <td className="whitespace-nowrap px-4 py-3 text-[var(--ink-muted)]">
+          {row.indicator_category?.name ?? "—"}
+        </td>
+        <td className="whitespace-nowrap px-4 py-3">
+          {row.year ?? "—"}
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex flex-col gap-0.5">
+            <span className="font-medium text-[var(--ink)]">
+              {row.source_definition ?? row.source ?? "—"}
+            </span>
+            {row.source_definition && row.source ? (
+              <span className="text-xs text-[var(--ink-muted)]">
+                {row.source}
+              </span>
+            ) : null}
+          </div>
+        </td>
+        <td className="whitespace-nowrap px-4 py-3 text-[var(--ink-muted)]">
+          {row.obj_status?.status_name ?? statusLabel(row.status_id)}
+        </td>
+        <td className="whitespace-nowrap px-4 py-3 text-xs text-[var(--ink-muted)]">
+          {formatDate(row.last_update_at)}
+        </td>
+        <td className="px-4 py-3">
+          {row.prms_link ? (
+            <a
+              href={row.prms_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--accent)] underline-offset-2 hover:underline"
+            >
+              Open
+            </a>
+          ) : (
+            "—"
+          )}
+        </td>
+      </tr>
+    ));
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
@@ -254,11 +379,10 @@ export function ResultsExplorer() {
                   key={opt.value}
                   type="button"
                   onClick={() => toggleSource(opt.value)}
-                  className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
-                    filters.source.includes(opt.value)
+                  className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${filters.source.includes(opt.value)
                       ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
                       : "border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--ink-muted)] hover:border-[var(--ink-muted)]"
-                  }`}
+                    }`}
                 >
                   {opt.label}
                 </button>
@@ -276,11 +400,10 @@ export function ResultsExplorer() {
                   key={opt.value}
                   type="button"
                   onClick={() => toggleStatus(opt.value)}
-                  className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition sm:text-sm ${
-                    filters.statusId.includes(opt.value)
+                  className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition sm:text-sm ${filters.statusId.includes(opt.value)
                       ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
                       : "border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--ink-muted)] hover:border-[var(--ink-muted)]"
-                  }`}
+                    }`}
                 >
                   {opt.label}
                 </button>
@@ -299,11 +422,10 @@ export function ResultsExplorer() {
                     key={opt.value}
                     type="button"
                     onClick={() => toggleResultType(opt.value)}
-                    className={`rounded-md border px-2 py-1 text-xs transition ${
-                      filters.resultType.includes(opt.value)
+                    className={`rounded-md border px-2 py-1 text-xs transition ${filters.resultType.includes(opt.value)
                         ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
                         : "border-transparent bg-[var(--surface)] text-[var(--ink-muted)] hover:border-[var(--border)]"
-                    }`}
+                      }`}
                   >
                     {opt.label}
                   </button>
@@ -365,8 +487,7 @@ export function ResultsExplorer() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 text-sm text-[var(--ink-muted)]">
-              Per page
-              <select
+              Per page <select
                 className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-1.5 text-[var(--ink)] outline-none"
                 value={filters.size}
                 onChange={(e) => changeSize(Number(e.target.value))}
@@ -423,94 +544,7 @@ export function ResultsExplorer() {
                 </th>
               </tr>
             </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={9} className="px-4 py-16 text-center">
-                    <span className="inline-flex items-center gap-2 text-[var(--ink-muted)]">
-                      <span
-                        className="size-4 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent"
-                        aria-hidden
-                      />
-                      Loading results…
-                    </span>
-                  </td>
-                </tr>
-              ) : !payload || payload.data.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={9}
-                    className="px-4 py-14 text-center text-[var(--ink-muted)]"
-                  >
-                    No data to show. Adjust filters or ensure the fetcher
-                    service is running.
-                  </td>
-                </tr>
-              ) : (
-                payload.data.map((row: ResultRow, i: number) => (
-                  <tr
-                    key={`${row.result_code ?? i}-${i}`}
-                    className="border-b border-[var(--border)]/70 transition hover:bg-[var(--bg-elevated)]/50"
-                  >
-                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs font-medium text-[var(--accent)]">
-                      {row.result_code ?? "—"}
-                    </td>
-                    <td className="max-w-xs px-4 py-3 text-[var(--ink)]">
-                      <span className="line-clamp-2" title={row.result_title ?? ""}>
-                        {row.result_title ?? "—"}
-                      </span>
-                    </td>
-                    <td className="max-w-[200px] px-4 py-3 text-[var(--ink-muted)]">
-                      <span
-                        className="line-clamp-2 text-sm"
-                        title={formatLeadingResult(row.leading_result)}
-                      >
-                        {formatLeadingResult(row.leading_result)}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-[var(--ink-muted)]">
-                      {row.indicator_category?.name ?? "—"}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3">
-                      {row.year ?? "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-medium text-[var(--ink)]">
-                          {row.source_definition ?? row.source ?? "—"}
-                        </span>
-                        {row.source_definition && row.source ? (
-                          <span className="text-xs text-[var(--ink-muted)]">
-                            {row.source}
-                          </span>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-[var(--ink-muted)]">
-                      {row.obj_status?.status_name ??
-                        statusLabel(row.status_id)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-xs text-[var(--ink-muted)]">
-                      {formatDate(row.last_update_at)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {row.prms_link ? (
-                        <a
-                          href={row.prms_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[var(--accent)] underline-offset-2 hover:underline"
-                        >
-                          Open
-                        </a>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
+            <tbody>{renderTableBody()}</tbody>
           </table>
         </div>
 
