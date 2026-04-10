@@ -8,6 +8,10 @@ export type ResultRow = {
   result_code?: number;
   result_title?: string | null;
   leading_result?: LeadingResult | null;
+  primary_entity?: {
+    official_code?: string | null;
+    name?: string | null;
+  } | null;
   year?: number | null;
   status_id?: number;
   source?: string | null;
