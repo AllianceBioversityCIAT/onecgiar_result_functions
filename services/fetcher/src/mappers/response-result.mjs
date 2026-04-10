@@ -2,10 +2,27 @@ export const isEmpty = (v) => {
   return (
     v === null ||
     v === "" ||
-    (typeof v === "number" && isNaN(v)) ||
+    (typeof v === "number" && Number.isNaN(v)) ||
     v === undefined ||
     (Array.isArray(v) && v.length === 0)
   );
+};
+
+/** OpenSearch `source`: Result = W1/W2, API = W3/Bilateral (bilateral list semantics). */
+export const normalizeStoredSource = (stored) => {
+  if (stored === null || stored === undefined || stored === "") return null;
+  const lower = String(stored).trim().toLowerCase();
+  if (lower === "result") return "Result";
+  if (lower === "api") return "API";
+  return String(stored).trim();
+};
+
+export const storedSourceToDefinition = (normalizedSource) => {
+  if (normalizedSource == null || normalizedSource === "") return null;
+  const lower = String(normalizedSource).toLowerCase();
+  if (lower === "result") return "W1/W2";
+  if (lower === "api") return "W3/Bilateral";
+  return null;
 };
 
 const INITIATIVE_ROLE_LABELS = {
@@ -21,7 +38,7 @@ export class ResultLevelMapper {
   }
 
   static from(resultLevel) {
-    return !isEmpty(resultLevel) ? new ResultLevelMapper(resultLevel) : null;
+    return isEmpty(resultLevel) ? null : new ResultLevelMapper(resultLevel);
   }
 }
 
@@ -32,9 +49,9 @@ export class IndicatorCategoryMapper {
   }
 
   static from(resultType) {
-    return !isEmpty(resultType)
-      ? new IndicatorCategoryMapper(resultType)
-      : null;
+    return isEmpty(resultType)
+      ? null
+      : new IndicatorCategoryMapper(resultType);
   }
 }
 
@@ -45,9 +62,9 @@ export class GeographicFocusMapper {
   }
 
   static from(geographicScope) {
-    return !isEmpty(geographicScope)
-      ? new GeographicFocusMapper(geographicScope)
-      : null;
+    return isEmpty(geographicScope)
+      ? null
+      : new GeographicFocusMapper(geographicScope);
   }
 }
 
@@ -58,7 +75,7 @@ export class RegionMapper {
   }
 
   static from(regionObject) {
-    return !isEmpty(regionObject) ? new RegionMapper(regionObject) : null;
+    return isEmpty(regionObject) ? null : new RegionMapper(regionObject);
   }
 
   static fromArray(regionObjects) {
@@ -77,7 +94,7 @@ export class CountryMapper {
   }
 
   static from(countryObject) {
-    return !isEmpty(countryObject) ? new CountryMapper(countryObject) : null;
+    return isEmpty(countryObject) ? null : new CountryMapper(countryObject);
   }
 
   static fromArray(countryObjects) {
@@ -100,9 +117,9 @@ export class ContributingCenterMapper {
   }
 
   static from(contributingCenterObject) {
-    return !isEmpty(contributingCenterObject)
-      ? new ContributingCenterMapper(contributingCenterObject)
-      : null;
+    return isEmpty(contributingCenterObject)
+      ? null
+      : new ContributingCenterMapper(contributingCenterObject);
   }
 
   static fromArray(contributingCenterObjects) {
@@ -125,9 +142,9 @@ export class ContributingPartnerMapper {
   }
 
   static from(contributingPartnerObject) {
-    return !isEmpty(contributingPartnerObject)
-      ? new ContributingPartnerMapper(contributingPartnerObject)
-      : null;
+    return isEmpty(contributingPartnerObject)
+      ? null
+      : new ContributingPartnerMapper(contributingPartnerObject);
   }
 
   static fromArray(contributingPartnerObjects) {
@@ -153,9 +170,9 @@ export class EvidencesMapper {
   }
 
   static from(evidenceObject) {
-    return !isEmpty(evidenceObject)
-      ? new EvidencesMapper(evidenceObject)
-      : null;
+    return isEmpty(evidenceObject)
+      ? null
+      : new EvidencesMapper(evidenceObject);
   }
 
   static fromArray(evidenceObjects) {
@@ -173,9 +190,9 @@ export class PrimaryEntityMapper {
   }
 
   static from(primaryEntityObject) {
-    return !isEmpty(primaryEntityObject)
-      ? new PrimaryEntityMapper(primaryEntityObject)
-      : null;
+    return isEmpty(primaryEntityObject)
+      ? null
+      : new PrimaryEntityMapper(primaryEntityObject);
   }
 
   static fromArray(primaryEntityObjects) {
@@ -194,20 +211,20 @@ export class EntityMapper {
   }
 
   static from(entityObject) {
-    return !isEmpty(entityObject) ? new EntityMapper(entityObject) : null;
+    return isEmpty(entityObject) ? null : new EntityMapper(entityObject);
   }
 }
 
 export class SubEntityMapper {
   constructor(subEntityObject) {
     this.official_code = subEntityObject?.official_code;
-    this.description = null; //TODO: data not found
+    this.description = null; // TODO: data not found
   }
 
   static from(subEntityObject) {
-    return !isEmpty(subEntityObject)
-      ? new SubEntityMapper(subEntityObject)
-      : null;
+    return isEmpty(subEntityObject)
+      ? null
+      : new SubEntityMapper(subEntityObject);
   }
 }
 
@@ -219,9 +236,9 @@ export class TocResultMapper {
   }
 
   static from(tocResultObject) {
-    return !isEmpty(tocResultObject)
-      ? new TocResultMapper(tocResultObject)
-      : null;
+    return isEmpty(tocResultObject)
+      ? null
+      : new TocResultMapper(tocResultObject);
   }
 
   static fromArray(tocResultObjects) {
@@ -229,9 +246,8 @@ export class TocResultMapper {
     const dataList = [];
     for (const tocResultObject of tocResultObjects) {
       const tocResult = TocResultMapper.from(tocResultObject);
-      if (!isEmpty(tocResult)) {
-        dataList.push(tocResult);
-      }
+      if (isEmpty(tocResult)) continue;
+      dataList.push(tocResult);
     }
     return dataList;
   }
@@ -245,7 +261,7 @@ export class TocMapper {
   }
 
   static from(tocObject) {
-    return !isEmpty(tocObject) ? new TocMapper(tocObject) : null;
+    return isEmpty(tocObject) ? null : new TocMapper(tocObject);
   }
 
   static fromArray(tocObjects) {
@@ -253,9 +269,8 @@ export class TocMapper {
     const dataList = [];
     for (const tocObject of tocObjects) {
       const toc = TocMapper.from(tocObject);
-      if (!isEmpty(toc)) {
-        dataList.push(toc);
-      }
+      if (isEmpty(toc)) continue;
+      dataList.push(toc);
     }
     return dataList;
   }
@@ -314,5 +329,7 @@ export class ResultResponseMapper {
       rawData?.obj_result_by_initiatives,
     );
     this.created_by = CreatedByMapper.from(rawData?.obj_created);
+    this.source = normalizeStoredSource(rawData?.source);
+    this.source_definition = storedSourceToDefinition(this.source);
   }
 }

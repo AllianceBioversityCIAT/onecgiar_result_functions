@@ -95,8 +95,18 @@
             "schema": {
               "type": "string"
             },
-            "description": "Funding type",
-            "example": "GRP"
+            "description": "Legacy name: filters the same OpenSearch field `source` (comma-separated). Use values as stored in PRMS, e.g. Result or API (W1/W2 vs W3/Bilateral). Prefer query param `source` with W1/W2 / W3/Bilateral.",
+            "example": "Result"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by result origin (comma-separated for multiple). Allowed values: W1/W2 (OpenSearch source Result) and W3/Bilateral (OpenSearch source API). Example: W1/W2 or W1/W2,W3/Bilateral",
+            "example": "W1/W2"
           },
           {
             "name": "statusId",
@@ -2268,6 +2278,18 @@
               "official_code": { "type": "string", "nullable": true },
               "name": { "type": "string", "nullable": true }
             }
+          },
+          "source": {
+            "type": "string",
+            "nullable": true,
+            "description": "Stored funding route from PRMS / OpenSearch: Result (W1/W2) or API (W3/Bilateral)",
+            "enum": ["Result", "API"]
+          },
+          "source_definition": {
+            "type": "string",
+            "nullable": true,
+            "description": "Human-readable label for `source`: W1/W2 or W3/Bilateral",
+            "enum": ["W1/W2", "W3/Bilateral"]
           }
         }
       },
