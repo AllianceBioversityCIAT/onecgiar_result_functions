@@ -1,3 +1,8 @@
+/** Phase years available in the results explorer filter */
+export const PHASE_YEAR_OPTIONS = [2022, 2023, 2024, 2025] as const;
+
+export const DEFAULT_PHASE_YEAR = "2025";
+
 export const RESULT_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "policy_change", label: "Policy change" },
   { value: "innovation_use", label: "Innovation use" },

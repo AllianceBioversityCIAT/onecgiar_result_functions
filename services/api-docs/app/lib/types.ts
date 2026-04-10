@@ -1,6 +1,13 @@
+export type LeadingResult = {
+  acronym?: string | null;
+  name?: string | null;
+  code?: string | number | null;
+};
+
 export type ResultRow = {
   result_code?: number;
   result_title?: string | null;
+  leading_result?: LeadingResult | null;
   year?: number | null;
   status_id?: number;
   source?: string | null;

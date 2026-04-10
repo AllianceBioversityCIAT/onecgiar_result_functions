@@ -331,5 +331,10 @@ export class ResultResponseMapper {
     this.created_by = CreatedByMapper.from(rawData?.obj_created);
     this.source = normalizeStoredSource(rawData?.source);
     this.source_definition = storedSourceToDefinition(this.source);
+    this.leading_result =
+      rawData?.leading_result !== undefined &&
+      rawData?.leading_result !== null
+        ? rawData.leading_result
+        : null;
   }
 }

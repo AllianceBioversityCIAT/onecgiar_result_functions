@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  DEFAULT_PHASE_YEAR,
+  PHASE_YEAR_OPTIONS,
   RESULT_TYPE_OPTIONS,
   SOURCE_OPTIONS,
   STATUS_OPTIONS,
@@ -12,7 +14,7 @@ import type { ResultListPayload, ResultRow } from "../lib/types";
 const defaultFilters = (): FilterState => ({
   page: 1,
   size: 25,
-  year: "",
+  year: DEFAULT_PHASE_YEAR,
   centerAcronym: "",
   resultCode: "",
   resultType: [],
@@ -33,8 +35,17 @@ function formatDate(iso?: string) {
   }
 }
 
+function formatLeadingResult(lr: ResultRow["leading_result"]): string {
+  if (lr == null || typeof lr !== "object") return "Not defined";
+  const ac = typeof lr.acronym === "string" ? lr.acronym.trim() : "";
+  const nm = typeof lr.name === "string" ? lr.name.trim() : "";
+  if (!ac && !nm) return "Not defined";
+  if (ac && nm) return `${ac} · ${nm}`;
+  return ac || nm;
+}
+
 export function ResultsExplorer() {
-  const [filters, setFilters] = useState<FilterState>(defaultFilters);
+  const [filters, setFilters] = useState<FilterState>(() => defaultFilters());
   const [payload, setPayload] = useState<ResultListPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -189,15 +200,19 @@ export function ResultsExplorer() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <label className="flex flex-col gap-1.5 text-sm">
               <span className="font-medium text-[var(--ink-muted)]">Year</span>
-              <input
-                type="number"
-                placeholder="e.g. 2025"
+              <select
                 className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-[var(--ink)] outline-none ring-[var(--accent)] transition focus:ring-2"
                 value={filters.year}
                 onChange={(e) =>
                   setFilters((s) => ({ ...s, year: e.target.value }))
                 }
-              />
+              >
+                {PHASE_YEAR_OPTIONS.map((y) => (
+                  <option key={y} value={String(y)}>
+                    {y}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="flex flex-col gap-1.5 text-sm">
               <span className="font-medium text-[var(--ink-muted)]">
@@ -205,7 +220,7 @@ export function ResultsExplorer() {
               </span>
               <input
                 type="text"
-                placeholder="CIAT"
+                placeholder="ABC"
                 className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 uppercase outline-none ring-[var(--accent)] transition focus:ring-2"
                 value={filters.centerAcronym}
                 onChange={(e) =>
@@ -376,7 +391,7 @@ export function ResultsExplorer() {
         ) : null}
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[980px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--bg-elevated)]/80">
                 <th className="px-4 py-3 font-semibold text-[var(--ink-muted)]">
@@ -384,6 +399,9 @@ export function ResultsExplorer() {
                 </th>
                 <th className="px-4 py-3 font-semibold text-[var(--ink-muted)]">
                   Title
+                </th>
+                <th className="px-4 py-3 font-semibold text-[var(--ink-muted)]">
+                  Leading result
                 </th>
                 <th className="px-4 py-3 font-semibold text-[var(--ink-muted)]">
                   Type
@@ -408,7 +426,7 @@ export function ResultsExplorer() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-16 text-center">
+                  <td colSpan={9} className="px-4 py-16 text-center">
                     <span className="inline-flex items-center gap-2 text-[var(--ink-muted)]">
                       <span
                         className="size-4 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent"
@@ -421,7 +439,7 @@ export function ResultsExplorer() {
               ) : !payload || payload.data.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-4 py-14 text-center text-[var(--ink-muted)]"
                   >
                     No data to show. Adjust filters or ensure the fetcher
@@ -440,6 +458,14 @@ export function ResultsExplorer() {
                     <td className="max-w-xs px-4 py-3 text-[var(--ink)]">
                       <span className="line-clamp-2" title={row.result_title ?? ""}>
                         {row.result_title ?? "—"}
+                      </span>
+                    </td>
+                    <td className="max-w-[200px] px-4 py-3 text-[var(--ink-muted)]">
+                      <span
+                        className="line-clamp-2 text-sm"
+                        title={formatLeadingResult(row.leading_result)}
+                      >
+                        {formatLeadingResult(row.leading_result)}
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-[var(--ink-muted)]">
