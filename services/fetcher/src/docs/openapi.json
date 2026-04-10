@@ -95,8 +95,28 @@
             "schema": {
               "type": "string"
             },
-            "description": "Funding type",
-            "example": "GRP"
+            "description": "Legacy name: filters the same OpenSearch field `source` (comma-separated). Use values as stored in PRMS, e.g. Result or API (W1/W2 vs W3/Bilateral). Prefer query param `source` with W1/W2 / W3/Bilateral.",
+            "example": "Result"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by result origin (comma-separated for multiple). Allowed values: W1/W2 (OpenSearch source Result) and W3/Bilateral (OpenSearch source API). Example: W1/W2 or W1/W2,W3/Bilateral",
+            "example": "W1/W2"
+          },
+          {
+            "name": "statusId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by result status_id (comma-separated for multiple). Values: 1 Editing, 2 Quality Assessed, 3 Submitted, 4 Discontinued, 5 Pending Review, 6 Approved, 7 Rejected",
+            "example": "2,6"
           }
         ],
         "summary": "Get all results",
@@ -2218,6 +2238,27 @@
               }
             }
           },
+          "dac_scores": {
+            "type": "object",
+            "nullable": true,
+            "description": "Puntuaciones DAC por eje (estructura desde API / OpenSearch)"
+          },
+          "obj_status": {
+            "type": "object",
+            "nullable": true,
+            "description": "Estado del resultado (result_status_id, status_name, …)"
+          },
+          "bilateral_projects": {
+            "type": "array",
+            "description": "Proyectos bilaterales vinculados",
+            "items": {
+              "type": "object",
+              "properties": {
+                "short_name": { "type": "string", "nullable": true },
+                "organization_code": { "type": "string", "nullable": true }
+              }
+            }
+          },
           "evidences": {
             "type": "array",
             "description": "Evidencias",
@@ -2237,6 +2278,18 @@
               "official_code": { "type": "string", "nullable": true },
               "name": { "type": "string", "nullable": true }
             }
+          },
+          "source": {
+            "type": "string",
+            "nullable": true,
+            "description": "Stored funding route from PRMS / OpenSearch: Result (W1/W2) or API (W3/Bilateral)",
+            "enum": ["Result", "API"]
+          },
+          "source_definition": {
+            "type": "string",
+            "nullable": true,
+            "description": "Human-readable label for `source`: W1/W2 or W3/Bilateral",
+            "enum": ["W1/W2", "W3/Bilateral"]
           }
         }
       },

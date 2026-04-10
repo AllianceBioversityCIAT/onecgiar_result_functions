@@ -1,6 +1,5 @@
 import { OpenSearchClient } from "../clients/opensearch.mjs";
-import { ResultResponseMapper } from "../mappers/response-result.mjs";
-import { isEmpty } from "../mappers/response-result.mjs";
+import { ResultResponseMapper, isEmpty } from "../mappers/response-result.mjs";
 
 const responseFormat = (data, status) => ({
   results: data,
@@ -22,6 +21,78 @@ export const RESULT_TYPES_MAP = {
   complementary_innovation: "Complementary innovation",
 };
 
+/** Maps PRMS `status_id` (numeric) to display name. */
+export const RESULT_STATUS_BY_ID = {
+  1: "Editing",
+  2: "Quality Assessed",
+  3: "Submitted",
+  4: "Discontinued",
+  5: "Pending Review",
+  6: "Approved",
+  7: "Rejected",
+};
+
+/** Bilateral / PRMS: stored `source` field → filter labels (GET /result?source=) */
+export const SOURCE_FILTER_LABEL_TO_STORED = {
+  "w1/w2": "Result",
+  "w3/bilateral": "API",
+};
+
+/**
+ * Maps query values like W1/W2, W3/Bilateral to OpenSearch `source` terms (Result, API).
+ * @param {string[]|undefined} labels
+ * @returns {string[]}
+ */
+export const mapSourceFilterLabelsToStored = (labels) => {
+  if (!Array.isArray(labels) || labels.length === 0) return [];
+  const out = [];
+  for (const label of labels) {
+    const key = String(label).trim().toLowerCase().replaceAll(/\s+/g, "");
+    const stored = SOURCE_FILTER_LABEL_TO_STORED[key];
+    if (stored) out.push(stored);
+  }
+  return [...new Set(out)];
+};
+
+/**
+ * OpenSearch often maps string `source` as text + `.keyword`; `terms` on `source` alone misses exact values.
+ */
+const expandSourceTermVariants = (values) => {
+  const out = new Set();
+  for (const v of values) {
+    if (v === null || v === undefined) continue;
+    const s = String(v).trim();
+    if (!s) continue;
+    out.add(s);
+    out.add(s.toLowerCase());
+    out.add(s.toUpperCase());
+    const titled =
+      s.length > 0
+        ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
+        : s;
+    out.add(titled);
+  }
+  return [...out];
+};
+
+/**
+ * @param {string[]|undefined} values
+ * @returns {object|null}
+ */
+const sourceFieldTermsClause = (values) => {
+  if (!Array.isArray(values) || values.length === 0) return null;
+  const expanded = expandSourceTermVariants(values);
+  return {
+    bool: {
+      should: [
+        { terms: { "source.keyword": expanded } },
+        { terms: { source: expanded } },
+      ],
+      minimum_should_match: 1,
+    },
+  };
+};
+
 const buildFilters = (filters) => {
   const keys = {
     centerAcronym: {
@@ -41,14 +112,16 @@ const buildFilters = (filters) => {
         result_code: filters.resultCode,
       },
     },
-    fundingType: {
-      terms: {
-        source: filters.fundingType,
-      },
-    },
+    fundingType: sourceFieldTermsClause(filters.fundingType),
+    sourceStored: sourceFieldTermsClause(filters.sourceStored),
     year: {
       term: {
         "obj_version.phase_year": filters.year,
+      },
+    },
+    statusId: {
+      terms: {
+        status_id: filters.statusId,
       },
     },
   };

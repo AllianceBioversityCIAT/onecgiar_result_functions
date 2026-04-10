@@ -1,5 +1,9 @@
 import express from "express";
-import { getResult, getResultByCode } from "../services/results.service.mjs";
+import {
+  getResult,
+  getResultByCode,
+  mapSourceFilterLabelsToStored,
+} from "../services/results.service.mjs";
 import { queryParam } from "../utils/query.mjs";
 import { arrayFormat } from "../pipe/arrayFormat.mjs";
 
@@ -17,17 +21,26 @@ router.get("/", async (req, res) => {
     arrayFormat(value).map((item) => item.toUpperCase()),
   );
   const fundingType = query("fundingType", (value) =>
-    arrayFormat(value).map((item) => item.toLowerCase()),
+    arrayFormat(value).map((item) => String(item).trim()),
   );
   const resultType = query("resultType", (value) =>
     arrayFormat(value).map((item) => item.toLowerCase()),
   );
+  const statusId = query("statusId", (value) =>
+    arrayFormat(value).map(Number).filter((n) => Number.isFinite(n)),
+  );
+  const sourceLabels = query("source", (value) =>
+    arrayFormat(value).map((item) => String(item).trim()),
+  );
+  const sourceStored = mapSourceFilterLabelsToStored(sourceLabels);
   const filters = {
     centerAcronym,
     resultCode,
     fundingType,
     year,
     resultType,
+    statusId,
+    ...(sourceStored.length > 0 ? { sourceStored } : {}),
   };
 
   const results = await getResult(page, size, filters);
