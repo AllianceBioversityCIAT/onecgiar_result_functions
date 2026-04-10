@@ -55,19 +55,6 @@ export class IndicatorCategoryMapper {
   }
 }
 
-export class GeographicFocusMapper {
-  constructor(geographicScope) {
-    this.code = geographicScope?.id;
-    this.description = geographicScope?.description;
-  }
-
-  static from(geographicScope) {
-    return isEmpty(geographicScope)
-      ? null
-      : new GeographicFocusMapper(geographicScope);
-  }
-}
-
 export class RegionMapper {
   constructor(regionObject) {
     this.code = regionObject?.um49Code;
@@ -308,9 +295,14 @@ export class ResultResponseMapper {
       rawData?.obj_result_type,
     );
     this.toc_alignment = TocMapper.fromArray(rawData?.obj_results_toc_result);
-    this.geographic_focus = GeographicFocusMapper.from(
-      rawData?.obj_geographic_scope,
-    );
+    const geoScope = rawData?.obj_geographic_scope;
+    this.geographic_focus = isEmpty(geoScope)
+      ? null
+      : {
+          code: geoScope?.id,
+          name: geoScope?.name,
+          description: geoScope?.description,
+        };
     this.regions = RegionMapper.fromArray(rawData?.result_region_array);
     this.countries = CountryMapper.fromArray(rawData?.result_country_array);
     this.contributing_centers = ContributingCenterMapper.fromArray(
@@ -336,5 +328,15 @@ export class ResultResponseMapper {
       rawData?.leading_result !== null
         ? rawData.leading_result
         : null;
+    this.lead_contact_person =
+      rawData?.lead_contact_person ??
+      rawData?.leadContactPerson ??
+      (typeof rawData?.obj_lead_contact === "object" &&
+      rawData.obj_lead_contact !== null
+        ? rawData.obj_lead_contact?.full_name ??
+          rawData.obj_lead_contact?.name ??
+          null
+        : null) ??
+      null;
   }
 }

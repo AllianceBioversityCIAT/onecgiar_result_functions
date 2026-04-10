@@ -16,6 +16,7 @@ import {
   STATUS_OPTIONS,
 } from "../lib/result-constants";
 import { buildResultQueryString, type FilterState } from "../lib/build-query";
+import { ResultDetailModal } from "./ResultDetailModal";
 import type { ResultListPayload, ResultRow } from "../lib/types";
 
 const defaultFilters = (): FilterState => ({
@@ -82,6 +83,7 @@ export function ResultsExplorer() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastQuery, setLastQuery] = useState("");
+  const [detailCode, setDetailCode] = useState<string | null>(null);
 
   const fetchResults = useCallback(async (f: FilterState) => {
     const qs = buildResultQueryString(f);
@@ -202,7 +204,7 @@ export function ResultsExplorer() {
     if (loading) {
       return (
         <tr>
-          <td colSpan={9} className="px-4 py-16 text-center">
+          <td colSpan={10} className="px-4 py-16 text-center">
             <span className="inline-flex items-center gap-2 text-[var(--ink-muted)]">
               <span
                 className="size-4 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent"
@@ -217,7 +219,7 @@ export function ResultsExplorer() {
       return (
         <tr>
           <td
-            colSpan={9}
+            colSpan={10}
             className="px-4 py-14 text-center text-[var(--ink-muted)]"
           >
             No data to show. Adjust filters or ensure the fetcher service is
@@ -281,6 +283,19 @@ export function ResultsExplorer() {
             >
               Open
             </a>
+          ) : (
+            "—"
+          )}
+        </td>
+        <td className="whitespace-nowrap px-4 py-3">
+          {row.result_code != null ? (
+            <button
+              type="button"
+              onClick={() => setDetailCode(String(row.result_code))}
+              className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-1.5 text-xs font-medium text-[var(--accent)] transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]"
+            >
+              Detail
+            </button>
           ) : (
             "—"
           )}
@@ -551,6 +566,9 @@ export function ResultsExplorer() {
                 <th className="px-4 py-3 font-semibold text-[var(--ink-muted)]">
                   PRMS
                 </th>
+                <th className="px-4 py-3 font-semibold text-[var(--ink-muted)]">
+                  Detail
+                </th>
               </tr>
             </thead>
             <tbody>{renderTableBody()}</tbody>
@@ -604,6 +622,11 @@ export function ResultsExplorer() {
           </footer>
         ) : null}
       </section>
+
+      <ResultDetailModal
+        resultCode={detailCode}
+        onClose={() => setDetailCode(null)}
+      />
     </div>
   );
 }

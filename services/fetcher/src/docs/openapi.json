@@ -1873,10 +1873,14 @@
           "geographic_focus": {
             "nullable": true,
             "type": "object",
-            "description": "Alcance geográfico",
+            "description": "Alcance geográfico (mapeado desde obj_geographic_scope en origen)",
             "properties": {
               "code": {
                 "type": "number",
+                "nullable": true
+              },
+              "name": {
+                "type": "string",
                 "nullable": true
               },
               "description": {
