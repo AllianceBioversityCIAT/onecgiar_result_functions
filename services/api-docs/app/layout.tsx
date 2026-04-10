@@ -35,20 +35,12 @@ export const metadata: Metadata = {
     siteName: "PRMS API Console",
     locale: "en_US",
     url: "/",
-    images: [
-      {
-        url: "/og.png",
-        width: 1200,
-        height: 630,
-        alt: "PRMS Results API Console — browse and filter results",
-      },
-    ],
+    // opengraph-image.tsx + twitter-image.tsx (next/og) supply og:image / twitter:image
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
-    images: ["/og.png"],
   },
 };
 
