@@ -6,7 +6,6 @@ export const DEFAULT_PHASE_YEAR = "2025";
 export const RESULT_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "policy_change", label: "Policy change" },
   { value: "innovation_use", label: "Innovation use" },
-  { value: "capacity_change", label: "Capacity change" },
   { value: "other_outcome", label: "Other outcome" },
   {
     value: "capacity_sharing_for_development",
