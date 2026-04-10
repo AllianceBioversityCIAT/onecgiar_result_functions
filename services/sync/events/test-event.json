@@ -1,0 +1,5 @@
+{
+  "job": "sync-cron",
+  "env": "testing",
+  "result_type": "knowledge_product"
+}
