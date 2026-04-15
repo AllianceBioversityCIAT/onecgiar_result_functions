@@ -68,7 +68,8 @@ jspm_packages/
 
 # Gatsby files
 .cache/
-public
+# Repo-root `public` only (build output). Do not ignore e.g. `services/api-docs/public/`.
+/public
 
 # Storybook build outputs
 .out

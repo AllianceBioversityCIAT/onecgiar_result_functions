@@ -1865,6 +1865,42 @@
               }
             }
           },
+          "knowledge_product_summary": {
+            "nullable": true,
+            "type": "object",
+            "description": "Solo para Knowledge product (indicator code 6): resumen desde OpenSearch (`knowledge_product_summary` o `knowledge_product.handle`)",
+            "properties": {
+              "handle": {
+                "type": "string",
+                "nullable": true,
+                "description": "Handle / DOI-style identifier (ej. 10568/175778 o URL hdl)"
+              }
+            }
+          },
+          "innovation_development_summary": {
+            "nullable": true,
+            "type": "object",
+            "description": "Solo para Innovation development (indicator code 7): bloque completo desde OpenSearch (`innovation_development_summary`: short_name, characterization, typology, budgets, questionnaire, etc.)",
+            "additionalProperties": true
+          },
+          "innovation_use_summary": {
+            "nullable": true,
+            "type": "object",
+            "description": "Solo para Innovation use (indicator code 2): bloque completo desde OpenSearch (`innovation_use_summary`: linked_results, current_section, innovation_use_level, budgets, etc.)",
+            "additionalProperties": true
+          },
+          "capacity_development_summary": {
+            "nullable": true,
+            "type": "object",
+            "description": "Solo para Capacity sharing for development (y nombres PRMS equivalentes con capacity+development): bloque desde OpenSearch (`capacity_development_summary`: uso por sexo, delivery_method, training_length, on_behalf_organizations, etc.)",
+            "additionalProperties": true
+          },
+          "policy_change_summary": {
+            "nullable": true,
+            "type": "object",
+            "description": "Solo para Policy change (indicator code 1): bloque desde OpenSearch (`policy_change_summary`: policy_type, policy_stage, amounts, linked flags, organizations, etc.)",
+            "additionalProperties": true
+          },
           "toc_alignment": {
             "type": "array",
             "description": "Alineación ToC",
@@ -1974,6 +2010,52 @@
             "type": "object",
             "nullable": true,
             "description": "Estado del resultado (result_status_id, status_name, …)"
+          },
+          "last_submission": {
+            "type": "object",
+            "nullable": true,
+            "description": "Último envío / revisión del resultado en PRMS (desde OpenSearch)",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "nullable": true
+              },
+              "created_date": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              },
+              "comment": {
+                "type": "string",
+                "nullable": true
+              },
+              "status": {
+                "type": "boolean",
+                "nullable": true
+              },
+              "status_id": {
+                "type": "integer",
+                "nullable": true
+              },
+              "submitted_by": {
+                "type": "object",
+                "nullable": true,
+                "properties": {
+                  "user_id": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "first_name": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "last_name": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
           },
           "bilateral_projects": {
             "type": "array",
