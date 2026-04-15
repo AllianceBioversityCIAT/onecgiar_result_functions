@@ -63,6 +63,28 @@ export class KnowledgeProductSummaryMapper {
     this.handle = handle;
   }
 
+  /** Resolver público: https://hdl.handle.net/ */
+  static HANDLE_PROXY_PREFIX = "https://hdl.handle.net/";
+
+  /**
+   * Devuelve URL absoluta para el proxy Handle cuando el origen trae solo el sufijo
+   * (p. ej. `10568/175778`). Si ya viene como http(s):// o apunta a hdl.handle.net, no se altera.
+   */
+  static normalizeHandle(rawHandle) {
+    const h = String(rawHandle ?? "").trim();
+    if (h === "") return null;
+    const lower = h.toLowerCase();
+    if (lower.startsWith("http://") || lower.startsWith("https://")) {
+      return h;
+    }
+    const withoutScheme = /^hdl:\s*/i.test(h)
+      ? h.replace(/^hdl:\s*/i, "").trim()
+      : h;
+    const path = withoutScheme.replace(/^\/+/, "");
+    if (path === "") return null;
+    return `${KnowledgeProductSummaryMapper.HANDLE_PROXY_PREFIX}${path}`;
+  }
+
   static isKnowledgeProductType(resultType) {
     if (resultType == null || typeof resultType !== "object") return false;
     const id = Number(resultType.id);
@@ -94,7 +116,8 @@ export class KnowledgeProductSummaryMapper {
         kp.handle.trim() !== ""
         ? kp.handle.trim()
         : null;
-    const handle = fromSummary ?? fromKp ?? null;
+    const raw = fromSummary ?? fromKp ?? null;
+    const handle = KnowledgeProductSummaryMapper.normalizeHandle(raw);
     if (handle == null) return null;
     return new KnowledgeProductSummaryMapper(handle);
   }

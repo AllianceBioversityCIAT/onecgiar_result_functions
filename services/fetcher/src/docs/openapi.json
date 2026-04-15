@@ -1873,7 +1873,7 @@
               "handle": {
                 "type": "string",
                 "nullable": true,
-                "description": "Handle / DOI-style identifier (ej. 10568/175778 o URL hdl)"
+                "description": "URL del proxy Handle (p. ej. https://hdl.handle.net/10568/175778). Si OpenSearch trae solo el sufijo o `hdl:…`, la API antepone https://hdl.handle.net/ ; si ya viene como http(s)://, se devuelve igual."
               }
             }
           },
