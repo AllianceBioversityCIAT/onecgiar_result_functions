@@ -24,6 +24,7 @@ export type ResultRow = {
   innovation_use_summary?: Record<string, unknown> | null;
   capacity_development_summary?: Record<string, unknown> | null;
   policy_change_summary?: Record<string, unknown> | null;
+  ipsr_pathway_summary?: Record<string, unknown> | null;
   obj_status?: { status_name?: string } | null;
   prms_link?: string;
 };
@@ -77,6 +78,7 @@ export type ResultDetail = {
   innovation_use_summary?: Record<string, unknown> | null;
   capacity_development_summary?: Record<string, unknown> | null;
   policy_change_summary?: Record<string, unknown> | null;
+  ipsr_pathway_summary?: Record<string, unknown> | null;
   geographic_focus?: {
     code?: number | null;
     name?: string | null;
