@@ -51,7 +51,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Result type (comma separated) \n\nSupported values: policy_change, innovation_use, capacity_change, other_outcome, capacity_sharing_for_development, knowledge_product, innovation_development, other_output, impact_contribution, innovation_use_ipsr, complementary_innovation",
+            "description": "Supported values: policy_change, innovation_use, other_outcome, capacity_sharing_for_development, knowledge_product, innovation_development, other_output, impact_contribution, innovation_package, ",
             "example": "knowledge_product,policy_change",
             "enum": [
               "policy_change",
@@ -63,6 +63,7 @@
               "innovation_development",
               "other_output",
               "impact_contribution",
+              "innovation_package",
               "innovation_use_ipsr",
               "complementary_innovation"
             ]
@@ -1811,7 +1812,7 @@
           "prms_link": {
             "type": "string",
             "format": "uri",
-            "description": "URL de PRMS (general-information)"
+            "description": "PRMS deep link. Standard results: `/result/result-detail/{result_code}/general-information?phase=6`. Innovation Package (IPSR): `/ipsr/detail/{result_code}/general-information?phase={id}` where `phase` is taken from `obj_version.id` (fallback `phase_id`, `version_id`, or `6`)."
           },
           "last_update_at": {
             "type": "string",
@@ -1899,6 +1900,12 @@
             "nullable": true,
             "type": "object",
             "description": "Solo para Policy change (indicator code 1): bloque desde OpenSearch (`policy_change_summary`: policy_type, policy_stage, amounts, linked flags, organizations, etc.)",
+            "additionalProperties": true
+          },
+          "ipsr_pathway_summary": {
+            "nullable": true,
+            "type": "object",
+            "description": "Innovation Package (IPSR): bloque completo desde OpenSearch (`ipsr_pathway_summary`: step_one, step_two, step_three, step_four — pathway, complementary innovations, expert workshop, evidence-based assessment, budgets, materials, etc.)",
             "additionalProperties": true
           },
           "toc_alignment": {

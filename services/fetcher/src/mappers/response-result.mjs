@@ -284,6 +284,52 @@ export class PolicyChangeSummaryMapper {
   }
 }
 
+/**
+ * Innovation Package (IPSR): passthrough `ipsr_pathway_summary` from OpenSearch
+ * (`prms-results-innovation_package` index).
+ */
+export class IpsrPathwaySummaryMapper {
+  static fromRaw(rawData) {
+    const s = rawData?.ipsr_pathway_summary;
+    if (s == null || typeof s !== "object" || Array.isArray(s)) return null;
+    if (typeof structuredClone === "function") {
+      try {
+        return structuredClone(s);
+      } catch {
+        /* continue */
+      }
+    }
+    try {
+      return JSON.parse(JSON.stringify(s));
+    } catch {
+      return null;
+    }
+  }
+}
+
+/** PRMS reporting phase id for deep links (`?phase=`). */
+const prmsPhaseQueryParam = (rawData) => {
+  const v = rawData?.obj_version;
+  if (v == null || typeof v !== "object") return "6";
+  const id = v.id ?? v.phase_id ?? v.version_id;
+  if (id != null && id !== "") return String(id);
+  return "6";
+};
+
+/** PRMS `obj_result_type.id` for Innovation Package (IPSR pathway). */
+const INNOVATION_PACKAGE_TYPE_ID = 10;
+
+const isInnovationPackageDoc = (rawData) => {
+  const s = rawData?.ipsr_pathway_summary;
+  if (s != null && typeof s === "object" && !Array.isArray(s)) return true;
+  const rt = rawData?.obj_result_type;
+  const typeId = Number(rt?.id);
+  if (!Number.isNaN(typeId) && typeId === INNOVATION_PACKAGE_TYPE_ID) return true;
+  const nameNorm = String(rt?.name ?? "").trim().toLowerCase();
+  if (nameNorm === "innovation package") return true;
+  return /\(ipsr\)/i.test(String(rt?.name ?? ""));
+};
+
 export class RegionMapper {
   constructor(regionObject) {
     this.code = regionObject?.um49Code;
@@ -555,13 +601,20 @@ export class LastSubmissionMapper {
 
 export class ResultResponseMapper {
   constructor(rawData) {
+    const reportingBase = String(
+      process.env.REPORTING_BASE_URL ?? "https://reporting.cgiar.org",
+    ).replace(/\/+$/, "");
+    const phaseParam = prmsPhaseQueryParam(rawData);
+
     this.created_date = new Date(rawData.created_date)?.toISOString();
     this.last_updated_date = new Date(rawData.last_updated_date)?.toISOString();
     this.result_code = Number(rawData?.result_code);
     this.status_id = Number(rawData?.status_id);
     this.year = rawData?.obj_version?.phase_year;
-    this.pdf_link = `${process.env.REPORTING_BASE_URL}/reports/result-details/${this.result_code}?phase=${"6"}`;
-    this.prms_link = `${process.env.REPORTING_BASE_URL}/result/result-detail/${this.result_code}/general-information?phase=${"6"}`;
+    this.pdf_link = `${reportingBase}/reports/result-details/${this.result_code}?phase=6`;
+    this.prms_link = isInnovationPackageDoc(rawData)
+      ? `${reportingBase}/ipsr/detail/${this.result_code}/general-information?phase=${phaseParam}`
+      : `${reportingBase}/result/result-detail/${this.result_code}/general-information?phase=6`;
     this.last_update_at = new Date(rawData.last_updated_date).toISOString();
     this.is_active = Boolean(Number(rawData.is_active));
     this.created_by = CreatedByMapper.from(rawData?.obj_created);
@@ -626,5 +679,7 @@ export class ResultResponseMapper {
     this.capacity_development_summary =
       CapacityDevelopmentSummaryMapper.fromRaw(rawData);
     this.policy_change_summary = PolicyChangeSummaryMapper.fromRaw(rawData);
+    this.ipsr_pathway_summary =
+      IpsrPathwaySummaryMapper.fromRaw(rawData);
   }
 }

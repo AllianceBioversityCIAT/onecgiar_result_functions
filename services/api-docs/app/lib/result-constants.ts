@@ -15,7 +15,8 @@ export const RESULT_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "innovation_development", label: "Innovation development" },
   { value: "other_output", label: "Other output" },
   { value: "impact_contribution", label: "Impact contribution" },
-  { value: "innovation_use_ipsr", label: "Innovation Use (IPSR)" },
+  { value: "innovation_package", label: "Innovation package (IPSR)" },
+  { value: "innovation_use_ipsr", label: "Innovation Use (IPSR) — alias" },
 ];
 
 export const STATUS_OPTIONS: { value: number; label: string }[] = [

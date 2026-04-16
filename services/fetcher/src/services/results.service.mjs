@@ -17,7 +17,10 @@ export const RESULT_TYPES_MAP = {
   innovation_development: "Innovation development",
   other_output: "Other output",
   impact_contribution: "Impact contribution",
-  innovation_use_ipsr: "Innovation Use(IPSR)",
+  /** @deprecated Prefer slug `innovation_package`. Same PRMS type name in OpenSearch. */
+  innovation_use_ipsr: "Innovation Package",
+  /** IPSR / Innovation Package — `obj_result_type.name` in PRMS is **Innovation Package** (id 10); index `prms-results-innovation_package`. */
+  innovation_package: "Innovation Package",
   complementary_innovation: "Complementary innovation",
 };
 
