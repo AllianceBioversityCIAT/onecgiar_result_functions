@@ -137,10 +137,10 @@ if (!envLoaded) {
   }
 }
 
-import { BILATERAL_RESULT_TYPES } from "./constants/bilateral-result-types.mjs";
 import { runSyncJob } from "./job.mjs";
 import { Logger } from "./utils/logger.mjs";
 import { resolveLastUpdatedWindowUtc } from "./utils/cron-date-window.mjs";
+import { runSyncOpenSearchByResultType } from "./utils/sync-opensearch-by-result-type.mjs";
 
 const logger = new Logger("CronHandler");
 
@@ -253,9 +253,6 @@ export const handler = async (event, context) => {
         ? /** @type {Record<string, string | undefined>} */ (payload)
         : {}
     );
-    console.error(
-      `Window (UTC): ${window.last_updated_from} → ${window.last_updated_to}`
-    );
 
     // Log the actual event structure for debugging
     logger.info("Event structure", requestId, {
@@ -288,42 +285,15 @@ export const handler = async (event, context) => {
 
     if (shouldOrchestrateAllBilateralTypes(payload)) {
       logger.info(
-        "Orchestrating bilateral sync for all result types (sequential)",
+        "Orchestrating bilateral sync via GET /sync per result_type (sync-opensearch-by-result-type)",
         requestId,
-        { typeCount: BILATERAL_RESULT_TYPES.length }
+        {}
       );
 
-      const perTypeResults = [];
-      let aggregateFetched = 0;
-      let aggregateIndexed = 0;
-      let aggregateFailed = 0;
-
-      for (let i = 0; i < BILATERAL_RESULT_TYPES.length; i++) {
-        const rt = BILATERAL_RESULT_TYPES[i];
-        const { result_type: _ignored, ...filtersNoType } = syncFilters;
-        const typeResult = await runSyncJob({
-          env,
-          requestId: `${requestId}-t${i}`,
-          ...filtersNoType,
-          result_type: rt,
-        });
-        perTypeResults.push({ result_type: rt, result: typeResult });
-        aggregateFetched += typeResult.fetched ?? 0;
-        aggregateIndexed += typeResult.indexed ?? 0;
-        aggregateFailed += typeResult.failed ?? 0;
-      }
-
-      result = {
-        orchestrated: true,
-        types: BILATERAL_RESULT_TYPES.length,
-        window,
-        aggregate: {
-          fetched: aggregateFetched,
-          indexed: aggregateIndexed,
-          failed: aggregateFailed,
-        },
-        perType: perTypeResults,
-      };
+      result = await runSyncOpenSearchByResultType({
+        payload,
+        requestId,
+      });
     } else {
       const resultType =
         payload.result_type || process.env.RESULT_TYPE || "knowledge_product";

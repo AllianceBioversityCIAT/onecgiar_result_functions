@@ -204,7 +204,7 @@ Resources:
       Handler: dist/lambda.handler
       Role: !GetAtt SyncApiLambdaRole.Arn
       Runtime: nodejs22.x
-      Timeout: 30
+      Timeout: 600
       MemorySize: 512
       Environment:
         Variables:
