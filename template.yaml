@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: PRMS Sync Cron Job - Scheduled Lambda function for syncing results
 
@@ -23,42 +23,42 @@ Parameters:
     Type: String
     Default: knowledge_product
     Description: Result type to sync (e.g., knowledge_product, innovation_development, etc.)
-  
+
   CronJobLimit:
     Type: Number
     Default: 500
     Description: "Limit of items per page for cron job (1-500)"
-  
+
   CronJobPortfolio:
     Type: String
     Default: P25
     Description: "Portfolio filter (e.g., P22, P25). Leave empty to not filter."
-  
+
   CronJobPhaseYear:
     Type: Number
     Default: 0
     Description: "Phase year filter. Set to 0 to not filter by phase year."
-  
+
   CronJobStatus:
     Type: String
     Default: ""
     Description: "Status filter (e.g., 'Pending Review'). Leave empty to not filter."
-  
+
   CronJobLastUpdatedFrom:
     Type: String
     Default: ""
     Description: "Last updated date from (YYYY-MM-DD). Leave empty to not filter."
-  
+
   CronJobLastUpdatedTo:
     Type: String
     Default: ""
     Description: "Last updated date to (YYYY-MM-DD). Leave empty to not filter."
-  
+
   CronJobCreatedFrom:
     Type: String
     Default: ""
     Description: "Created date from (YYYY-MM-DD). Leave empty to not filter."
-  
+
   CronJobCreatedTo:
     Type: String
     Default: ""
@@ -83,7 +83,7 @@ Resources:
   SyncCronDLQ:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Sub '${Environment}-sync-cron-dlq'
+      QueueName: !Sub "${Environment}-sync-cron-dlq"
       MessageRetentionPeriod: 1209600 # 14 days
       Tags:
         - Key: Project
@@ -94,7 +94,7 @@ Resources:
   SyncCronLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub '/aws/lambda/${Environment}-sync-cron'
+      LogGroupName: !Sub "/aws/lambda/${Environment}-sync-cron"
       RetentionInDays: 30
       # Note: AWS::Logs::LogGroup does not support Tags property in CloudFormation
 
@@ -103,7 +103,7 @@ Resources:
     Properties:
       # REMOVE RoleName to avoid collisions across stacks/accounts
       AssumeRolePolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -114,11 +114,11 @@ Resources:
       Policies:
         - PolicyName: SyncCronLambdaPolicy
           PolicyDocument:
-            Version: '2012-10-17'
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action: secretsmanager:GetSecretValue
-                Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:dev/app/lambdas/prms/result-management/sync*'
+                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:dev/app/lambdas/prms/result-management/sync*"
               - Effect: Allow
                 Action: sqs:SendMessage
                 Resource: !GetAtt SyncCronDLQ.Arn
@@ -131,7 +131,7 @@ Resources:
   SyncCronFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub '${Environment}-sync-cron'
+      FunctionName: !Sub "${Environment}-sync-cron"
       CodeUri: services/sync/
       Handler: dist-cron/handler.handler
       Role: !GetAtt SyncCronLambdaRole.Arn
@@ -160,7 +160,7 @@ Resources:
                 "env": "${Environment}",
                 "orchestrate_bilateral_types": true,
                 "limit": ${CronJobLimit},
-                "portfolio": "${CronJobPortfolio}"
+                "portfolio": "P25"
               }
 
   SyncApiLambdaRole:
@@ -168,7 +168,7 @@ Resources:
     Properties:
       # REMOVE RoleName to avoid collisions across stacks/accounts
       AssumeRolePolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -179,11 +179,11 @@ Resources:
       Policies:
         - PolicyName: SyncApiLambdaPolicy
           PolicyDocument:
-            Version: '2012-10-17'
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action: secretsmanager:GetSecretValue
-                Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:dev/app/lambdas/prms/result-management/sync*'
+                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:dev/app/lambdas/prms/result-management/sync*"
       Tags:
         - Key: Project
           Value: PRMS
@@ -193,7 +193,7 @@ Resources:
   SyncApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub '${Environment}-sync-api'
+      FunctionName: !Sub "${Environment}-sync-api"
       CodeUri: services/sync/
       Handler: dist/lambda.handler
       Role: !GetAtt SyncApiLambdaRole.Arn
@@ -223,28 +223,28 @@ Outputs:
     Description: ARN of the Sync Cron Lambda function
     Value: !GetAtt SyncCronFunction.Arn
     Export:
-      Name: !Sub '${Environment}-sync-cron-arn'
+      Name: !Sub "${Environment}-sync-cron-arn"
 
   SyncCronFunctionName:
     Description: Name of the Sync Cron Lambda function
     Value: !Ref SyncCronFunction
     Export:
-      Name: !Sub '${Environment}-sync-cron-name'
+      Name: !Sub "${Environment}-sync-cron-name"
 
   SyncCronDLQUrl:
     Description: URL of the Dead Letter Queue
     Value: !Ref SyncCronDLQ
     Export:
-      Name: !Sub '${Environment}-sync-cron-dlq-url'
+      Name: !Sub "${Environment}-sync-cron-dlq-url"
 
   SyncCronSchedule:
     Description: EventBridge Schedule expression
     Value: !Ref ScheduleExpression
     Export:
-      Name: !Sub '${Environment}-sync-cron-schedule'
+      Name: !Sub "${Environment}-sync-cron-schedule"
 
   SyncApiUrl:
     Description: HTTP API base URL for Sync service
-    Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com'
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
     Export:
-      Name: !Sub '${Environment}-sync-api-url'
+      Name: !Sub "${Environment}-sync-api-url"
