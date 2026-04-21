@@ -1,7 +1,7 @@
 /**
- * UTC date window for cron sync (matches onecgiar-pr-server sync-opensearch script).
- * Default: previous full calendar day in UTC [yesterday 00:00Z, today 00:00Z) expressed as
- * last_updated_from / last_updated_to (API date filters).
+ * UTC date window for cron sync.
+ * Default: current UTC calendar day [today 00:00Z, tomorrow 00:00Z) as
+ * last_updated_from / last_updated_to (YYYY-MM-DD for the API).
  */
 
 function pad2(n) {
@@ -26,7 +26,7 @@ function addOneUtcDay(ymd) {
  * 1. payload: both last_updated_from and last_updated_to (non-empty)
  * 2. env: both LAST_UPDATED_FROM and LAST_UPDATED_TO (non-empty)
  * 3. SYNC_UTC_DAY (env or payload): single UTC day backfill → [day, day+1)
- * 4. Default: yesterday 00:00Z through today 00:00Z (dates = yesterday, today)
+ * 4. Default: current UTC day — today through tomorrow 00:00Z (dates = today, tomorrow)
  *
  * @param {Record<string, string | undefined>} [payload]
  * @returns {{ last_updated_from: string, last_updated_to: string }}
@@ -59,9 +59,9 @@ export function resolveLastUpdatedWindowUtc(payload = {}) {
   const todayStart = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
   );
-  const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+  const tomorrowStart = new Date(todayStart.getTime() + 86400000);
   return {
-    last_updated_from: toYmdUtc(yesterdayStart),
-    last_updated_to: toYmdUtc(todayStart),
+    last_updated_from: toYmdUtc(todayStart),
+    last_updated_to: toYmdUtc(tomorrowStart),
   };
 }

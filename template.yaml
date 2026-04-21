@@ -12,9 +12,9 @@ Parameters:
   # IMPORTANT: This will NOT be overridden from Jenkins (avoid truncation issues)
   ScheduleExpression:
     Type: String
-    Default: cron(10 0 * * ? *)
+    Default: cron(0 23 * * ? *)
     MinLength: 1
-    Description: "EventBridge schedule. Default 00:10 UTC daily (after midnight UTC) for previous-day bilateral window. Examples: cron(10 0 * * ? *), rate(15 minutes). Do not wrap in quotes."
+    Description: "EventBridge schedule. Default once daily at 23:00 UTC (= 18:00 / 6pm Colombia, UTC-5, no DST). Examples: cron(0 23 * * ? *). Do not wrap in quotes."
     # Keep validation simple to avoid false negatives; AWS will enforce correctness anyway.
     AllowedPattern: "^(rate\\([0-9]+ (minute|minutes|hour|hours|day|days)\\)|cron\\(.+\\))$"
     ConstraintDescription: "Use rate(x minutes|hours|days) or 6-field cron(0 12 * * ? *); do not wrap in quotes."
@@ -67,7 +67,7 @@ Parameters:
   SyncUtcDay:
     Type: String
     Default: ""
-    Description: "Optional UTC calendar day YYYY-MM-DD for backfill window [day, day+1). Leave empty to use default previous UTC day or LAST_UPDATED_* overrides."
+    Description: "Optional UTC calendar day YYYY-MM-DD for backfill window [day, day+1). Leave empty to use default current UTC day or LAST_UPDATED_* overrides."
 
 Globals:
   Function:
@@ -160,13 +160,7 @@ Resources:
                 "env": "${Environment}",
                 "orchestrate_bilateral_types": true,
                 "limit": ${CronJobLimit},
-                "portfolio": "${CronJobPortfolio}",
-                "phase_year": ${CronJobPhaseYear},
-                "status": "${CronJobStatus}",
-                "last_updated_from": "${CronJobLastUpdatedFrom}",
-                "last_updated_to": "${CronJobLastUpdatedTo}",
-                "created_from": "${CronJobCreatedFrom}",
-                "created_to": "${CronJobCreatedTo}"
+                "portfolio": "${CronJobPortfolio}"
               }
 
   SyncApiLambdaRole:
