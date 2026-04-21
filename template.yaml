@@ -15,9 +15,9 @@ Parameters:
     Default: cron(0 23 * * ? *)
     MinLength: 1
     Description: "EventBridge schedule. Default once daily at 23:00 UTC (= 18:00 / 6pm Colombia, UTC-5, no DST). Examples: cron(0 23 * * ? *). Do not wrap in quotes."
-    # Keep validation simple to avoid false negatives; AWS will enforce correctness anyway.
-    AllowedPattern: "^(rate\\([0-9]+ (minute|minutes|hour|hours|day|days)\\)|cron\\(.+\\))$"
-    ConstraintDescription: "Use rate(x minutes|hours|days) or 6-field cron(0 12 * * ? *); do not wrap in quotes."
+    # Broad pattern: rate(...) or cron(...). (Shell must not glob * in cron — quote overrides in CI.)
+    AllowedPattern: "^(rate\\(.+\\)|cron\\(.+\\))$"
+    ConstraintDescription: "Use rate(...) or 6-field AWS cron(...); avoid unquoted * in shell when passing overrides."
 
   ResultType:
     Type: String
