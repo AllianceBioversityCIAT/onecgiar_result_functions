@@ -137,10 +137,62 @@ if (!envLoaded) {
   }
 }
 
+import { BILATERAL_RESULT_TYPES } from "./constants/bilateral-result-types.mjs";
 import { runSyncJob } from "./job.mjs";
 import { Logger } from "./utils/logger.mjs";
+import { resolveLastUpdatedWindowUtc } from "./utils/cron-date-window.mjs";
 
 const logger = new Logger("CronHandler");
+
+/**
+ * @param {Record<string, unknown>} payload
+ */
+function shouldOrchestrateAllBilateralTypes(payload) {
+  if (payload.orchestrate_bilateral_types === false) return false;
+  if (payload.orchestrate_bilateral_types === true) return true;
+  return !payload.result_type;
+}
+
+/**
+ * Removes cron-only fields before calling runSyncJob / API filters.
+ * @param {Record<string, unknown>} payload
+ */
+function stripCronMeta(payload) {
+  const {
+    job: _job,
+    orchestrate_bilateral_types: _orch,
+    sync_utc_day: _day,
+    ...rest
+  } = payload;
+  return rest;
+}
+
+/**
+ * Merges resolved date window and drops empty / no-op filter values.
+ * @param {Record<string, unknown>} rest
+ * @param {{ last_updated_from: string, last_updated_to: string }} window
+ */
+function prepareSyncFilters(rest, window) {
+  const merged = {
+    ...rest,
+    last_updated_from: window.last_updated_from,
+    last_updated_to: window.last_updated_to,
+  };
+  if (merged.phase_year === 0 || merged.phase_year === "0") {
+    delete merged.phase_year;
+  }
+  if (merged.portfolio === "" || merged.portfolio === undefined) {
+    delete merged.portfolio;
+  }
+  if (merged.status === "" || merged.status === undefined) {
+    delete merged.status;
+  }
+  const sf = { ...merged };
+  for (const k of ["created_from", "created_to", "last_updated_from", "last_updated_to"]) {
+    if (sf[k] === "") delete sf[k];
+  }
+  return sf;
+}
 
 /**
  * Lambda handler for EventBridge Scheduler
@@ -195,7 +247,15 @@ export const handler = async (event, context) => {
     // Extract values with defaults
     const env = payload.env || process.env.ENVIRONMENT || "testing";
     const jobType = payload.job || "sync-cron";
-    const resultType = payload.result_type || process.env.RESULT_TYPE || "knowledge_product";
+
+    const window = resolveLastUpdatedWindowUtc(
+      typeof payload === "object" && payload !== null
+        ? /** @type {Record<string, string | undefined>} */ (payload)
+        : {}
+    );
+    console.error(
+      `Window (UTC): ${window.last_updated_from} → ${window.last_updated_to}`
+    );
 
     // Log the actual event structure for debugging
     logger.info("Event structure", requestId, {
@@ -205,29 +265,76 @@ export const handler = async (event, context) => {
       eventKeys: event && typeof event === "object" ? Object.keys(event).slice(0, 10) : [],
     });
 
-    // Log only non-sensitive payload fields
     const sanitizedPayload = {
       job: payload.job,
       env: payload.env,
       result_type: payload.result_type,
+      orchestrate_bilateral_types: payload.orchestrate_bilateral_types,
       page: payload.page,
       limit: payload.limit,
-      // Exclude any potential sensitive fields
     };
 
     logger.info("Processing cron job", requestId, {
       jobType,
       env,
-      resultType,
+      lastUpdatedWindow: window,
       payload: sanitizedPayload,
     });
 
-    // Run the sync job
-    const result = await runSyncJob({
-      env,
-      requestId,
-      ...payload,
-    });
+    const baseStripped = stripCronMeta(payload);
+    const syncFilters = prepareSyncFilters(baseStripped, window);
+
+    let result;
+
+    if (shouldOrchestrateAllBilateralTypes(payload)) {
+      logger.info(
+        "Orchestrating bilateral sync for all result types (sequential)",
+        requestId,
+        { typeCount: BILATERAL_RESULT_TYPES.length }
+      );
+
+      const perTypeResults = [];
+      let aggregateFetched = 0;
+      let aggregateIndexed = 0;
+      let aggregateFailed = 0;
+
+      for (let i = 0; i < BILATERAL_RESULT_TYPES.length; i++) {
+        const rt = BILATERAL_RESULT_TYPES[i];
+        const { result_type: _ignored, ...filtersNoType } = syncFilters;
+        const typeResult = await runSyncJob({
+          env,
+          requestId: `${requestId}-t${i}`,
+          ...filtersNoType,
+          result_type: rt,
+        });
+        perTypeResults.push({ result_type: rt, result: typeResult });
+        aggregateFetched += typeResult.fetched ?? 0;
+        aggregateIndexed += typeResult.indexed ?? 0;
+        aggregateFailed += typeResult.failed ?? 0;
+      }
+
+      result = {
+        orchestrated: true,
+        types: BILATERAL_RESULT_TYPES.length,
+        window,
+        aggregate: {
+          fetched: aggregateFetched,
+          indexed: aggregateIndexed,
+          failed: aggregateFailed,
+        },
+        perType: perTypeResults,
+      };
+    } else {
+      const resultType =
+        payload.result_type || process.env.RESULT_TYPE || "knowledge_product";
+
+      result = await runSyncJob({
+        env,
+        requestId,
+        ...syncFilters,
+        result_type: resultType,
+      });
+    }
 
     const duration = Date.now() - startTime;
 

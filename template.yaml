@@ -12,9 +12,9 @@ Parameters:
   # IMPORTANT: This will NOT be overridden from Jenkins (avoid truncation issues)
   ScheduleExpression:
     Type: String
-    Default: rate(15 minutes)
+    Default: cron(10 0 * * ? *)
     MinLength: 1
-    Description: "EventBridge schedule expression. Examples: rate(15 minutes), cron(0 8 * * ? *). Do not wrap in quotes."
+    Description: "EventBridge schedule. Default 00:10 UTC daily (after midnight UTC) for previous-day bilateral window. Examples: cron(10 0 * * ? *), rate(15 minutes). Do not wrap in quotes."
     # Keep validation simple to avoid false negatives; AWS will enforce correctness anyway.
     AllowedPattern: "^(rate\\([0-9]+ (minute|minutes|hour|hours|day|days)\\)|cron\\(.+\\))$"
     ConstraintDescription: "Use rate(x minutes|hours|days) or 6-field cron(0 12 * * ? *); do not wrap in quotes."
@@ -26,12 +26,12 @@ Parameters:
   
   CronJobLimit:
     Type: Number
-    Default: 100
+    Default: 500
     Description: "Limit of items per page for cron job (1-500)"
   
   CronJobPortfolio:
     Type: String
-    Default: ""
+    Default: P25
     Description: "Portfolio filter (e.g., P22, P25). Leave empty to not filter."
   
   CronJobPhaseYear:
@@ -63,6 +63,11 @@ Parameters:
     Type: String
     Default: ""
     Description: "Created date to (YYYY-MM-DD). Leave empty to not filter."
+
+  SyncUtcDay:
+    Type: String
+    Default: ""
+    Description: "Optional UTC calendar day YYYY-MM-DD for backfill window [day, day+1). Leave empty to use default previous UTC day or LAST_UPDATED_* overrides."
 
 Globals:
   Function:
@@ -137,6 +142,9 @@ Resources:
       Environment:
         Variables:
           RESULT_TYPE: !Ref ResultType
+          LAST_UPDATED_FROM: !Ref CronJobLastUpdatedFrom
+          LAST_UPDATED_TO: !Ref CronJobLastUpdatedTo
+          SYNC_UTC_DAY: !Ref SyncUtcDay
       Tags:
         Project: PRMS
         Functionality: sync-result
@@ -150,7 +158,7 @@ Resources:
               {
                 "job": "sync-cron",
                 "env": "${Environment}",
-                "result_type": "${ResultType}",
+                "orchestrate_bilateral_types": true,
                 "limit": ${CronJobLimit},
                 "portfolio": "${CronJobPortfolio}",
                 "phase_year": ${CronJobPhaseYear},
