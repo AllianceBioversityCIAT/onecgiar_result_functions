@@ -12,9 +12,9 @@ Parameters:
   # IMPORTANT: This will NOT be overridden from Jenkins (avoid truncation issues)
   ScheduleExpression:
     Type: String
-    Default: cron(0 23 * * ? *)
+    Default: rate(1 day)
     MinLength: 1
-    Description: "EventBridge schedule. Default once daily at 23:00 UTC (= 18:00 / 6pm Colombia, UTC-5, no DST). Examples: cron(0 23 * * ? *). Do not wrap in quotes."
+    Description: "EventBridge schedule. Default rate(1 day) = every 24 hours (anchor shifts on deploy). For a fixed clock time use cron, e.g. cron(0 23 * * ? *). Do not wrap in quotes."
     # Broad pattern: rate(...) or cron(...). (Shell must not glob * in cron — quote overrides in CI.)
     AllowedPattern: "^(rate\\(.+\\)|cron\\(.+\\))$"
     ConstraintDescription: "Use rate(...) or 6-field AWS cron(...); avoid unquoted * in shell when passing overrides."
