@@ -2,11 +2,25 @@ import fetch from "node-fetch";
 
 export class ExternalApiClient {
   baseUrl;
+  apiKey;
   timeout;
 
-  constructor(baseUrl, timeout = 30000) {
+  constructor(baseUrl, timeout = 30000, apiKey) {
     this.baseUrl = baseUrl || process.env.EXTERNAL_API_URL || "";
+    this.apiKey = apiKey ?? process.env.EXTERNAL_API_KEY ?? "";
     this.timeout = timeout;
+  }
+
+  getRequestHeaders() {
+    if (!this.apiKey) {
+      throw new Error("External API key not configured");
+    }
+
+    return {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-API-Key": this.apiKey,
+    };
   }
 
   async sendResult(result) {
@@ -41,10 +55,7 @@ export class ExternalApiClient {
 
       const response = await fetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: this.getRequestHeaders(),
         body: JSON.stringify(payload),
         signal: controller.signal,
       });
