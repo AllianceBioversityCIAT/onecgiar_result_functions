@@ -88,6 +88,36 @@ export class SyncController {
                 // Construct the expected schema for OpenSearch mapping
                 const idempotencyKey = `prms.result-management.api:${item.result_type_id}:${item.id}`;
 
+                // Soft-deleted results now arrive in the /list payload with is_active=false.
+                // Remove their stale documents from OpenSearch instead of re-indexing them.
+                if (item.is_active === false) {
+                    try {
+                        const deletion = await this.openSearchClient.deleteByResultId(item.id);
+                        this.logger.info(
+                            `Inactive result ${item.id} removed from OpenSearch`,
+                            idempotencyKey,
+                            deletion
+                        );
+                        return {
+                            success: true,
+                            id: idempotencyKey,
+                            deleted: deletion.deleted,
+                        };
+                    } catch (error) {
+                        const errorMessage =
+                            error instanceof Error ? error.message : "Unknown Error";
+                        this.logger.error(
+                            `Failed to remove inactive result ${item.id} from OpenSearch`,
+                            error
+                        );
+                        return {
+                            success: false,
+                            id: idempotencyKey,
+                            error: errorMessage,
+                        };
+                    }
+                }
+
                 // Sanitize fields that might come as strings/numbers from external API but OpenSearch expects as objects natively
                 const sanitizedPayload = { ...item };
 

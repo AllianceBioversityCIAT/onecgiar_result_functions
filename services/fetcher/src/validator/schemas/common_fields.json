@@ -8,6 +8,7 @@
     "created_date",
     "created_by",
     "lead_center",
+    "lead_contact_person",
     "title",
     "description",
     "toc_mapping",
@@ -41,6 +42,23 @@
           "description": "Full name of the user who created the result."
         }
       }
+    },
+
+    "lead_contact_person": {
+      "type": "object",
+      "description": "Lead contact person for the result.",
+      "required": ["email", "name"],
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Email address of the lead contact person."
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the lead contact person."
+        }
+      },
+      "additionalProperties": false
     },
 
     "submitted_by": {
