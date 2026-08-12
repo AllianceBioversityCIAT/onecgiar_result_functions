@@ -611,10 +611,25 @@ export class ResultResponseMapper {
     this.result_code = Number(rawData?.result_code);
     this.status_id = Number(rawData?.status_id);
     this.year = rawData?.obj_version?.phase_year;
-    this.pdf_link = `${reportingBase}/reports/result-details/${this.result_code}?phase=6`;
-    this.prms_link = isInnovationPackageDoc(rawData)
-      ? `${reportingBase}/ipsr/detail/${this.result_code}/general-information?phase=${phaseParam}`
-      : `${reportingBase}/result/result-detail/${this.result_code}/general-information?phase=6`;
+    // PRMS structures these links on /api/bilateral/list (the sync stores them in the
+    // indexed document), carrying the real version_id in `?phase=`. Prefer the stored
+    // links; fall back to computing them with the real phase instead of a hardcoded one.
+    const storedPdfLink =
+      typeof rawData?.pdf_link === "string" && rawData.pdf_link.trim() !== ""
+        ? rawData.pdf_link
+        : null;
+    const storedPrmsLink =
+      typeof rawData?.prms_link === "string" && rawData.prms_link.trim() !== ""
+        ? rawData.prms_link
+        : null;
+    this.pdf_link =
+      storedPdfLink ||
+      `${reportingBase}/reports/result-details/${this.result_code}?phase=${phaseParam}`;
+    this.prms_link =
+      storedPrmsLink ||
+      (isInnovationPackageDoc(rawData)
+        ? `${reportingBase}/ipsr/detail/${this.result_code}/general-information?phase=${phaseParam}`
+        : `${reportingBase}/result/result-detail/${this.result_code}/general-information?phase=${phaseParam}`);
     this.last_update_at = new Date(rawData.last_updated_date).toISOString();
     this.is_active = Boolean(Number(rawData.is_active));
     this.created_by = CreatedByMapper.from(rawData?.obj_created);
