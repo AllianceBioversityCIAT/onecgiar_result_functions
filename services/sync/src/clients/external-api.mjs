@@ -3,11 +3,14 @@ import fetch from "node-fetch";
 export class ExternalApiClient {
   baseUrl;
   timeout;
+  apiKey;
 
-  constructor(baseUrl, timeout) {
+  constructor(baseUrl, timeout, apiKey) {
     this.baseUrl = baseUrl || process.env.EXTERNAL_API_URL || "";
     // Timeout configurable via EXTERNAL_API_TIMEOUT_MS env var, default 30000ms (30s)
     this.timeout = timeout ?? Number(process.env.EXTERNAL_API_TIMEOUT_MS || 90000);
+    // PRMS /list is guarded by ClarisaApiKeyGuard (X-API-Key header).
+    this.apiKey = apiKey ?? process.env.EXTERNAL_API_KEY ?? "";
   }
 
   /**
@@ -54,6 +57,7 @@ export class ExternalApiClient {
         method: "GET",
         headers: {
           Accept: "application/json",
+          ...(this.apiKey ? { "X-API-Key": this.apiKey } : {}),
         },
         signal: controller.signal,
       });
