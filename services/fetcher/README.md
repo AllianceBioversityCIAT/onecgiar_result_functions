@@ -63,6 +63,25 @@ is registered is not delivered afterwards, because no delivery is ever queued fo
 
 The URL must be `https` and publicly reachable. Addresses inside private networks are refused.
 
+### Matching a callback to your own record
+
+Send `external_reference` inside each result's `data` when you ingest — your consecutive number,
+your UUID, whatever your system already uses:
+
+```json
+{ "type": "knowledge_product", "data": { "external_reference": "STAR-9f2c-4471", "...": "..." } }
+```
+
+PRMS stores it verbatim and hands it back verbatim, at the top level of the decision callback and in
+the ingest response. No prefix, no parsing.
+
+**It is optional and stays optional.** Not every producer has such an id, and a bilateral result
+created inside the PRMS UI has no external system behind it at all — those carry `null`, which is
+the honest answer rather than an invented value.
+
+But without it you cannot correlate: the callback tells you *what* was decided and *why*, and
+nothing that points at your row.
+
 ---
 
 ## 🔐 Authentication

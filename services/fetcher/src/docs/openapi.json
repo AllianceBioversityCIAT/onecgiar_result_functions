@@ -2291,6 +2291,12 @@
           "contributing_bilateral_projects"
         ],
         "properties": {
+          "external_reference": {
+            "type": "string",
+            "maxLength": 191,
+            "description": "Your own identifier for this result — a consecutive number, a UUID, or any string your system already uses. Optional. Stored verbatim in PRMS and returned verbatim on the decision webhook (top-level `external_reference`) and in the ingest response, so you can map our callback back to your record without parsing anything.",
+            "example": "STAR-9f2c-4471"
+          },
           "result_id": {
             "description": "Identifier of the result in the source system (optional)",
             "oneOf": [

@@ -17,6 +17,12 @@
   ],
 
   "properties": {
+    "external_reference": {
+      "description": "The reporting platform's own identifier for this result (consecutive number, UUID, or any string). Optional. Stored verbatim in PRMS and returned verbatim on the decision webhook, so you can map our callback back to your record.",
+      "type": "string",
+      "maxLength": 191
+    },
+
     "result_id": {
       "description": "Identifier of the result in the source system (optional).",
       "oneOf": [{ "type": "number" }, { "type": "string" }]
