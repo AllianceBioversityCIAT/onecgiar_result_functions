@@ -7,6 +7,7 @@
   "required": [
     "created_date",
     "created_by",
+    "lead_contact_person",
     "lead_center",
     "toc_mapping",
     "contributing_bilateral_projects",
@@ -74,6 +75,26 @@
           "type": "string",
           "format": "date-time",
           "description": "Date when the result was submitted. If empty, current date will be used."
+        }
+      },
+      "additionalProperties": false
+    },
+    "lead_contact_person": {
+      "type": "object",
+      "description": "Lead contact person for the result.",
+      "required": [
+        "email",
+        "name"
+      ],
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address of the lead contact person."
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the lead contact person."
         }
       },
       "additionalProperties": false
