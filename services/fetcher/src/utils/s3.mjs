@@ -3,6 +3,7 @@ import {
   GetObjectCommand,
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
+import { redact } from "./redact.mjs";
 
 export class S3Utils {
   client;
@@ -42,8 +43,9 @@ export class S3Utils {
     const key = `${keyPrefix}/${timestamp}-${Date.now()}.json`;
 
     try {
+      // Chokepoint: everything written here lands in long-lived storage nobody reads back.
       const body = JSON.stringify({
-        ...data,
+        ...redact(data),
         meta: {
           ...metadata,
           saved_at: new Date().toISOString(),
@@ -114,8 +116,8 @@ export class S3Utils {
           stack: error?.stack,
           name: error?.name,
         },
-        result,
-        context,
+        result: redact(result),
+        context: redact(context),
       };
 
       await this.client.send(

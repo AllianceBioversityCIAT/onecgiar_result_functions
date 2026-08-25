@@ -5,6 +5,9 @@ import { offloadRequestBody } from "./utils.js";
 import { ProcessorFactory } from "./processors/factory.mjs";
 import { Logger } from "./utils/logger.mjs";
 import { S3Utils } from "./utils/s3.mjs";
+import { ExternalApiClient } from "./clients/external-api.mjs";
+import { requireApiKey } from "./auth/require-api-key.mjs";
+import { AUTH_REQUEST_KEY } from "./auth/constants.mjs";
 import resultsRouter from "./controllers/results.controllers.mjs";
 
 import openapi from "./docs/openapi.json" with { type: "json" };
@@ -48,18 +51,43 @@ app.get("/docs", (_req, res) => {
   res.send(swaggerHtml);
 });
 
-app.post("/ingest", async (req, res) => {
+app.post("/ingest", requireApiKey, async (req, res) => {
   const startTime = Date.now();
   const requestId =
     req.headers["x-amzn-trace-id"] || req.headers["x-request-id"];
   const body = req.body || {};
+  const auth = req[AUTH_REQUEST_KEY];
 
   const logger = new Logger();
   const s3Utils = new S3Utils();
-  const processorFactory = new ProcessorFactory(logger);
+  // Built here, per request, so the caller's key — and only the caller's key — reaches Reporting.
+  // The client is injected downstream; the credential itself never enters a processor or a result.
+  //
+  // `requireApiKey` guarantees `auth.apiKey`, so the constructor's throw is unreachable today.
+  // It is caught anyway because Express 4 does not handle a rejected promise from an async
+  // handler: an uncaught throw here would hang the request instead of failing it. If this ever
+  // fires, the guard has been detached from the route.
+  let externalApiClient;
+  try {
+    externalApiClient = new ExternalApiClient(undefined, 30000, auth?.apiKey);
+  } catch (error) {
+    console.error("[ingest] cannot build the external API client", {
+      requestId,
+      message: error?.message,
+    });
+    return res.status(500).json({
+      ok: false,
+      error: "internal_error",
+      message: "Ingestion is misconfigured.",
+      requestId,
+    });
+  }
+
+  const processorFactory = new ProcessorFactory(logger, externalApiClient);
 
   console.log("[ingest] request received", {
     requestId,
+    platform: auth.mis?.acronym,
     hasBody: !!body,
     rawKeys: Object.keys(body || {}),
     tenantRaw: body.tenant,
@@ -439,6 +467,93 @@ app.post("/ingest", async (req, res) => {
       : {}),
     timestamp: new Date().toISOString(),
   });
+});
+
+/**
+ * Webhook registration — where a platform tells PRMS how to call it back when a Science Program
+ * approves or rejects one of its results.
+ *
+ * Exposed here rather than pointing integrators at Reporting directly: they hold one base URL and
+ * one key, and they do not need to know Reporting exists. This is a forward and nothing more —
+ * Reporting resolves the recipient from the key and guards the URL.
+ *
+ * Ordering worth knowing, because the obvious assumption is wrong: registering is **not** a
+ * prerequisite for submitting results. The destination is resolved when a Science Program decides,
+ * not when a result is ingested. What matters is that one exists before that decision — a decision
+ * taken with none registered is not delivered later, because no delivery is ever queued.
+ */
+function webhookClientFor(req, res, requestId) {
+  const auth = req[AUTH_REQUEST_KEY];
+
+  // `requireApiKey` guarantees the key, so this is unreachable today. Caught anyway for the same
+  // reason as in /ingest: Express 4 hangs on a rejected promise from an async handler, so an
+  // uncaught throw would leave the request open instead of failing it.
+  try {
+    return new ExternalApiClient(undefined, 30000, auth?.apiKey);
+  } catch (error) {
+    console.error("[webhook] cannot build the external API client", {
+      requestId,
+      message: error?.message,
+    });
+    res.status(500).json({
+      ok: false,
+      error: "internal_error",
+      message: "Could not reach the reporting service.",
+      requestId,
+    });
+    return undefined;
+  }
+}
+
+/**
+ * Surfaces Reporting's own status instead of flattening everything to 500.
+ *
+ * A 400 from the URL guard is the caller's mistake and has to read as one — collapsing it would
+ * send them hunting a bug on our side. A 401 here, after we already accepted their key, means the
+ * two hops disagree, and that is worth seeing rather than masking.
+ */
+function respondWithUpstreamFailure(res, error, requestId) {
+  const status =
+    typeof error?.status === "number" && error.status >= 400 ? error.status : 502;
+
+  return res.status(status).json({
+    ok: false,
+    error: status === 504 ? "upstream_timeout" : "webhook_registration_failed",
+    message: error?.apiResponse?.message ?? error?.message ?? "Unknown error",
+    requestId,
+  });
+}
+
+app.post("/webhook", requireApiKey, async (req, res) => {
+  const requestId =
+    req.headers["x-amzn-trace-id"] || req.headers["x-request-id"];
+
+  const client = webhookClientFor(req, res, requestId);
+  if (!client) return undefined;
+
+  try {
+    // `url` is passed through untouched. Reporting validates it — including refusing anything that
+    // points inside a private network — and its message is what the caller needs to fix theirs.
+    const result = await client.registerWebhook(req.body?.url);
+    return res.status(200).json({ ok: true, ...result, requestId });
+  } catch (error) {
+    return respondWithUpstreamFailure(res, error, requestId);
+  }
+});
+
+app.get("/webhook", requireApiKey, async (req, res) => {
+  const requestId =
+    req.headers["x-amzn-trace-id"] || req.headers["x-request-id"];
+
+  const client = webhookClientFor(req, res, requestId);
+  if (!client) return undefined;
+
+  try {
+    const result = await client.getWebhook();
+    return res.status(200).json({ ok: true, ...result, requestId });
+  } catch (error) {
+    return respondWithUpstreamFailure(res, error, requestId);
+  }
 });
 
 app.use("/result", resultsRouter);

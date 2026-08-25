@@ -175,7 +175,7 @@
               },
               "examples": {
                 "kpRegional": {
-                  "summary": "Knowledge Product — Regional (scope_code=2, requires regions[])",
+                  "summary": "Knowledge Product \u2014 Regional (scope_code=2, requires regions[])",
                   "value": {
                     "tenant": "prms.result-management.api",
                     "op": "dataset.ingest.requested",
@@ -290,7 +290,7 @@
                   }
                 },
                 "kpNational": {
-                  "summary": "Knowledge Product — National (scope_code=4, requires countries[≥1])",
+                  "summary": "Knowledge Product \u2014 National (scope_code=4, requires countries[\u22651])",
                   "value": {
                     "tenant": "prms.result-management.api",
                     "results": [
@@ -304,7 +304,7 @@
                           },
                           "submitted_by": {
                             "email": "m.lee@cgiar.org",
-                            "name": "María Lee",
+                            "name": "Mar\u00eda Lee",
                             "submitted_date": "2025-10-10T10:30:00Z"
                           },
                           "lead_center": {
@@ -392,7 +392,7 @@
                   }
                 },
                 "kpSubnational": {
-                  "summary": "Knowledge Product — Sub-national (scope_code=5, requires countries[≥1] and subnational_areas[≥1])",
+                  "summary": "Knowledge Product \u2014 Sub-national (scope_code=5, requires countries[\u22651] and subnational_areas[\u22651])",
                   "value": {
                     "tenant": "prms.result-management.api",
                     "results": [
@@ -406,7 +406,7 @@
                           },
                           "submitted_by": {
                             "email": "l.garcia@cgiar.org",
-                            "name": "Luis García",
+                            "name": "Luis Garc\u00eda",
                             "submitted_date": "2025-10-10T11:15:00Z"
                           },
                           "lead_center": {
@@ -500,7 +500,7 @@
                   }
                 },
                 "kpGlobal": {
-                  "summary": "Knowledge Product — Global (scope_code=1, should NOT send regions/countries/subnational_areas)",
+                  "summary": "Knowledge Product \u2014 Global (scope_code=1, should NOT send regions/countries/subnational_areas)",
                   "value": {
                     "tenant": "prms.result-management.api",
                     "results": [
@@ -702,7 +702,7 @@
                   }
                 },
                 "csExample": {
-                  "summary": "Capacity Sharing — Example with all fields",
+                  "summary": "Capacity Sharing \u2014 Example with all fields",
                   "value": {
                     "tenant": "prms.result-management.api",
                     "op": "dataset.ingest.requested",
@@ -801,7 +801,7 @@
                   }
                 },
                 "idExample": {
-                  "summary": "Innovation Development — Example with all fields",
+                  "summary": "Innovation Development \u2014 Example with all fields",
                   "value": {
                     "tenant": "prms.result-management.api",
                     "op": "dataset.ingest.requested",
@@ -901,7 +901,7 @@
                   }
                 },
                 "iuExample": {
-                  "summary": "Innovation Use — Example with actors and organizations (search by ID)",
+                  "summary": "Innovation Use \u2014 Example with actors and organizations (search by ID)",
                   "value": {
                     "tenant": "prms.result-management.api",
                     "op": "dataset.ingest.requested",
@@ -1062,7 +1062,7 @@
                   }
                 },
                 "iuByName": {
-                  "summary": "Innovation Use — Search by actor/institution names instead of IDs",
+                  "summary": "Innovation Use \u2014 Search by actor/institution names instead of IDs",
                   "value": {
                     "tenant": "prms.result-management.api",
                     "op": "dataset.ingest.requested",
@@ -1184,7 +1184,7 @@
                   }
                 },
                 "iuTBD": {
-                  "summary": "Innovation Use — To Be Determined (innov_use_to_be_determined: true)",
+                  "summary": "Innovation Use \u2014 To Be Determined (innov_use_to_be_determined: true)",
                   "value": {
                     "tenant": "prms.result-management.api",
                     "op": "dataset.ingest.requested",
@@ -1268,7 +1268,7 @@
                   }
                 },
                 "pcBudgetAllocation": {
-                  "summary": "Policy Change — Budget Allocation (policy_type id=1, requires status_amount & amount)",
+                  "summary": "Policy Change \u2014 Budget Allocation (policy_type id=1, requires status_amount & amount)",
                   "value": {
                     "tenant": "prms.result-management.api",
                     "op": "dataset.ingest.requested",
@@ -1381,7 +1381,7 @@
                   }
                 },
                 "pcRegulatory": {
-                  "summary": "Policy Change — Regulatory (policy_type id≠1, no status_amount/amount)",
+                  "summary": "Policy Change \u2014 Regulatory (policy_type id\u22601, no status_amount/amount)",
                   "value": {
                     "tenant": "prms.result-management.api",
                     "op": "dataset.ingest.requested",
@@ -1479,7 +1479,7 @@
                   }
                 },
                 "ooExample": {
-                  "summary": "Other Output — Example with common fields only",
+                  "summary": "Other Output \u2014 Example with common fields only",
                   "value": {
                     "tenant": "prms.result-management.api",
                     "op": "dataset.ingest.requested",
@@ -1559,7 +1559,7 @@
                   }
                 },
                 "ocExample": {
-                  "summary": "Other Outcome — Example with common fields only",
+                  "summary": "Other Outcome \u2014 Example with common fields only",
                   "value": {
                     "tenant": "prms.result-management.api",
                     "op": "dataset.ingest.requested",
@@ -1705,18 +1705,64 @@
             }
           }
         },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "responses": {
-          "202": {
-            "description": "Accepted and published to EventBridge"
+          "200": {
+            "description": "All results processed successfully"
+          },
+          "207": {
+            "description": "Processed with per-result failures"
           },
           "400": {
             "description": "Bad Request (missing wrapper fields)"
+          },
+          "401": {
+            "description": "Missing or invalid API key. Nothing is validated, processed or indexed.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "ok": false,
+                  "error": "unauthorized",
+                  "message": "Unauthorized",
+                  "requestId": "Root=1-68ac0f21-1a2b3c4d5e6f"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "More than 100 results in one request; nothing processed"
           },
           "422": {
             "description": "Validation failed for all items"
           },
           "500": {
-            "description": "Internal error (EventBridge/S3)"
+            "description": "Internal error"
+          },
+          "503": {
+            "description": "CLARISA could not be reached to validate the API key. This is not a statement about your key \u2014 retry later. Nothing is processed.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer",
+                  "example": 30
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "ok": false,
+                  "error": "auth_unavailable",
+                  "message": "Authentication service unavailable. Retry later.",
+                  "requestId": "Root=1-68ac0f21-1a2b3c4d5e6f"
+                }
+              }
+            }
           }
         }
       }
@@ -1730,9 +1776,75 @@
           }
         }
       }
+    },
+    "/webhook": {
+      "post": {
+        "summary": "Register or update your webhook destination",
+        "description": "Registers the HTTPS URL that PRMS POSTs to when a Science Program approves or rejects one of your results.\n\nThe destination is bound to the platform that owns the API key \u2014 there is no recipient field, and one platform cannot register another's callback. Calling this again replaces the URL; there is one destination per platform.\n\n**Registering is not a prerequisite for submitting results.** The destination is looked up when a Science Program decides on a result, not when the result is ingested. What matters is that a destination exists before that decision \u2014 a decision taken with none registered is not delivered afterwards.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookRegistration"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The registered destination."
+          },
+          "400": {
+            "description": "The url is missing, is not https, or points at a host that is not publicly reachable."
+          },
+          "401": {
+            "description": "Missing or invalid API key."
+          },
+          "502": {
+            "description": "The reporting service could not be reached."
+          },
+          "503": {
+            "description": "The authentication service is unavailable. Retry later."
+          }
+        }
+      },
+      "get": {
+        "summary": "Retrieve your webhook destination",
+        "description": "Returns the destination registered for the platform that owns the API key, or null when none has been registered yet.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The registered destination, or null."
+          },
+          "401": {
+            "description": "Missing or invalid API key."
+          },
+          "502": {
+            "description": "The reporting service could not be reached."
+          }
+        }
+      }
     }
   },
   "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "CLARISA API key of the calling platform. Validated by the Fetcher against CLARISA and forwarded to PRMS Reporting, which resolves the platform identity from it. Applied to POST /ingest only; the read endpoints are currently open."
+      }
+    },
     "schemas": {
       "IngestRequest": {
         "type": "object",
@@ -1797,12 +1909,12 @@
         "properties": {
           "result_code": {
             "type": "string",
-            "description": "Código del resultado"
+            "description": "C\u00f3digo del resultado"
           },
           "year": {
             "type": "integer",
             "nullable": true,
-            "description": "Año (pendiente de versión)"
+            "description": "A\u00f1o (pendiente de versi\u00f3n)"
           },
           "pdf_link": {
             "type": "string",
@@ -1817,20 +1929,20 @@
           "last_update_at": {
             "type": "string",
             "format": "date-time",
-            "description": "Última actualización en ISO 8601"
+            "description": "\u00daltima actualizaci\u00f3n en ISO 8601"
           },
           "is_active": {
             "type": "boolean",
-            "description": "Si el resultado está activo"
+            "description": "Si el resultado est\u00e1 activo"
           },
           "result_title": {
             "type": "string",
-            "description": "Título del resultado"
+            "description": "T\u00edtulo del resultado"
           },
           "description": {
             "type": "string",
             "nullable": true,
-            "description": "Descripción del resultado"
+            "description": "Descripci\u00f3n del resultado"
           },
           "result_level": {
             "nullable": true,
@@ -1854,7 +1966,7 @@
           "indicator_category": {
             "nullable": true,
             "type": "object",
-            "description": "Categoría indicador (result_type)",
+            "description": "Categor\u00eda indicador (result_type)",
             "properties": {
               "code": {
                 "type": "number",
@@ -1874,7 +1986,7 @@
               "handle": {
                 "type": "string",
                 "nullable": true,
-                "description": "URL del proxy Handle (p. ej. https://hdl.handle.net/10568/175778). Si OpenSearch trae solo el sufijo o `hdl:…`, la API antepone https://hdl.handle.net/ ; si ya viene como http(s)://, se devuelve igual."
+                "description": "URL del proxy Handle (p. ej. https://hdl.handle.net/10568/175778). Si OpenSearch trae solo el sufijo o `hdl:\u2026`, la API antepone https://hdl.handle.net/ ; si ya viene como http(s)://, se devuelve igual."
               }
             }
           },
@@ -1905,18 +2017,18 @@
           "ipsr_pathway_summary": {
             "nullable": true,
             "type": "object",
-            "description": "Innovation Package (IPSR): bloque completo desde OpenSearch (`ipsr_pathway_summary`: step_one, step_two, step_three, step_four — pathway, complementary innovations, expert workshop, evidence-based assessment, budgets, materials, etc.)",
+            "description": "Innovation Package (IPSR): bloque completo desde OpenSearch (`ipsr_pathway_summary`: step_one, step_two, step_three, step_four \u2014 pathway, complementary innovations, expert workshop, evidence-based assessment, budgets, materials, etc.)",
             "additionalProperties": true
           },
           "toc_alignment": {
             "type": "array",
-            "description": "Alineación ToC",
+            "description": "Alineaci\u00f3n ToC",
             "items": {}
           },
           "geographic_focus": {
             "nullable": true,
             "type": "object",
-            "description": "Alcance geográfico (mapeado desde obj_geographic_scope en origen)",
+            "description": "Alcance geogr\u00e1fico (mapeado desde obj_geographic_scope en origen)",
             "properties": {
               "code": {
                 "type": "number",
@@ -1951,7 +2063,7 @@
           },
           "countries": {
             "type": "array",
-            "description": "Países",
+            "description": "Pa\u00edses",
             "items": {
               "type": "object",
               "properties": {
@@ -2016,12 +2128,12 @@
           "obj_status": {
             "type": "object",
             "nullable": true,
-            "description": "Estado del resultado (result_status_id, status_name, …)"
+            "description": "Estado del resultado (result_status_id, status_name, \u2026)"
           },
           "last_submission": {
             "type": "object",
             "nullable": true,
-            "description": "Último envío / revisión del resultado en PRMS (desde OpenSearch)",
+            "description": "\u00daltimo env\u00edo / revisi\u00f3n del resultado en PRMS (desde OpenSearch)",
             "properties": {
               "id": {
                 "type": "integer",
@@ -2151,15 +2263,15 @@
           },
           "page": {
             "type": "integer",
-            "description": "Página actual"
+            "description": "P\u00e1gina actual"
           },
           "size": {
             "type": "integer",
-            "description": "Tamaño de página"
+            "description": "Tama\u00f1o de p\u00e1gina"
           },
           "totalPages": {
             "type": "integer",
-            "description": "Total de páginas"
+            "description": "Total de p\u00e1ginas"
           }
         }
       },
@@ -2579,6 +2691,21 @@
                 }
               }
             }
+          }
+        }
+      },
+      "WebhookRegistration": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 500,
+            "description": "HTTPS URL PRMS will POST the review decision to. Must be publicly reachable.",
+            "example": "https://your-platform.example.org/prms/callback"
           }
         }
       }

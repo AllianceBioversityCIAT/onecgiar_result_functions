@@ -1,12 +1,11 @@
-import { ExternalApiClient } from "../../clients/external-api.mjs";
 import { OpenSearchClient } from "../../clients/opensearch.mjs";
 import { Logger } from "../../utils/logger.mjs";
 
 export class PolicyChangeProcessor  {
   logger;
 
-  constructor(logger) {
-    this.externalApiClient = new ExternalApiClient();
+  constructor(logger, externalApiClient) {
+    this.externalApiClient = externalApiClient;
     this.openSearchClient = new OpenSearchClient();
     this.logger = logger;
   }

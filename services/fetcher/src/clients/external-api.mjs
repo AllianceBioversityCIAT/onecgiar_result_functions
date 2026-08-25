@@ -1,13 +1,46 @@
 import fetch from "node-fetch";
 
+/**
+ * Errors thrown from `sendResult` carry `apiResponse` and `responseBody` — Reporting's full error
+ * body, which echoes the caller's payload back. Log the diagnosis, not the cargo.
+ */
+function summarizeError(error) {
+  if (!error || typeof error !== "object") {
+    return { message: String(error) };
+  }
+
+  return {
+    name: error.name,
+    message: error.message,
+    ...(error.status !== undefined ? { status: error.status } : {}),
+    ...(error.statusText !== undefined ? { statusText: error.statusText } : {}),
+    ...(error.url !== undefined ? { url: error.url } : {}),
+  };
+}
+
 export class ExternalApiClient {
   baseUrl;
   apiKey;
   timeout;
 
+  /**
+   * `apiKey` is the credential of the platform that called us, validated by `requireApiKey` and
+   * handed down per request. It is deliberately NOT defaulted to `process.env.EXTERNAL_API_KEY`:
+   * that fallback fails in the worst possible way — silently, by attributing a platform's result
+   * to the Fetcher, which is the exact bug this credential pass-through exists to close.
+   *
+   * Throwing here rather than in `getRequestHeaders()` is on purpose. `getRequestHeaders()` runs
+   * inside `enrichResult`'s try/catch, which converts a throw into `{ success: false }` per
+   * result — so a wiring mistake would surface as a plausible-looking 207 over a whole batch
+   * instead of a loud failure. Constructed in the request handler, this throw is uncaught.
+   */
   constructor(baseUrl, timeout = 30000, apiKey) {
+    if (!apiKey) {
+      throw new Error("ExternalApiClient requires the caller's API key");
+    }
+
     this.baseUrl = baseUrl || process.env.EXTERNAL_API_URL || "";
-    this.apiKey = apiKey ?? process.env.EXTERNAL_API_KEY ?? "";
+    this.apiKey = apiKey;
     this.timeout = timeout;
   }
 
@@ -24,8 +57,6 @@ export class ExternalApiClient {
   }
 
   async sendResult(result) {
-    console.log("[ExternalApiClient] Enriching result", result);
-
     if (!this.baseUrl) {
       throw new Error("External API URL not configured");
     }
@@ -38,16 +69,26 @@ export class ExternalApiClient {
       type: result.type,
     });
 
+    // The envelope Reporting already declares on `RootResultsDto`. `idempotencyKey` is what lands
+    // in `result.external_reference` there, so an external platform can match our callbacks against
+    // its own record. `jobId` is intentionally absent: Reporting does not declare it, so
+    // `whitelist: true` dropped it silently — it stays a Fetcher-local field for error correlation.
     const payload = {
       type: result.type,
       data: result.data,
-      ...(result.jobId ? { jobId: result.jobId } : {}),
+      idempotencyKey: result.idempotencyKey,
+      tenant: result.tenant,
+      op: result.op,
+      received_at: result.received_at,
     };
 
-    console.log(
-      `[ExternalApiClient] Payload being sent to ${url}:`,
-      JSON.stringify(payload, null, 2)
-    );
+    console.log(`[ExternalApiClient] Payload shape for ${url}:`, {
+      idempotencyKey: payload.idempotencyKey,
+      type: payload.type,
+      tenant: payload.tenant,
+      op: payload.op,
+      dataKeys: Object.keys(payload.data ?? {}).length,
+    });
 
     try {
       const controller = new AbortController();
@@ -77,9 +118,11 @@ export class ExternalApiClient {
           parsedBody = undefined;
         }
 
+        // Truncated: Reporting's validation errors quote back the values we sent, which are the
+        // caller's payload, not ours to spray across CloudWatch in full.
         console.error(
           `[ExternalApiClient] Error response body for ${result.idempotencyKey}:`,
-          errorBody
+          errorBody.slice(0, 500)
         );
 
         const err = new Error(
@@ -94,11 +137,6 @@ export class ExternalApiClient {
       }
 
       const data = await response.json();
-
-      console.log(
-        `[ExternalApiClient] Full API response for ${result.idempotencyKey}:`,
-        JSON.stringify(data, null, 2)
-      );
 
       const responsePayload = data?.response;
       const resultsCount = (() => {
@@ -135,7 +173,7 @@ export class ExternalApiClient {
       }
       console.error(
         `[ExternalApiClient] Error sending result ${result.idempotencyKey}:`,
-        error
+        summarizeError(error)
       );
       throw error;
     }
@@ -145,6 +183,95 @@ export class ExternalApiClient {
    * Sends a result once and returns both the possibly enriched result (adding result_id/result_code)
    * and the raw API response. On failure returns the original result and throws the error upward if desired.
    */
+  /**
+   * Registers (or replaces) this platform's webhook destination in Reporting.
+   *
+   * A thin forward on purpose. Reporting owns every rule: it resolves the recipient from the API
+   * key — so the body carries no recipient field and one platform cannot register another's
+   * destination — and it guards the URL against pointing at something internal. Re-validating here
+   * would be a second copy of that logic to keep in sync, and the two would drift.
+   *
+   * Unlike `enrichResult`, failures throw. Registration is a single operation the caller is waiting
+   * on; turning it into `{ success: false }` would make them inspect a 200 to find out it failed.
+   */
+  async registerWebhook(url) {
+    return this.callWebhookEndpoint("POST", { url });
+  }
+
+  /** The destination currently registered for this platform, as Reporting reports it. */
+  async getWebhook() {
+    return this.callWebhookEndpoint("GET");
+  }
+
+  /**
+   * Shared transport for the two webhook calls.
+   *
+   * **Never logs `url`.** It is a webhook destination, and both `docs/prd.md` AC-9 and
+   * `.cursorrules` name webhook URLs — complete or partial — among the things that must not reach
+   * logs or output. The same reason P2-3166's failure alert quotes a delivery id instead of a URL.
+   *
+   * Reporting's status is attached to the error rather than flattened, so the caller can pass it
+   * through: a 400 from the URL guard is the caller's mistake and has to read as one.
+   */
+  async callWebhookEndpoint(method, body) {
+    if (!this.baseUrl) {
+      throw new Error("External API URL not configured");
+    }
+
+    const base = this.baseUrl.replace(/\/+$/, "");
+    const endpoint = `${base}/webhook`;
+
+    console.log(`[ExternalApiClient] ${method} webhook registration`);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+    try {
+      const response = await fetch(endpoint, {
+        method,
+        headers: this.getRequestHeaders(),
+        ...(body ? { body: JSON.stringify(body) } : {}),
+        signal: controller.signal,
+      });
+
+      const text = await response.text();
+      let parsed;
+      try {
+        parsed = text ? JSON.parse(text) : undefined;
+      } catch {
+        parsed = undefined;
+      }
+
+      console.log(
+        `[ExternalApiClient] webhook registration responded`,
+        response.status
+      );
+
+      if (!response.ok) {
+        const err = new Error(
+          `Reporting rejected the webhook registration (HTTP ${response.status})`
+        );
+        err.status = response.status;
+        // Reporting's message explains *why* the URL was refused; the caller needs it to fix theirs.
+        err.apiResponse = parsed;
+        throw err;
+      }
+
+      return parsed;
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        const timeoutError = new Error(
+          `Timed out after ${this.timeout}ms registering the webhook`
+        );
+        timeoutError.status = 504;
+        throw timeoutError;
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
   async enrichResult(result) {
     try {
       const apiResponse = await this.sendResult(result);
@@ -182,7 +309,7 @@ export class ExternalApiClient {
           : undefined;
       console.error(
         `[ExternalApiClient] Failed to enrich result ${result.idempotencyKey}:`,
-        error
+        summarizeError(error)
       );
       return {
         enriched: result,
