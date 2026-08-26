@@ -48,7 +48,7 @@ Your own identifier for this result — the consecutive number, UUID, or interna
 | Ingest response — a row rejected before processing (schema, missing `type`/`data`) | `rejected[].external_reference` |
 | Decision webhook | `external_reference` (top level) |
 
-> ℹ️ It comes back on **every** row, including the ones that failed. A rejected row is the one you most need to find again — it is the row you have to show your own user.
+> ℹ️ It comes back on **every** row, including the ones that failed. A rejected row is the one you most need to find again — it is the row you have to show your own user. `null` when you sent none.
 
 ```json
 {

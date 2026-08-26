@@ -2,7 +2,7 @@
 
 > **Destino:** [PRMS Normalizer — Technical Field Documentation](https://cgiar-prms.notion.site/PRMS-Normalizer-Technical-Field-Documentation-287f271224788055a0d9c2bc23b1a06b)
 >
-> Cinco inserciones, todas en la misma página. Salieron de probar el test pack de Nicoleta contra el ambiente de TEST el 26-ago; cada una corresponde a un defecto verificado, no a una mejora especulativa.
+> Cuatro inserciones en esta página, más un puntero al fragmento que ya existía para `external_reference`. Salieron de probar el test pack de Nicoleta contra el ambiente de TEST el 26-ago; cada una corresponde a un defecto verificado, no a una mejora especulativa.
 >
 > **Orden sugerido:** Fragmento 1 (change log) al final, cuando los demás ya estén publicados — así los enlaces internos no quedan colgando.
 >
@@ -134,21 +134,11 @@ PRMS derives non-youth as the difference and does not store it. **There is no to
 
 ---
 
-## Fragmento 4 — `external_reference`, tabla actualizada
+## Fragmento 4 — `external_reference`
 
-**Dónde:** reemplaza la tabla **"Where it comes back to you"** dentro de la entrada `#### 🔹 external_reference` (toggle **🧱 Common Fields**). El resto de esa entrada queda igual — intro, tabla de Type y ejemplo JSON no se tocan.
+**No va acá.** Esa entrada la documenta el **Fragmento 2 de [`notion-main-page-fragments.md`](./notion-main-page-fragments.md)**, que cubre la entrada completa — intro, tabla de Type, la tabla "Where it comes back to you", los callouts y el ejemplo JSON. Ya está actualizado ahí con la fila de `rejected[]`; pegá ese fragmento, no una versión recortada.
 
-**Aparte, y sin relación con este cambio:** a la entrada publicada le faltan tres callouts que sí trae el Fragmento 2 de [`notion-main-page-fragments.md`](./notion-main-page-fragments.md) — *"It is optional and will stay optional"*, *"But without it you cannot correlate"* y *"One value per result, not per request"*. O no se pegaron o se recortaron. El segundo es el argumento de por qué mandarlo, y el tercero previene el error de mandar uno por request en un payload de varios resultados. Conviene recuperarlos en el mismo pase.
-
-| **Where** | **Field** |
-| --- | --- |
-| Ingest response — a row that was processed, success or failure | `results[].external_reference` |
-| Ingest response — a row rejected before processing (schema, missing `type`/`data`) | `rejected[].external_reference` |
-| Decision webhook | `external_reference` (top level) |
-
-> ℹ️ It comes back on **every** row, including the ones that failed. A rejected row is the one you most need to find again — it is the row you have to show your own user. `null` when you sent none.
-
-> ⚠️ Previously the documented path `results[].external_reference` did not exist (the value came back only nested), and a failed row carried no reference at all.
+Lo único a saber para este pase: la tabla **"Where it comes back to you"** pasa de dos filas a tres, porque `external_reference` ahora vuelve también en las filas rechazadas. Y ojo que a la entrada publicada le faltan tres callouts que ese fragmento sí trae — *"It is optional and will stay optional"*, *"But without it you cannot correlate"* y *"One value per result, not per request"* — así que pegarlo completo también los recupera.
 
 ---
 
