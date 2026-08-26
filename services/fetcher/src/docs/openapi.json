@@ -42,7 +42,7 @@
               "type": "string"
             },
             "description": "Center acronym",
-            "example": "ABC"
+            "example": "Bioversity (Alliance)"
           },
           {
             "name": "resultType",
@@ -195,7 +195,7 @@
                             "submitted_date": "2025-10-09T12:00:00Z"
                           },
                           "lead_center": {
-                            "name": "Alliance of Bioversity International and ABC",
+                            "name": "Alliance of Bioversity and CIAT - Headquarter (Bioversity International)",
                             "acronym": "Alliance"
                           },
                           "title": "Improved seed varieties adoption in drylands",
@@ -308,7 +308,7 @@
                             "submitted_date": "2025-10-10T10:30:00Z"
                           },
                           "lead_center": {
-                            "acronym": "ABC"
+                            "acronym": "Bioversity (Alliance)"
                           },
                           "title": "National varietal release guidelines",
                           "description": "Guidelines to streamline varietal release at national level.",
@@ -410,7 +410,7 @@
                             "submitted_date": "2025-10-10T11:15:00Z"
                           },
                           "lead_center": {
-                            "acronym": "ABC"
+                            "acronym": "Bioversity (Alliance)"
                           },
                           "title": "County-level varietal adoption",
                           "description": "Dataset on varietal adoption at sub-national level.",
@@ -612,7 +612,7 @@
                             "submitted_date": "2025-10-10T09:00:00Z"
                           },
                           "lead_center": {
-                            "acronym": "ABC"
+                            "acronym": "Bioversity (Alliance)"
                           },
                           "title": "Minimal KP",
                           "description": "Short description.",
@@ -921,7 +921,7 @@
                             "submitted_date": "2025-11-18T20:00:00Z"
                           },
                           "lead_center": {
-                            "acronym": "ABC"
+                            "acronym": "Bioversity (Alliance)"
                           },
                           "title": "Adoption of Climate-Resilient Seed Varieties",
                           "description": "Tracking the use and adoption of climate-resilient seed varieties among different actor types.",
@@ -1288,7 +1288,7 @@
                             "submitted_date": "2025-11-19T14:05:00Z"
                           },
                           "lead_center": {
-                            "acronym": "ABC",
+                            "acronym": "Bioversity (Alliance)",
                             "name": "International Center for Tropical Agriculture"
                           },
                           "title": "New Agricultural Policy Implementation in Kenya",
@@ -1400,7 +1400,7 @@
                             "submitted_date": "2025-11-19T14:05:00Z"
                           },
                           "lead_center": {
-                            "acronym": "ABC"
+                            "acronym": "Bioversity (Alliance)"
                           },
                           "title": "Regulatory Framework for Seed Distribution",
                           "description": "Policy change for improved seed certification and distribution across the region.",
@@ -1423,7 +1423,7 @@
                           "contributing_center": [
                             {
                               "institution_id": 115,
-                              "acronym": "ABC"
+                              "acronym": "Bioversity (Alliance)"
                             }
                           ],
                           "contributing_partners": [
@@ -1499,7 +1499,7 @@
                             "submitted_date": "2025-11-06T10:00:00Z"
                           },
                           "lead_center": {
-                            "acronym": "ABC"
+                            "acronym": "Bioversity (Alliance)"
                           },
                           "title": "Miscellaneous Research Output",
                           "description": "A general research output that doesn't fit other categories.",
@@ -1657,7 +1657,7 @@
                             "submitted_date": "2025-10-10T16:45:00Z"
                           },
                           "lead_center": {
-                            "acronym": "ABC"
+                            "acronym": "Bioversity (Alliance)"
                           },
                           "title": "Invalid KP",
                           "description": "Missing geo_focus and evidence, will fail.",
@@ -2214,7 +2214,7 @@
           "primary_entity": {
             "nullable": true,
             "type": "object",
-            "description": "Entidad principal (iniABCiva Primary submitter)",
+            "description": "Entidad principal (iniciativa Primary submitter)",
             "properties": {
               "official_code": {
                 "type": "string",
