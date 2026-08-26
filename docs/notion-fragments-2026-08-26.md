@@ -136,7 +136,9 @@ PRMS derives non-youth as the difference and does not store it. **There is no to
 
 ## Fragmento 4 — `external_reference`, tabla actualizada
 
-**Dónde:** reemplaza la tabla **"Where it comes back to you"** dentro de la entrada `external_reference` (toggle **🧱 Common Fields**). El resto de esa entrada queda igual.
+**Dónde:** reemplaza la tabla **"Where it comes back to you"** dentro de la entrada `#### 🔹 external_reference` (toggle **🧱 Common Fields**). El resto de esa entrada queda igual — intro, tabla de Type y ejemplo JSON no se tocan.
+
+**Aparte, y sin relación con este cambio:** a la entrada publicada le faltan tres callouts que sí trae el Fragmento 2 de [`notion-main-page-fragments.md`](./notion-main-page-fragments.md) — *"It is optional and will stay optional"*, *"But without it you cannot correlate"* y *"One value per result, not per request"*. O no se pegaron o se recortaron. El segundo es el argumento de por qué mandarlo, y el tercero previene el error de mandar uno por request en un payload de varios resultados. Conviene recuperarlos en el mismo pase.
 
 | **Where** | **Field** |
 | --- | --- |
