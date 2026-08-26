@@ -272,6 +272,83 @@ export class ExternalApiClient {
     }
   }
 
+  /**
+   * Asks Reporting to carry an approved result from a previous phase into the open one.
+   *
+   * Only a `result_code` goes over the wire. The code is stable across phases, so Reporting
+   * resolves which version to continue, and it derives the target Science Program from the
+   * result's own primary initiative — the caller has no internal id to keep and no programme
+   * to look up.
+   *
+   * Every rule lives on the Reporting side: approved, previous phase, not already carried
+   * forward, not a Knowledge Product, and owned by the platform asking. Re-checking any of
+   * them here would be a second copy to keep in sync, and the two would drift — the same
+   * reasoning as `registerWebhook` and the URL guard.
+   *
+   * Failures throw, with Reporting's status and body attached: this is a single operation the
+   * caller is waiting on, and its refusal message is what tells them which rule they hit.
+   */
+  async versionResult(resultCode, externalReference) {
+    if (!this.baseUrl) {
+      throw new Error("External API URL not configured");
+    }
+
+    const base = this.baseUrl.replace(/\/+$/, "");
+    const endpoint = `${base}/version`;
+
+    console.log(`[ExternalApiClient] POST version for result ${resultCode}`);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: this.getRequestHeaders(),
+        body: JSON.stringify({
+          result_code: resultCode,
+          ...(externalReference ? { external_reference: externalReference } : {}),
+        }),
+        signal: controller.signal,
+      });
+
+      const text = await response.text();
+      let parsed;
+      try {
+        parsed = text ? JSON.parse(text) : undefined;
+      } catch {
+        parsed = undefined;
+      }
+
+      console.log(
+        `[ExternalApiClient] version responded`,
+        response.status
+      );
+
+      if (!response.ok) {
+        const err = new Error(
+          `Reporting refused to carry result ${resultCode} forward (HTTP ${response.status})`
+        );
+        err.status = response.status;
+        err.apiResponse = parsed;
+        throw err;
+      }
+
+      return parsed;
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        const timeoutError = new Error(
+          `Timed out after ${this.timeout}ms carrying result ${resultCode} forward`
+        );
+        timeoutError.status = 504;
+        throw timeoutError;
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
   async enrichResult(result) {
     try {
       const apiResponse = await this.sendResult(result);

@@ -1834,6 +1834,72 @@
           }
         }
       }
+    },
+    "/version": {
+      "post": {
+        "summary": "Carry an approved result from a previous phase into the current one",
+        "description": "Creates a new version of an approved W3/Bilateral result in the open reporting phase, linked to the original by its result code. The approved prior-phase record is not modified.\n\n**Send only the result code.** It is stable across phases, so PRMS resolves which version to continue, and it derives the target Science Program from the result's own primary initiative \u2014 there is no internal id to keep and no programme to look up.\n\n**The new version lands in Draft.** This operation continues a result; it does not report on it. Whoever edits it afterwards \u2014 through the API or in the PRMS reporting tool \u2014 is who submits it for review, and it is that submission that starts the Science Program's approval workflow. The decision then reaches you through your registered webhook.\n\nA result is carried forward **once**: if a version already exists in the current phase there is nothing left to do, and the call is refused.\n\n**Knowledge Products cannot be carried forward.** Their metadata is owned by CGSpace, so a new knowledge product is reported with its own handle instead.\n\nOnly the platform that reported a result may carry it forward.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "result_code"
+                ],
+                "properties": {
+                  "result_code": {
+                    "type": "string",
+                    "description": "The PRMS result code of the approved result to continue. This is the number producers already see in the reporting tool.",
+                    "example": "28565"
+                  },
+                  "external_reference": {
+                    "type": "string",
+                    "maxLength": 191,
+                    "description": "Your own identifier for this request, echoed back verbatim so you can match the response to your record.",
+                    "example": "STAR-9f2c-4471"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Carried forward. The response names the new version's id, its phase, and its status (Draft), plus the previous phase it came from."
+          },
+          "400": {
+            "description": "`result_code` missing, or the result is not a W3/Bilateral result."
+          },
+          "401": {
+            "description": "No API key, or CLARISA says the key is not valid."
+          },
+          "403": {
+            "description": "The result belongs to another platform, or its lead centre is outside this platform's scope."
+          },
+          "404": {
+            "description": "No active result matches that result code."
+          },
+          "409": {
+            "description": "Refused by a rule, and the message names which one: the result exists only in the current phase, already has a version there, is not approved, is a Knowledge Product, has no primary Science Program, or there is no open reporting phase."
+          },
+          "502": {
+            "description": "Reporting could not be reached or answered unusably."
+          },
+          "503": {
+            "description": "CLARISA could not be reached to validate the key. Retryable."
+          },
+          "504": {
+            "description": "Reporting did not answer in time."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2294,7 +2360,7 @@
           "external_reference": {
             "type": "string",
             "maxLength": 191,
-            "description": "Your own identifier for this result — a consecutive number, a UUID, or any string your system already uses. Optional. Stored verbatim in PRMS and returned verbatim on the decision webhook (top-level `external_reference`) and on every row of the ingest response: `results[].external_reference` for a row that was processed (success or failure) and `rejected[].external_reference` for a row rejected before processing. Null when you send none. Lets you map any response or callback back to your record without parsing anything.",
+            "description": "Your own identifier for this result \u2014 a consecutive number, a UUID, or any string your system already uses. Optional. Stored verbatim in PRMS and returned verbatim on the decision webhook (top-level `external_reference`) and on every row of the ingest response: `results[].external_reference` for a row that was processed (success or failure) and `rejected[].external_reference` for a row rejected before processing. Null when you send none. Lets you map any response or callback back to your record without parsing anything.",
             "example": "STAR-9f2c-4471"
           },
           "result_id": {

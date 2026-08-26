@@ -30,11 +30,50 @@ POST /ingest → Validate → Process → External API → OpenSearch → 200 OK
 ```
 GET  /result, GET /result/{code}  → OpenSearch
 POST /ingest                      → validate, process, external API, OpenSearch  (requires x-api-key)
+POST /version                     → carry an approved result into the current phase (requires x-api-key)
 POST /webhook, GET /webhook       → register / read your callback destination     (requires x-api-key)
 GET  /health, GET /openapi.json, GET /docs
 ```
 
 Bulk sync, single-result PATCH update, and DELETE are **not** exposed here (use the separate sync/other services).
+
+---
+
+## 🔁 Continuing a result in a new phase
+
+An approved result does not have to be re-reported from scratch each year. `POST /version`
+carries it into the open reporting phase, keeping the same result code so the trace between
+phases survives:
+
+```bash
+curl -X POST "$FETCHER_URL/version" \
+  -H "x-api-key: $YOUR_CLARISA_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"result_code":"28565","external_reference":"STAR-9f2c-4471"}'
+```
+
+**Send only the result code.** It is stable across phases, so PRMS resolves which version to
+continue and derives the target Science Program from the result itself — there is no internal
+id to keep and no programme to look up. `external_reference` is optional and comes back
+verbatim, as everywhere else.
+
+**The new version lands in `Draft`.** This continues a result; it does not report on it.
+Whoever edits it next — through the API or in the PRMS reporting tool — is who submits it for
+review, and that submission is what starts the Science Program's approval workflow. The
+decision then reaches you through your registered callback, so the previous section applies
+unchanged.
+
+A result is carried forward **once**. If a version already exists in the current phase there
+is nothing left to do and the call is refused.
+
+**What gets refused, and why it says so:** the result must exist, must not live only in the
+current phase, must not already have a version there, must have arrived through this API,
+must be **approved**, and must belong to you — the platform that reported a result is the one
+that may continue it. **Knowledge Products cannot be carried forward at all**: their metadata
+is owned by CGSpace, so a new knowledge product is reported with its own handle instead.
+
+Every refusal names the rule it hit rather than failing generically, so the message is the
+thing to read before retrying.
 
 ---
 

@@ -588,6 +588,71 @@ app.get("/webhook", requireApiKey, async (req, res) => {
   }
 });
 
+/**
+ * Carries an approved result from a previous phase into the open reporting phase (P2-3228).
+ *
+ * Its own route rather than another `op` on `/ingest`: this carries no result payload, only a
+ * code, and it answers with a single outcome instead of a per-row report. Folding it into the
+ * batch endpoint would make one contract mean two things.
+ *
+ * No S3 offload and no batching for the same reason — one call, one result.
+ */
+app.post("/version", requireApiKey, async (req, res) => {
+  const requestId =
+    req.headers["x-amzn-trace-id"] || req.headers["x-request-id"];
+
+  const resultCode =
+    typeof req.body?.result_code === "string"
+      ? req.body.result_code.trim()
+      : req.body?.result_code != null
+        ? String(req.body.result_code).trim()
+        : "";
+  const externalReference = req.body?.external_reference ?? null;
+
+  if (!resultCode) {
+    return res.status(400).json({
+      ok: false,
+      error: "validation_failed",
+      message: "result_code is required.",
+      external_reference: externalReference,
+      requestId,
+    });
+  }
+
+  const client = versionClientFor(req, res, requestId);
+  if (!client) return undefined;
+
+  try {
+    const result = await client.versionResult(resultCode, externalReference);
+    return res.status(200).json({
+      ok: true,
+      result_code: resultCode,
+      // Echoed even though Reporting also returns it: a caller reads one field regardless of
+      // which side answered, the same property the ingest response now has on every row.
+      external_reference: externalReference,
+      ...result,
+      requestId,
+    });
+  } catch (error) {
+    const status =
+      typeof error?.status === "number" && error.status >= 400
+        ? error.status
+        : 502;
+
+    return res.status(status).json({
+      ok: false,
+      error: status === 504 ? "upstream_timeout" : "version_failed",
+      // Reporting's message names the rule that refused it — approved, previous phase, already
+      // carried forward, Knowledge Product, ownership. That is the whole value of the response.
+      message:
+        error?.apiResponse?.message ?? error?.message ?? "Unknown error",
+      result_code: resultCode,
+      external_reference: externalReference,
+      requestId,
+    });
+  }
+});
+
 app.use("/result", resultsRouter);
 
 export default app;
