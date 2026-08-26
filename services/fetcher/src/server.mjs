@@ -15,6 +15,20 @@ import openapi from "./docs/openapi.json" with { type: "json" };
 const DEFAULT_OP = (process.env.DEFAULT_OP || "create").toLowerCase();
 const BATCH_SIZE = parseInt(process.env.BATCH_SIZE || "10");
 
+/**
+ * The reporting platform's own id for a result, read wherever it sits.
+ *
+ * The value travels on `data`, but by the time a result reaches the processing loop it
+ * has been through `normalizeCommon` and re-wrapped, so the same field can be found one
+ * level up or nested under `data`. Returning null rather than undefined keeps the key
+ * present in the JSON response: a caller reading `external_reference` gets an explicit
+ * "we have none for this row" instead of a missing property.
+ */
+function externalReferenceOf(source) {
+  if (!source || typeof source !== "object") return null;
+  return source.external_reference ?? source.data?.external_reference ?? null;
+}
+
 const app = express();
 app.use(express.json({ limit: "5mb" }));
 
@@ -135,13 +149,26 @@ app.post("/ingest", requireApiKey, async (req, res) => {
     const type = String(it.type || "").toLowerCase();
     const op = String(it.op || opDefault).toLowerCase();
     const data = it.data;
+    // Echoed on every rejection below. A rejected row is exactly where the caller needs
+    // it — that is the row it has to show its own user — and it used to come back with
+    // nothing but an array index to go on.
+    const externalReference = externalReferenceOf(it.data);
 
     if (!type) {
-      rejected.push({ index: i, reason: "type is required" });
+      rejected.push({
+        index: i,
+        external_reference: externalReference,
+        reason: "type is required",
+      });
       continue;
     }
     if (!data || typeof data !== "object") {
-      rejected.push({ index: i, type, reason: "data is required" });
+      rejected.push({
+        index: i,
+        type,
+        external_reference: externalReference,
+        reason: "data is required",
+      });
       continue;
     }
 
@@ -159,6 +186,7 @@ app.post("/ingest", requireApiKey, async (req, res) => {
       rejected.push({
         index: i,
         type,
+        external_reference: externalReference,
         reason: `normalization_error: ${normErr?.message}`,
       });
       continue;
@@ -169,6 +197,7 @@ app.post("/ingest", requireApiKey, async (req, res) => {
       rejected.push({
         index: i,
         type,
+        external_reference: externalReference,
         errors: v.errors,
         // Include detailed errors if available for better debugging
         ...(v.detailedErrors ? { detailedErrors: v.detailedErrors } : {}),
@@ -328,6 +357,7 @@ app.post("/ingest", requireApiKey, async (req, res) => {
                 ...processingResult,
                 resultId: result.idempotencyKey,
                 resultType: result.type,
+                external_reference: externalReferenceOf(result),
               };
 
               // If there's an error, make error details more accessible
@@ -386,6 +416,7 @@ app.post("/ingest", requireApiKey, async (req, res) => {
                 errorDetails,
                 resultId: result.idempotencyKey,
                 resultType: result.type,
+                external_reference: externalReferenceOf(result),
               };
             }
           }),
@@ -418,6 +449,7 @@ app.post("/ingest", requireApiKey, async (req, res) => {
           },
           resultId: result.idempotencyKey,
           resultType: type,
+          external_reference: externalReferenceOf(result),
         });
         totalFailed++;
       }

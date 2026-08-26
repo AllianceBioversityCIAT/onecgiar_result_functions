@@ -44,8 +44,11 @@ Your own identifier for this result — the consecutive number, UUID, or interna
 
 | **Where** | **Field** |
 | --- | --- |
-| Ingest response | `results[].external_reference` |
+| Ingest response — a row that was processed, success or failure | `results[].external_reference` |
+| Ingest response — a row rejected before processing (schema, missing `type`/`data`) | `rejected[].external_reference` |
 | Decision webhook | `external_reference` (top level) |
+
+> ℹ️ It comes back on **every** row, including the ones that failed. A rejected row is the one you most need to find again — it is the row you have to show your own user.
 
 ```json
 {

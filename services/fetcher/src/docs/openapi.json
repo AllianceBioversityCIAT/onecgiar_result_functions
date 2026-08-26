@@ -1715,7 +1715,7 @@
             "description": "All results processed successfully"
           },
           "207": {
-            "description": "Processed with per-result failures"
+            "description": "Processed with per-result failures. Every entry in `results[]` carries `external_reference` (null when none was sent), so a failed row can be matched to the record it came from."
           },
           "400": {
             "description": "Bad Request (missing wrapper fields)"
@@ -1737,7 +1737,7 @@
             "description": "More than 100 results in one request; nothing processed"
           },
           "422": {
-            "description": "Validation failed for all items"
+            "description": "Validation failed for all items. Every entry in `rejected[]` carries `index` and `external_reference` (null when none was sent) alongside its errors."
           },
           "500": {
             "description": "Internal error"
@@ -2294,7 +2294,7 @@
           "external_reference": {
             "type": "string",
             "maxLength": 191,
-            "description": "Your own identifier for this result — a consecutive number, a UUID, or any string your system already uses. Optional. Stored verbatim in PRMS and returned verbatim on the decision webhook (top-level `external_reference`) and in the ingest response, so you can map our callback back to your record without parsing anything.",
+            "description": "Your own identifier for this result — a consecutive number, a UUID, or any string your system already uses. Optional. Stored verbatim in PRMS and returned verbatim on the decision webhook (top-level `external_reference`) and on every row of the ingest response: `results[].external_reference` for a row that was processed (success or failure) and `rejected[].external_reference` for a row rejected before processing. Null when you send none. Lets you map any response or callback back to your record without parsing anything.",
             "example": "STAR-9f2c-4471"
           },
           "result_id": {

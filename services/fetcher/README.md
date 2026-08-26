@@ -75,6 +75,17 @@ your UUID, whatever your system already uses:
 PRMS stores it verbatim and hands it back verbatim, at the top level of the decision callback and in
 the ingest response. No prefix, no parsing.
 
+In the ingest response it comes back on **every** row, whatever happened to it:
+
+| Where | Field |
+|---|---|
+| A row that was processed (success or failure) | `results[].external_reference` |
+| A row rejected before processing (schema, missing `type`/`data`) | `rejected[].external_reference` |
+| Decision webhook | `external_reference` (top level) |
+
+A rejected row is the one you most need to find again — it is the row you have to show your own
+user — so it carries the reference alongside its `index` and errors.
+
 **It is optional and stays optional.** Not every producer has such an id, and a bilateral result
 created inside the PRMS UI has no external system behind it at all — those carry `null`, which is
 the honest answer rather than an invented value.
