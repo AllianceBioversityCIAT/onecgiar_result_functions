@@ -6,7 +6,9 @@
 >
 > **Orden sugerido:** Fragmento 1 (change log) al final, cuando los demás ya estén publicados — así los enlaces internos no quedan colgando.
 >
-> ⚠️ **Una ubicación sin confirmar** y hay que verificarla al pegar: el nombre exacto del toggle de Innovation Use (Fragmento 3). El resto está confirmado contra la página.
+> **Todas las ubicaciones están confirmadas** contra el contenido publicado de la página.
+>
+> Los Fragmentos 2 y 3 son **reemplazos completos** de su entrada, no bloques a añadir: lo que está publicado tiene errores que hay que corregir en el mismo pegado. Cada uno explica cuáles.
 
 ---
 
@@ -65,27 +67,44 @@ PRMS stores the link and **never copies the document**. Everything about what is
 
 ## Fragmento 3 — Innovation use, actores
 
-**Dónde:** dentro del toggle de **Innovation Use (`innovation_use.json`)**, en el bloque de `current_innovation_use_numbers.actors[]`.
+**Dónde:** reemplaza la entrada **`### 🔹 actors`** completa, dentro de `innovation_use.current_innovation_use_numbers`.
 
-### **🔹 actors[].actor_type_id / actor_type_name ⚠️ changed 2026-08**
+**Reemplazo completo, no un bloque a añadir.** Dos cosas de lo publicado están mal, aparte de lo nuevo:
 
-Send **either** `actor_type_id` **or** `actor_type_name`. When both are present, the id wins.
+1. **La descripción de `sex_and_age_disaggregation` está invertida.** Dice "Indicates whether sex/age disaggregation is being used", y es al revés: el campo del formulario se llama *"Sex and age disaggregation does not apply"*, así que `true` significa que NO aplica — de ahí que la propia regla del schema exija `how_many` cuando es `true`. Leído como está publicado, un productor lo manda invertido y pierde toda la desagregación, youth incluido.
+2. **La tabla de campos está rota.** Los tipos union se escribieron `string | integer`, y ese `|` sin escapar parte las celdas: varias filas quedan con 6 celdas contra 5 del header (se ve en `result_actors_id`, donde el `❌` cayó en la columna de Required). Acá van como "string or integer".
 
-| id | name |
+También quité el bullet `- **result_actors_id**` que quedó suelto arriba de la tabla del catálogo.
+
+### **🔹 actors**
+
+Represents groups of actors using the innovation.
+
+| actor_type_id | name |
 | --- | --- |
-| 1 | `Farmers/ (agro)pastoralist/ herders/ fishers` |
-| 2 | `Researchers` |
-| 3 | `Extension agents` |
-| 4 | `Policy actors (public or private)` |
-| 5 | `Other` — requires `other_actor_type` |
+| 1 | Farmers/ (agro)pastoralist/ herders/ fishers |
+| 2 | Researchers |
+| 3 | Extension agents |
+| 4 | Policy actors (public or private) |
+| 5 | Other |
 
-Name matching is case-insensitive and tolerant of the spacing around the slashes, so both `Farmers/ (agro)pastoralist/ herders/ fishers` and `farmers/(agro)pastoralist/herders/fishers` resolve to id 1.
+| **Field** | **Type** | **Required** | **Description** | **Example** |
+| --- | --- | --- | --- | --- |
+| **result_actors_id** | string or integer | ❌ | Internal identifier for the actor record (if available). | 105 |
+| **actor_type_id** | string or integer | ⚙️ Optional (if **actor_type_name** is provided) | Coded type of actor, from the table above. **Preferred over the name.** | 5 |
+| **actor_type_name** | string | ⚙️ Optional (if **actor_type_id** is provided) ⚠️ | Descriptive label of the actor type, matched against the table above. Case-insensitive and tolerant of spacing around the slashes. An unresolvable name is rejected. | "Researchers" |
+| **other_actor_type** | string or null | Conditional | Required when `actor_type_id` = 5. Describes the specific actor type when "Other" is selected. | "Youth farmer groups" |
+| **sex_and_age_disaggregation** | boolean or null | ❌ | ⚠️ **Reads as "does not apply".** `false` (or omitted) → report `women` / `men` with their youth. `true` → the disaggregation is **not** available for this group, so report `how_many` only. | false |
+| **how_many** | string, integer or null | Conditional | Total number of actors in this group. Required when `sex_and_age_disaggregation` = `true`. | 120 |
+| **women** | string, integer or null | ❌ | Number of women in this actor group. | 60 |
+| **women_youth** | string, integer or null | ❌ | Number of women in this group who are youth. **Counted within `women`**, so it can never exceed it. | 25 |
+| **men** | string, integer or null | ❌ | Number of men in this actor group. | 40 |
+| **men_youth** | string, integer or null | ❌ | Number of men in this group who are youth. **Counted within `men`**, so it can never exceed it. | 15 |
+| **previousWomen** | string, integer or null | ❌ | Historical value of women in previous reporting (if applicable). | 50 |
 
-> ⚠️ **Until 2026-08 a name was accepted and then ignored.** An actor identified by `actor_type_name` alone was stored with no type — in practice, **dropped** — and the request still returned `200` with "All results processed successfully". If you send names, check that the actors you expect actually came back. Sending the id has always been safe.
+**How youth is reported**
 
-### **🔹 actors[].women_youth / men_youth ⚠️ new validation 2026-08**
-
-Youth is reported **within each sex**, not as a separate group:
+Youth is a subset of each sex, not a separate group:
 
 ```json
 {
@@ -96,15 +115,22 @@ Youth is reported **within each sex**, not as a separate group:
 }
 ```
 
-`women_youth` counts women who are youth, so it can never exceed `women`; the same for men. PRMS derives non-youth as the difference and does not store it. **There is no total-youth field** — a youth figure that is not split by sex has nowhere to go.
+PRMS derives non-youth as the difference and does not store it. **There is no total-youth field** — a youth figure that is not split by sex has nowhere to go.
 
-| Rule | Behaviour |
-| --- | --- |
-| `women_youth > women` or `men_youth > men` | Rejected (`400`) naming the actor index and both values. |
-| Youth sent without its sex total | Accepted — PRMS fills the total from it. |
-| `sex_and_age_disaggregation: true` | Not checked. **That flag means the disaggregation does NOT apply**: report `how_many` only. |
+> ✅
+>
+> **Validation rules (schema):**
 
-> ⚠️ **Until 2026-08 nothing was checked.** `women: 10, women_youth: 999` was stored as sent, and the derived non-youth was then clamped to 0 — inconsistent figures rather than a rejection.
+- At least **one** must be provided: `actor_type_id` **or** `actor_type_name`.
+- If `sex_and_age_disaggregation` **is present and** = `true` → `how_many` is **required**.
+- If `actor_type_id` **is present and** is `"5"` or `5` → `other_actor_type` is **required**.
+- `women_youth` ≤ `women`, and `men_youth` ≤ `men`. ⚠️ *new 2026-08*
+
+> ⚠️ **Changed 2026-08.** Three things behaved differently before, all now fixed:
+>
+> - An actor sent with `actor_type_name` and no `actor_type_id` was **silently dropped** — stored with no type, and the request still returned `200` with "All results processed successfully". If you send names, verify the actors you expect came back.
+> - Youth was never checked against its sex total: `women: 10, women_youth: 999` was stored as sent, and the derived non-youth clamped to 0.
+> - The last two conditional rules fired when the field was **absent**, not just when it held the triggering value. Omitting `sex_and_age_disaggregation` demanded `how_many`, and identifying an actor by name demanded `other_actor_type`. Both now require the field to be present.
 
 ---
 
