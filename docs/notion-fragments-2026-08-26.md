@@ -6,7 +6,7 @@
 >
 > **Orden sugerido:** Fragmento 1 (change log) al final, cuando los demás ya estén publicados — así los enlaces internos no quedan colgando.
 >
-> ⚠️ **Dos ubicaciones que no pude confirmar** y hay que verificar al pegar: el nombre exacto del toggle de Innovation Use (Fragmento 3) y si `evidence` está documentado dentro del toggle de Common Fields o en una sección propia (Fragmento 2). El resto de las ubicaciones sí están confirmadas contra la estructura actual de la página.
+> ⚠️ **Una ubicación sin confirmar** y hay que verificarla al pegar: el nombre exacto del toggle de Innovation Use (Fragmento 3). El resto está confirmado contra la página.
 
 ---
 
@@ -31,16 +31,23 @@
 
 ## Fragmento 2 — reglas del link de evidencia
 
-**Dónde:** en la entrada `evidence` (es un campo de Common Fields — `common_fields.json`), como bloque al final de esa entrada.
+**Dónde:** reemplaza la entrada **`### 🔹 evidence`** completa (toggle **🧱 Common Fields** — `evidence` vive en `common_fields.json`).
 
-### **🔹 evidence[].link — accepted values ⚠️ changed 2026-08**
+**Reemplazo completo, no un bloque a añadir.** La fila `link` de la tabla que está publicada dice `string (URI)` con un ejemplo genérico, y eso contradice las reglas de abajo: ahí está el cambio, además del bloque nuevo.
+
+### **🔹 evidence**
+
+| **Field** | **Type** | **Required** | **Description** | **Example** |
+| --- | --- | --- | --- | --- |
+| link | string (`http(s)` URL) | ✅ | **Publicly accessible link to the supporting evidence** (paper, report, dataset, etc.). Must include the scheme. File storage platforms are not accepted — see the rules below. | `"https://cgspace.cgiar.org/handle/10568/181939"` |
+| description | string | ❌ | **Brief description of the evidence.** | `"Peer-reviewed article summarizing multi-country trials."` |
 
 PRMS stores the link and **never copies the document**. Everything about what is accepted follows from that: whoever opens the link later — a reviewer, the CGIAR Results Dashboard — gets exactly what you sent, or nothing.
 
 | Rule | Detail |
 | --- | --- |
-| **Scheme required** | The link must start with `http://` or `https://`. A bare file name is rejected. |
-| **No file storage platforms** | SharePoint, OneDrive, Google Drive and Dropbox links are rejected, whatever the tenant. |
+| **Scheme required** ⚠️ *2026-08* | The link must start with `http://` or `https://`. A bare file name is rejected. |
+| **No file storage platforms** ⚠️ *2026-08* | SharePoint, OneDrive, Google Drive and Dropbox links are rejected, whatever the tenant. |
 | **Publicly reachable** | A link nobody outside your organisation can open is of no use as evidence, even when it is technically accepted. |
 
 ✅ `https://cgspace.cgiar.org/handle/10568/181939`
