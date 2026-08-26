@@ -207,8 +207,9 @@
         {
           "if": {
             "anyOf": [
-              { "properties": { "scope_code": { "const": 50 } } },
+              { "required": ["scope_code"], "properties": { "scope_code": { "const": 50 } } },
               {
+                "required": ["scope_label"],
                 "properties": {
                   "scope_label": { "const": "This is yet to be determined" }
                 }
@@ -220,8 +221,8 @@
         {
           "if": {
             "anyOf": [
-              { "properties": { "scope_code": { "const": 1 } } },
-              { "properties": { "scope_label": { "const": "Global" } } }
+              { "required": ["scope_code"], "properties": { "scope_code": { "const": 1 } } },
+              { "required": ["scope_label"], "properties": { "scope_label": { "const": "Global" } } }
             ]
           },
           "then": { "properties": {} }
@@ -229,8 +230,8 @@
         {
           "if": {
             "anyOf": [
-              { "properties": { "scope_code": { "const": 2 } } },
-              { "properties": { "scope_label": { "const": "Regional" } } }
+              { "required": ["scope_code"], "properties": { "scope_code": { "const": 2 } } },
+              { "required": ["scope_label"], "properties": { "scope_label": { "const": "Regional" } } }
             ]
           },
           "then": { "required": ["regions"] }
@@ -238,8 +239,8 @@
         {
           "if": {
             "anyOf": [
-              { "properties": { "scope_code": { "const": 3 } } },
-              { "properties": { "scope_label": { "const": "Multi-national" } } }
+              { "required": ["scope_code"], "properties": { "scope_code": { "const": 3 } } },
+              { "required": ["scope_label"], "properties": { "scope_label": { "const": "Multi-national" } } }
             ]
           },
           "then": {
@@ -250,8 +251,8 @@
         {
           "if": {
             "anyOf": [
-              { "properties": { "scope_code": { "const": 4 } } },
-              { "properties": { "scope_label": { "const": "National" } } }
+              { "required": ["scope_code"], "properties": { "scope_code": { "const": 4 } } },
+              { "required": ["scope_label"], "properties": { "scope_label": { "const": "National" } } }
             ]
           },
           "then": {
@@ -262,8 +263,8 @@
         {
           "if": {
             "anyOf": [
-              { "properties": { "scope_code": { "const": 5 } } },
-              { "properties": { "scope_label": { "const": "Sub-national" } } }
+              { "required": ["scope_code"], "properties": { "scope_code": { "const": 5 } } },
+              { "required": ["scope_label"], "properties": { "scope_label": { "const": "Sub-national" } } }
             ]
           },
           "then": {

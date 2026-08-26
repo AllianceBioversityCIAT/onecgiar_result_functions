@@ -317,6 +317,9 @@
           "if": {
             "anyOf": [
               {
+                "required": [
+                  "scope_code"
+                ],
                 "properties": {
                   "scope_code": {
                     "const": 50
@@ -324,6 +327,9 @@
                 }
               },
               {
+                "required": [
+                  "scope_label"
+                ],
                 "properties": {
                   "scope_label": {
                     "const": "This is yet to be determined"
@@ -340,6 +346,9 @@
           "if": {
             "anyOf": [
               {
+                "required": [
+                  "scope_code"
+                ],
                 "properties": {
                   "scope_code": {
                     "const": 1
@@ -347,6 +356,9 @@
                 }
               },
               {
+                "required": [
+                  "scope_label"
+                ],
                 "properties": {
                   "scope_label": {
                     "const": "Global"
@@ -363,6 +375,9 @@
           "if": {
             "anyOf": [
               {
+                "required": [
+                  "scope_code"
+                ],
                 "properties": {
                   "scope_code": {
                     "const": 2
@@ -370,6 +385,9 @@
                 }
               },
               {
+                "required": [
+                  "scope_label"
+                ],
                 "properties": {
                   "scope_label": {
                     "const": "Regional"
@@ -388,6 +406,9 @@
           "if": {
             "anyOf": [
               {
+                "required": [
+                  "scope_code"
+                ],
                 "properties": {
                   "scope_code": {
                     "const": 3
@@ -395,6 +416,9 @@
                 }
               },
               {
+                "required": [
+                  "scope_label"
+                ],
                 "properties": {
                   "scope_label": {
                     "const": "Multi-national"
@@ -418,6 +442,9 @@
           "if": {
             "anyOf": [
               {
+                "required": [
+                  "scope_code"
+                ],
                 "properties": {
                   "scope_code": {
                     "const": 4
@@ -425,6 +452,9 @@
                 }
               },
               {
+                "required": [
+                  "scope_label"
+                ],
                 "properties": {
                   "scope_label": {
                     "const": "National"
@@ -448,6 +478,9 @@
           "if": {
             "anyOf": [
               {
+                "required": [
+                  "scope_code"
+                ],
                 "properties": {
                   "scope_code": {
                     "const": 5
@@ -455,6 +488,9 @@
                 }
               },
               {
+                "required": [
+                  "scope_label"
+                ],
                 "properties": {
                   "scope_label": {
                     "const": "Sub-national"

@@ -84,6 +84,7 @@
                     "allOf": [
                       {
                         "if": {
+                          "required": ["sex_and_age_disaggregation"],
                           "properties": {
                             "sex_and_age_disaggregation": { "const": true }
                           }
@@ -94,6 +95,7 @@
                       },
                       {
                         "if": {
+                          "required": ["actor_type_id"],
                           "properties": {
                             "actor_type_id": { "enum": ["5", 5] }
                           }
@@ -139,6 +141,7 @@
                     "allOf": [
                       {
                         "if": {
+                          "required": ["institution_types_id"],
                           "properties": {
                             "institution_types_id": { "enum": ["78", 78] }
                           }
@@ -170,6 +173,7 @@
               },
               "required": ["innov_use_to_be_determined"],
               "if": {
+                "required": ["innov_use_to_be_determined"],
                 "properties": {
                   "innov_use_to_be_determined": { "const": false }
                 }
