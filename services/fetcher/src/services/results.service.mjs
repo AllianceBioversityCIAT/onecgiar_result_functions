@@ -96,13 +96,52 @@ const sourceFieldTermsClause = (values) => {
   };
 };
 
+/**
+ * Matches the **lead** centre's acronym, case-insensitively.
+ *
+ * `leading_result.acronym.keyword` is an exact, case-sensitive term, and the acronyms
+ * CLARISA stores are mixed case — "Bioversity (Alliance)", "WorldFish", "AfricaRice",
+ * "UC Davis". The filter used to upper-case the incoming value before matching, so those
+ * centres could never be found: `BIOVERSITY (ALLIANCE)` returned 0 against 5963
+ * documents, the largest bucket in the index. Only all-caps acronyms (IITA, CIP, ILRI)
+ * happened to work, which made the filter look intermittent rather than broken.
+ *
+ * `case_insensitive` on a term query needs OpenSearch 7.10+/2.x; the cluster runs 2.19.
+ * The variant-expansion trick used for `source` is not enough here — it produces four
+ * fixed casings, none of which reconstructs "Bioversity (Alliance)" from user input.
+ *
+ * Scope is deliberately the lead centre only: a centre that contributed without leading
+ * is in `result_center_array` and is not matched. That is the documented meaning of
+ * `centerAcronym`.
+ *
+ * @param {string[]|undefined} values
+ * @returns {object|null}
+ */
+const centerAcronymClause = (values) => {
+  if (!Array.isArray(values) || values.length === 0) return null;
+  const wanted = values
+    .map((value) => String(value ?? "").trim())
+    .filter((value) => value.length > 0);
+  if (wanted.length === 0) return null;
+
+  return {
+    bool: {
+      should: wanted.map((value) => ({
+        term: {
+          "leading_result.acronym.keyword": {
+            value,
+            case_insensitive: true,
+          },
+        },
+      })),
+      minimum_should_match: 1,
+    },
+  };
+};
+
 const buildFilters = (filters) => {
   const keys = {
-    centerAcronym: {
-      terms: {
-        "leading_result.acronym.keyword": filters.centerAcronym,
-      },
-    },
+    centerAcronym: centerAcronymClause(filters.centerAcronym),
     resultType: {
       terms: {
         "obj_result_type.name.keyword": filters.resultType

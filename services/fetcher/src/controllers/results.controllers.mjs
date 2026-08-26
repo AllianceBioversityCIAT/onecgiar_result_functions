@@ -14,8 +14,12 @@ router.get("/", async (req, res) => {
   const page = query("page", Number);
   const size = query("size", Number);
   const year = query("year", Number);
+  // Not upper-cased: the stored acronyms are mixed case ("Bioversity (Alliance)",
+  // "WorldFish", "AfricaRice"), and the filter matches them case-insensitively in the
+  // service. Upper-casing here used to make those centres unreachable — see
+  // centerAcronymClause.
   const centerAcronym = query("centerAcronym", (value) =>
-    arrayFormat(value).map((item) => item.toUpperCase()),
+    arrayFormat(value).map((item) => String(item).trim()),
   );
   const resultCode = query("resultCode", (value) =>
     arrayFormat(value).map((item) => item.toUpperCase()),
