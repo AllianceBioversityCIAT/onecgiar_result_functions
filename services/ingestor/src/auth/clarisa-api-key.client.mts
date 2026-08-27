@@ -52,22 +52,89 @@ function trimTrailingSlashes(value: string) {
   return value.replace(/\/+$/, "");
 }
 
+/**
+ * Never log a credential. The last four characters are enough for a producer to
+ * confirm which key they sent when they ask why they got a 401.
+ */
+function maskKey(apiKey: string) {
+  return apiKey.length <= 4 ? "****" : `****${apiKey.slice(-4)}`;
+}
+
+/**
+ * One line per validation, whatever the outcome, so CloudWatch shows the hop
+ * happened and how it went. Grep `[clarisa-auth]` to see every decision.
+ */
+function logOutcome(
+  outcome: ApiKeyValidation,
+  meta: { key: string; startedAt: number; host?: string; requestId?: string }
+) {
+  const fields = [
+    `outcome=${outcome.status}`,
+    `key=${meta.key}`,
+    `ms=${Date.now() - meta.startedAt}`,
+    meta.host ? `host=${meta.host}` : "",
+    meta.requestId ? `requestId=${meta.requestId}` : "",
+    outcome.status === "valid" && outcome.mis
+      ? `mis=${outcome.mis.acronym || outcome.mis.name}(${outcome.mis.id})`
+      : "",
+    outcome.status === "valid" && outcome.environment
+      ? `environment=${outcome.environment}`
+      : "",
+    outcome.status === "unavailable" ? `reason=${outcome.reason}` : "",
+  ].filter(Boolean);
+
+  const line = `[clarisa-auth] ${fields.join(" ")}`;
+  if (outcome.status === "valid") console.log(line);
+  else if (outcome.status === "invalid") console.warn(line);
+  else console.error(line);
+}
+
+function hostOf(baseUrl: string) {
+  try {
+    return new URL(baseUrl).host;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function validateApiKey(
   apiKey: string,
-  context: { ipAddress?: string } = {}
+  context: { ipAddress?: string; requestId?: string } = {}
 ): Promise<ApiKeyValidation> {
+  const startedAt = Date.now();
   const baseUrl = trimTrailingSlashes(process.env.CLA_VALIDATE_URL ?? "");
+  const meta = {
+    key: maskKey(apiKey),
+    startedAt,
+    host: hostOf(baseUrl),
+    requestId: context.requestId,
+  };
 
   if (!baseUrl) {
     if (!missingUrlReported) {
       missingUrlReported = true;
       console.error(
-        "[ClarisaApiKeyClient] CLA_VALIDATE_URL is not configured. Every bulk request will be rejected with 503 until it is set."
+        "[clarisa-auth] CLA_VALIDATE_URL is not configured. Every bulk request will be rejected with 503 until it is set."
       );
     }
-    return { status: "unavailable", reason: "cla_validate_url_missing" };
+    const outcome: ApiKeyValidation = {
+      status: "unavailable",
+      reason: "cla_validate_url_missing",
+    };
+    logOutcome(outcome, meta);
+    return outcome;
   }
 
+  const outcome = await callClarisa(apiKey, baseUrl, context);
+  logOutcome(outcome, meta);
+  return outcome;
+}
+
+async function callClarisa(
+  apiKey: string,
+  baseUrl: string,
+  context: { ipAddress?: string }
+): Promise<ApiKeyValidation> {
   const payload = {
     api_key: apiKey,
     microservice_name: MICROSERVICE_NAME,
@@ -117,16 +184,10 @@ export async function validateApiKey(
     // Anything else means CLARISA is unusable, including a 4xx caused by us
     // building a bad request. Never a rejection of the caller's key: that would
     // blame them for our bug.
-    console.warn(
-      `[ClarisaApiKeyClient] Unusable validation response: ${response.status} ${response.statusText}`
-    );
     return { status: "unavailable", reason: `http_${response.status}` };
   } catch (error: any) {
     const reason = error?.name === "AbortError" ? "timeout" : "transport_error";
-    console.warn(
-      `[ClarisaApiKeyClient] API key validation failed: ${reason}`,
-      error?.message
-    );
+    console.warn(`[clarisa-auth] transport failure: ${error?.message}`);
     return { status: "unavailable", reason };
   } finally {
     clearTimeout(timeoutId);

@@ -96,9 +96,20 @@ function getSourceIp(event: any) {
   return ctx?.identity?.sourceIp ?? ctx?.http?.sourceIp ?? undefined;
 }
 
+// The id a producer can quote to support when a request is rejected.
+function getRequestId(event: any) {
+  return (
+    getHeader(event?.headers, "x-amzn-trace-id") ??
+    event?.requestContext?.requestId
+  );
+}
+
 export const handler = async (event: any) => {
   const apiKey = getApiKey(event.headers);
   if (!apiKey) {
+    console.warn(
+      `[clarisa-auth] outcome=missing_header requestId=${getRequestId(event)}`
+    );
     return {
       statusCode: 401,
       headers: { "content-type": "application/json" },
@@ -112,14 +123,13 @@ export const handler = async (event: any) => {
   // replace that check, it just refuses the work up front.
   const validation = await validateApiKey(apiKey, {
     ipAddress: getSourceIp(event),
+    requestId: getRequestId(event),
   });
 
   if (validation.status === "unavailable") {
     // CLARISA could not answer. The key may well be fine, so this is retryable
-    // and must not be reported as an authentication failure.
-    console.error(
-      `[ingestor] API key validation unavailable: ${validation.reason}`
-    );
+    // and must not be reported as an authentication failure. The client already
+    // logged the outcome and the reason.
     return {
       statusCode: 503,
       headers: { "content-type": "application/json", "retry-after": "30" },
