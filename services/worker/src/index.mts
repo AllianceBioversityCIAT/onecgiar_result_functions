@@ -30,6 +30,9 @@ const FAILURES_PREFIX =
 const DETAIL_READ_CONCURRENCY = Number(
   process.env.DETAIL_READ_CONCURRENCY || "25"
 );
+const SUMMARY_WRITE_ATTEMPTS = Number(process.env.SUMMARY_WRITE_ATTEMPTS || "6");
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function log(level: "debug" | "info" | "warn" | "error", ...args: unknown[]) {
   const order = { debug: 0, info: 1, warn: 2, error: 3 } as const;
@@ -83,7 +86,6 @@ type JobSummary = {
   successDetailsLocation?: DetailsLocation;
   failureDetailsLocation?: DetailsLocation;
 };
-type SummaryDelta = { success: number; failures: FailureDetail[] };
 
 async function getChunkFromEvent(
   record: any
@@ -160,7 +162,12 @@ function getSummaryKey(jobId: string) {
   return `${SUMMARIES_PREFIX}${jobId}/summary.json`;
 }
 
-async function getJobSummary(bucket: string, jobId: string): Promise<JobSummary> {
+// The ETag comes back with the summary so the write can be made conditional on
+// nobody else having touched it in between.
+async function getJobSummary(
+  bucket: string,
+  jobId: string
+): Promise<{ summary: JobSummary; etag?: string }> {
   const key = getSummaryKey(jobId);
   try {
     const obj = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
@@ -173,31 +180,37 @@ async function getJobSummary(bucket: string, jobId: string): Promise<JobSummary>
     parsed.failuresDetail = Array.isArray(parsed.failuresDetail)
       ? parsed.failuresDetail
       : [];
-    return parsed;
+    return { summary: parsed, etag: obj.ETag };
   } catch (err: any) {
     const status = err?.$metadata?.httpStatusCode;
     if (status === 404 || err?.name === "NoSuchKey") {
       const nowIso = new Date().toISOString();
       return {
-        jobId,
-        status: "running",
-        total: 0,
-        processed: 0,
-        successCount: 0,
-        failureCount: 0,
-        failuresDetail: [],
-        createdAt: nowIso,
-        updatedAt: nowIso,
+        summary: {
+          jobId,
+          status: "running",
+          total: 0,
+          processed: 0,
+          successCount: 0,
+          failureCount: 0,
+          failuresDetail: [],
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        },
       };
     }
     throw err;
   }
 }
 
+// Conditional write: IfMatch when the summary already exists, IfNoneMatch when
+// we believe we are creating it. A concurrent writer makes S3 answer 412 and
+// the caller recomputes instead of overwriting fresher state.
 async function saveJobSummary(
   bucket: string,
   jobId: string,
-  summary: JobSummary
+  summary: JobSummary,
+  etag?: string
 ): Promise<void> {
   // Clean legacy field to avoid duplicate keys
   if ((summary as any).failureSamples) delete (summary as any).failureSamples;
@@ -208,92 +221,150 @@ async function saveJobSummary(
       Key: key,
       Body: JSON.stringify(summary, null, 2),
       ContentType: "application/json",
+      ...(etag ? { IfMatch: etag } : { IfNoneMatch: "*" }),
     })
   );
   log("debug", `Summary saved for job ${jobId} at ${key}`);
 }
 
-async function applySummaryDelta(
+function isPreconditionFailure(err: any) {
+  const status = err?.$metadata?.httpStatusCode;
+  return (
+    status === 412 ||
+    status === 409 ||
+    err?.name === "PreconditionFailed" ||
+    err?.name === "ConditionalRequestConflict"
+  );
+}
+
+// The per-chunk objects under successes/ and failures/ are the source of truth
+// for the job state: one object per chunk, named after the chunk, written
+// idempotently. Counting them survives both concurrent workers and SQS
+// redelivery, which the previous read-increment-write scheme did not.
+async function computeJobState(bucket: string, jobId: string) {
+  const [successKeys, failureKeys] = await Promise.all([
+    listDetailKeys(bucket, `${SUCCESSES_PREFIX}${jobId}/`),
+    listDetailKeys(bucket, `${FAILURES_PREFIX}${jobId}/`),
+  ]);
+
+  const partOf = (key: string) => key.split("/").pop() as string;
+  const successParts = new Set(successKeys.map(partOf));
+  // A chunk that failed and then succeeded on redelivery counts once, as success.
+  const failureParts = new Set(
+    failureKeys.map(partOf).filter((part) => !successParts.has(part))
+  );
+
+  return {
+    successParts,
+    failureParts,
+    successCount: successParts.size,
+    failureCount: failureParts.size,
+    processed: successParts.size + failureParts.size,
+  };
+}
+
+// Recomputes the whole state from those objects and writes it conditionally.
+// Nothing is incremented, so a retry after a lost race is always safe.
+async function refreshJobSummary(
   bucket: string,
   jobId: string,
-  delta: SummaryDelta
+  newSamples: FailureDetail[]
 ): Promise<void> {
-  try {
-    const nowIso = new Date().toISOString();
-    const summary = await getJobSummary(bucket, jobId);
+  for (let attempt = 1; attempt <= SUMMARY_WRITE_ATTEMPTS; attempt++) {
+    try {
+      const nowIso = new Date().toISOString();
+      const { summary, etag } = await getJobSummary(bucket, jobId);
+      const state = await computeJobState(bucket, jobId);
 
-    const successDelta = delta.success ?? 0;
-    const failureDelta = delta.failures?.length ?? 0;
+      summary.successCount = state.successCount;
+      summary.failureCount = state.failureCount;
+      summary.processed = state.processed;
 
-    summary.successCount = (summary.successCount || 0) + successDelta;
-    summary.failureCount = (summary.failureCount || 0) + failureDelta;
-    summary.processed = (summary.successCount || 0) + (summary.failureCount || 0);
-
-    // Normalize legacy failureSamples -> failuresDetail
-    if (!summary.failuresDetail && Array.isArray((summary as any).failureSamples)) {
-      summary.failuresDetail = (summary as any).failureSamples;
-    }
-
-    const existingSamples = Array.isArray(summary.failuresDetail)
-      ? summary.failuresDetail
-      : [];
-    const newSamples = delta.failures ?? [];
-
-    summary.failuresDetail = [...newSamples, ...existingSamples].slice(
-      0,
-      SUMMARY_FAILURE_SAMPLE_LIMIT
-    );
-
-    summary.total = Number(summary.total || 0);
-    summary.createdAt = summary.createdAt || nowIso;
-    summary.updatedAt = nowIso;
-
-    summary.successesPrefix = `${SUCCESSES_PREFIX}${jobId}/`;
-    summary.failuresPrefix = `${FAILURES_PREFIX}${jobId}/`;
-
-    const totalKnown = Number.isFinite(summary.total) && summary.total > 0;
-    if (totalKnown && summary.processed >= summary.total) {
-      summary.status =
-        summary.failureCount > 0 ? "partial_failed" : "succeeded";
-
-      try {
-        summary.successDetailsLocation = await consolidateDetails(
-          bucket,
-          jobId,
-          SUCCESSES_PREFIX,
-          "success-details.json"
-        );
-        summary.failureDetailsLocation = await consolidateDetails(
-          bucket,
-          jobId,
-          FAILURES_PREFIX,
-          "failure-details.json"
-        );
-      } catch (err: any) {
-        // The per-chunk prefixes stay readable, so reconciliation is still
-        // possible without the consolidated files.
-        log(
-          "error",
-          `Failed to consolidate details for job ${jobId}:`,
-          err?.message || err
-        );
+      // Sample kept for convenience, deduped by chunk so a redelivery does not
+      // add the same failure twice. The full list lives in failure-details.json.
+      const existingSamples = Array.isArray(summary.failuresDetail)
+        ? summary.failuresDetail
+        : [];
+      const seen = new Set<string>();
+      const mergedSamples: FailureDetail[] = [];
+      for (const sample of [...newSamples, ...existingSamples]) {
+        const id = sample?.key || sample?.messageId;
+        if (id) {
+          if (seen.has(id)) continue;
+          seen.add(id);
+        }
+        mergedSamples.push(sample);
       }
-    } else if (!summary.status) {
-      summary.status = "running";
+      summary.failuresDetail = mergedSamples.slice(
+        0,
+        SUMMARY_FAILURE_SAMPLE_LIMIT
+      );
+
+      summary.total = Number(summary.total || 0);
+      summary.createdAt = summary.createdAt || nowIso;
+      summary.updatedAt = nowIso;
+
+      summary.successesPrefix = `${SUCCESSES_PREFIX}${jobId}/`;
+      summary.failuresPrefix = `${FAILURES_PREFIX}${jobId}/`;
+
+      const totalKnown = Number.isFinite(summary.total) && summary.total > 0;
+      if (totalKnown && summary.processed >= summary.total) {
+        summary.status =
+          summary.failureCount > 0 ? "partial_failed" : "succeeded";
+
+        try {
+          // Consolidated from the same sets the counters came from, so the file
+          // can never be published as final while a chunk is still missing.
+          summary.successDetailsLocation = await consolidateDetails(
+            bucket,
+            jobId,
+            SUCCESSES_PREFIX,
+            "success-details.json",
+            state.successParts
+          );
+          summary.failureDetailsLocation = await consolidateDetails(
+            bucket,
+            jobId,
+            FAILURES_PREFIX,
+            "failure-details.json",
+            state.failureParts
+          );
+        } catch (err: any) {
+          // The per-chunk prefixes stay readable, so reconciliation is still
+          // possible without the consolidated files.
+          log(
+            "error",
+            `Failed to consolidate details for job ${jobId}:`,
+            err?.message || err
+          );
+        }
+      } else if (!summary.status) {
+        summary.status = "running";
+      }
+
+      log(
+        "info",
+        `Updating summary for job=${jobId} in bucket=${bucket} -> status=${summary.status}, total=${summary.total}, processed=${summary.processed}, success=${summary.successCount}, failures=${summary.failureCount}`
+      );
+
+      await saveJobSummary(bucket, jobId, summary, etag);
+      return;
+    } catch (err: any) {
+      if (isPreconditionFailure(err) && attempt < SUMMARY_WRITE_ATTEMPTS) {
+        log(
+          "debug",
+          `Summary for job ${jobId} changed while updating, recomputing (attempt ${attempt})`
+        );
+        await sleep(25 * attempt + Math.floor(Math.random() * 25));
+        continue;
+      }
+      log(
+        "error",
+        `Failed to update summary for job ${jobId}:`,
+        err?.message || err
+      );
+      return;
     }
-
-    log(
-      "info",
-      `Updating summary for job=${jobId} in bucket=${bucket} -> status=${summary.status}, total=${summary.total}, processed=${summary.processed}, success=${summary.successCount}, failures=${summary.failureCount}`
-    );
-
-    await saveJobSummary(bucket, jobId, summary);
-  } catch (err: any) {
-    log(
-      "error",
-      `Failed to update summary for job ${jobId}:`,
-      err?.message || err
-    );
   }
 }
 
@@ -415,9 +486,15 @@ async function consolidateDetails(
   bucket: string,
   jobId: string,
   prefix: string,
-  outName: string
+  outName: string,
+  allowedParts?: Set<string>
 ): Promise<DetailsLocation | undefined> {
-  const keys = await listDetailKeys(bucket, `${prefix}${jobId}/`);
+  const allKeys = await listDetailKeys(bucket, `${prefix}${jobId}/`);
+  // Same filter the counters used, so a chunk that failed and later succeeded
+  // is not reported on both sides.
+  const keys = allowedParts
+    ? allKeys.filter((k) => allowedParts.has(k.split("/").pop() as string))
+    : allKeys;
   const records: any[] = [];
 
   for (let i = 0; i < keys.length; i += DETAIL_READ_CONCURRENCY) {
@@ -494,16 +571,18 @@ async function saveErrorToS3(
 
 export const handler = async (event: any) => {
   const failures: Array<{ itemIdentifier: string }> = [];
-  const summaryDeltas = new Map<
+  // Jobs this batch touched. Counters are no longer accumulated here: they are
+  // recomputed from the per-chunk objects. This only tracks which jobs need a
+  // refresh, and the failure samples to surface in the summary.
+  const touchedJobs = new Map<
     string,
-    { bucket: string; success: number; failures: FailureDetail[] }
+    { bucket: string; samples: FailureDetail[] }
   >();
   log("info", `SQS batch received: ${event.Records?.length || 0} messages`);
 
-  const ensureDelta = (jobId: string, bucket: string) => {
-    if (!summaryDeltas.has(jobId))
-      summaryDeltas.set(jobId, { bucket, success: 0, failures: [] });
-    return summaryDeltas.get(jobId)!;
+  const touchJob = (jobId: string, bucket: string) => {
+    if (!touchedJobs.has(jobId)) touchedJobs.set(jobId, { bucket, samples: [] });
+    return touchedJobs.get(jobId)!;
   };
 
   for (const record of event.Records ?? []) {
@@ -592,10 +671,7 @@ export const handler = async (event: any) => {
         buildSuccessDetail(parsedBody, chunkData.chunk, key, messageId)
       );
 
-      if (jobId !== "unknown-job") {
-        const delta = ensureDelta(jobId, bucket);
-        delta.success += 1;
-      }
+      if (jobId !== "unknown-job") touchJob(jobId, bucket);
     } catch (err: any) {
       log("error", `Error processing ${messageId}:`, err?.message || err);
 
@@ -613,8 +689,7 @@ export const handler = async (event: any) => {
       await saveDetail(bucket, FAILURES_PREFIX, jobId, key, failureDetail);
 
       if (jobId !== "unknown-job") {
-        const delta = ensureDelta(jobId, bucket);
-        delta.failures.push({ ...failureDetail, payload });
+        touchJob(jobId, bucket).samples.push({ ...failureDetail, payload });
       }
 
       failures.push({ itemIdentifier: messageId });
@@ -624,13 +699,10 @@ export const handler = async (event: any) => {
   if (failures.length) log("warn", `Failed messages: ${failures.length}`);
   else log("info", "Batch processed successfully.");
 
-  if (summaryDeltas.size) {
+  if (touchedJobs.size) {
     await Promise.all(
-      [...summaryDeltas.entries()].map(([jobId, delta]) =>
-        applySummaryDelta(delta.bucket || BUCKET, jobId, {
-          success: delta.success,
-          failures: delta.failures,
-        })
+      [...touchedJobs.entries()].map(([jobId, job]) =>
+        refreshJobSummary(job.bucket || BUCKET, jobId, job.samples)
       )
     );
   }
