@@ -100,7 +100,7 @@ export const handler = async (event: any) => {
     new PutObjectCommand({
       Bucket: BUCKET,
       Key: key,
-      Body: Buffer.from(JSON.stringify(items)),
+      Body: Buffer.from(JSON.stringify({ apiKey, results: items })),
       ContentType: "application/json",
     })
   );

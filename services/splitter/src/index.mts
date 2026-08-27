@@ -88,6 +88,12 @@ export const handler = async (event: any): Promise<void> => {
       );
     }
 
+    // 2b) API key travels with the job so the worker can forward it
+    const apiKey =
+      !Array.isArray(parsed) && parsed && typeof parsed === "object"
+        ? (parsed as any).apiKey
+        : undefined;
+
     // 3) jobId from raw/<jobId>.json
     const jobId = (key.split("/")[1] || "job").replace(/\.json$/i, "");
 
@@ -103,7 +109,9 @@ export const handler = async (event: any): Promise<void> => {
         new PutObjectCommand({
           Bucket: bucket,
           Key: outKey,
-          Body: Buffer.from(JSON.stringify(item)),
+          Body: Buffer.from(
+            JSON.stringify(apiKey ? { apiKey, result: item } : item)
+          ),
           ContentType: "application/json",
         })
       );
