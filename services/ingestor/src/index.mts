@@ -69,7 +69,25 @@ async function getSummaryIfChanged(
   return { etag, data };
 }
 
+function getHeader(headers: any, name: string) {
+  if (!headers) return undefined;
+  const target = name.toLowerCase();
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === target) return value as string | undefined;
+  }
+  return undefined;
+}
+
 export const handler = async (event: any) => {
+  const apiKey = getHeader(event.headers, "x-api-key");
+  if (!apiKey || String(apiKey).trim() === "") {
+    return {
+      statusCode: 401,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: "Missing x-api-key header" }),
+    };
+  }
+
   const body =
     typeof event.body === "string"
       ? event.body
