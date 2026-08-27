@@ -15,6 +15,11 @@ const CHUNKS_PREFIX =
 const SUMMARIES_PREFIX =
   (process.env.SUMMARIES_PREFIX || "summaries/").replace(/^\/+|\/+$/g, "") +
   "/";
+const SUCCESSES_PREFIX =
+  (process.env.SUCCESSES_PREFIX || "successes/").replace(/^\/+|\/+$/g, "") +
+  "/";
+const FAILURES_PREFIX =
+  (process.env.FAILURES_PREFIX || "failures/").replace(/^\/+|\/+$/g, "") + "/";
 
 async function streamToString(stream: any): Promise<string> {
   const src = stream instanceof Readable ? stream : Readable.fromWeb(stream);
@@ -41,6 +46,8 @@ function buildInitialSummary(
     bucket,
     rawKey,
     chunksPrefix: `${CHUNKS_PREFIX}${jobId}/`,
+    successesPrefix: `${SUCCESSES_PREFIX}${jobId}/`,
+    failuresPrefix: `${FAILURES_PREFIX}${jobId}/`,
     createdAt: nowIso,
     updatedAt: nowIso,
   };
