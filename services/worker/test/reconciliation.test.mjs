@@ -199,7 +199,7 @@ function keysUnder(prefix) {
 
 // --- tests -----------------------------------------------------------------
 
-test("exito total: cada external_reference queda correlacionado con su result_code", async () => {
+test("full success: every external_reference is paired with its result_code", async () => {
   const jobId = "job-success";
   seedJob(jobId, 3);
   const refs = ["ABC-001", "ABC-002", "ABC-003"];
@@ -250,7 +250,7 @@ test("exito total: cada external_reference queda correlacionado con su result_co
   assert.deepEqual(failures.results, []);
 });
 
-test("partial_failed: exitos y fallos completos, y la suma reconcilia con total", async () => {
+test("partial_failed: complete success and failure detail, and both add up to total", async () => {
   const jobId = "job-partial";
   seedJob(jobId, 3);
   const refs = ["ABC-001", "ABC-002", "ABC-003"];
@@ -288,7 +288,7 @@ test("partial_failed: exitos y fallos completos, y la suma reconcilia con total"
   assert.equal(failed.payload, undefined);
 });
 
-test("fallo total: successCount 0 y detalle completo de fallos", async () => {
+test("total failure: successCount 0 and complete failure detail", async () => {
   const jobId = "job-failed";
   seedJob(jobId, 2);
   const refs = ["ABC-001", "ABC-002"];
@@ -316,7 +316,7 @@ test("fallo total: successCount 0 y detalle completo de fallos", async () => {
   );
 });
 
-test("redelivery: reprocesar el mismo chunk no duplica el detalle", async () => {
+test("redelivery: reprocessing the same chunk does not duplicate the detail", async () => {
   const jobId = "job-redelivery";
   seedJob(jobId, 1);
   const key = seedChunk(jobId, 1, "ABC-001");
@@ -335,7 +335,7 @@ test("redelivery: reprocesar el mismo chunk no duplica el detalle", async () => 
   assert.equal(details.results[0].external_reference, "ABC-001");
 });
 
-test("redelivery de un fallo: un solo registro por chunk", async () => {
+test("redelivery of a failure: one record per chunk", async () => {
   const jobId = "job-redelivery-failure";
   seedJob(jobId, 1);
   const key = seedChunk(jobId, 1, "ABC-099");
@@ -353,7 +353,7 @@ test("redelivery de un fallo: un solo registro por chunk", async () => {
   assert.equal(failures.results[0].external_reference, "ABC-099");
 });
 
-test("summary viejo sin campos nuevos: se completa sin romper", async () => {
+test("legacy summary without the new fields: filled in without breaking", async () => {
   const jobId = "job-legacy";
   // summary written before this feature existed
   store.set(
