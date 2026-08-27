@@ -5,6 +5,7 @@ import {
   GetObjectCommand,
 } from "@aws-sdk/client-s3";
 import crypto from "node:crypto";
+import { validateApiKey } from "./auth/clarisa-api-key.client.mjs";
 
 const s3 = new S3Client({});
 const BUCKET = process.env.BUCKET || "my-bulk-pipeline";
@@ -78,13 +79,61 @@ function getHeader(headers: any, name: string) {
   return undefined;
 }
 
+// A repeated header reaches us as an array (REST v1 multiValueHeaders) or joined
+// by commas (HTTP v2 collapses duplicates). Taking the first value keeps
+// "key1,key2" from being sent to CLARISA as if it were one key.
+function getApiKey(headers: any) {
+  const raw = getHeader(headers, "x-api-key");
+  const first = Array.isArray(raw) ? raw[0] : raw;
+  return typeof first === "string" ? first.split(",")[0].trim() : undefined;
+}
+
+function getSourceIp(event: any) {
+  const forwardedFor = getHeader(event?.headers, "x-forwarded-for");
+  if (typeof forwardedFor === "string" && forwardedFor)
+    return forwardedFor.split(",")[0].trim();
+  const ctx = event?.requestContext;
+  return ctx?.identity?.sourceIp ?? ctx?.http?.sourceIp ?? undefined;
+}
+
 export const handler = async (event: any) => {
-  const apiKey = getHeader(event.headers, "x-api-key");
-  if (!apiKey || String(apiKey).trim() === "") {
+  const apiKey = getApiKey(event.headers);
+  if (!apiKey) {
     return {
       statusCode: 401,
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ message: "Missing x-api-key header" }),
+    };
+  }
+
+  // Fail fast at the edge: an invalid key would otherwise be accepted with a 202
+  // and only surface as a failed job after the whole pipeline had run. The
+  // Fetcher still validates every request the worker sends; this does not
+  // replace that check, it just refuses the work up front.
+  const validation = await validateApiKey(apiKey, {
+    ipAddress: getSourceIp(event),
+  });
+
+  if (validation.status === "unavailable") {
+    // CLARISA could not answer. The key may well be fine, so this is retryable
+    // and must not be reported as an authentication failure.
+    console.error(
+      `[ingestor] API key validation unavailable: ${validation.reason}`
+    );
+    return {
+      statusCode: 503,
+      headers: { "content-type": "application/json", "retry-after": "30" },
+      body: JSON.stringify({
+        message: "Authentication service unavailable. Retry later.",
+      }),
+    };
+  }
+
+  if (validation.status !== "valid") {
+    return {
+      statusCode: 401,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: "Invalid x-api-key" }),
     };
   }
 
