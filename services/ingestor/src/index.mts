@@ -92,7 +92,29 @@ export const handler = async (event: any) => {
     typeof event.body === "string"
       ? event.body
       : JSON.stringify(event.body ?? "[]");
-  const items = JSON.parse(body);
+  const parsedBody = JSON.parse(body);
+  // Accept both a bare array and an envelope with results
+  const items = Array.isArray(parsedBody)
+    ? parsedBody
+    : Array.isArray(parsedBody?.results)
+      ? parsedBody.results
+      : null;
+
+  if (!items) {
+    return {
+      statusCode: 400,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        message: "Body must be an array of results or an object with a results array",
+      }),
+    };
+  }
+
+  // Keep the incoming envelope (tenant, op, ...) and carry the API key with it
+  const rawEnvelope = Array.isArray(parsedBody)
+    ? { apiKey, results: items }
+    : { ...parsedBody, apiKey, results: items };
+
   const jobId = crypto.randomUUID();
   const key = `raw/${jobId}.json`;
 
@@ -100,7 +122,7 @@ export const handler = async (event: any) => {
     new PutObjectCommand({
       Bucket: BUCKET,
       Key: key,
-      Body: Buffer.from(JSON.stringify({ apiKey, results: items })),
+      Body: Buffer.from(JSON.stringify(rawEnvelope)),
       ContentType: "application/json",
     })
   );
