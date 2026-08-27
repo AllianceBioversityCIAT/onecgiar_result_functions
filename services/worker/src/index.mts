@@ -63,7 +63,7 @@ type SummaryDelta = { success: number; failures: FailureDetail[] };
 
 async function getChunkFromEvent(
   record: any
-): Promise<{ chunk: any; key: string; bucket: string }> {
+): Promise<{ chunk: any; apiKey?: string; key: string; bucket: string }> {
   const body = JSON.parse(record.body);
   const s3Event = body?.Records?.[0];
   if (!s3Event) throw new Error("Invalid SQS message (no S3 event)");
@@ -86,7 +86,20 @@ async function getChunkFromEvent(
     throw err;
   }
 
-  return { chunk: parsed, key, bucket };
+  // Chunks carrying an API key are wrapped as { apiKey, result } by the splitter
+  const wrapped =
+    parsed &&
+    typeof parsed === "object" &&
+    !Array.isArray(parsed) &&
+    typeof parsed.apiKey === "string" &&
+    parsed.result !== undefined;
+
+  return {
+    chunk: wrapped ? parsed.result : parsed,
+    apiKey: wrapped ? parsed.apiKey : undefined,
+    key,
+    bucket,
+  };
 }
 
 // Wraps a single object (already normalized) in the envelope required by PRMS
@@ -313,9 +326,16 @@ export const handler = async (event: any) => {
         }`
       );
 
+      if (!chunkData.apiKey) {
+        log("warn", `No API key in chunk ${key}; sending request without x-api-key`);
+      }
+
       const res = await fetchWithTimeout(PRMS_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(chunkData.apiKey ? { "x-api-key": chunkData.apiKey } : {}),
+        },
         body: JSON.stringify(payload),
       });
 
