@@ -2,6 +2,7 @@ import {
   S3Client,
   GetObjectCommand,
   PutObjectCommand,
+  ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 import { Readable } from "node:stream";
 
@@ -20,6 +21,14 @@ const SUMMARIES_PREFIX =
   "/";
 const SUMMARY_FAILURE_SAMPLE_LIMIT = Number(
   process.env.SUMMARY_FAILURE_SAMPLE_LIMIT || "20"
+);
+const SUCCESSES_PREFIX =
+  (process.env.SUCCESSES_PREFIX || "successes/").replace(/^\/+|\/+$/g, "") +
+  "/";
+const FAILURES_PREFIX =
+  (process.env.FAILURES_PREFIX || "failures/").replace(/^\/+|\/+$/g, "") + "/";
+const DETAIL_READ_CONCURRENCY = Number(
+  process.env.DETAIL_READ_CONCURRENCY || "25"
 );
 
 function log(level: "debug" | "info" | "warn" | "error", ...args: unknown[]) {
@@ -44,7 +53,18 @@ type FailureDetail = {
   reason: string;
   key?: string;
   payload?: any;
+  external_reference?: string | null;
+  type?: string;
 };
+type SuccessDetail = {
+  messageId: string;
+  key: string;
+  external_reference: string | null;
+  result_code: number | null;
+  result_id?: number;
+  type?: string;
+};
+type DetailsLocation = { bucket: string; key: string };
 type JobSummary = {
   jobId: string;
   status: string;
@@ -58,6 +78,10 @@ type JobSummary = {
   bucket?: string;
   rawKey?: string;
   chunksPrefix?: string;
+  successesPrefix?: string;
+  failuresPrefix?: string;
+  successDetailsLocation?: DetailsLocation;
+  failureDetailsLocation?: DetailsLocation;
 };
 type SummaryDelta = { success: number; failures: FailureDetail[] };
 
@@ -224,10 +248,36 @@ async function applySummaryDelta(
     summary.createdAt = summary.createdAt || nowIso;
     summary.updatedAt = nowIso;
 
+    summary.successesPrefix = `${SUCCESSES_PREFIX}${jobId}/`;
+    summary.failuresPrefix = `${FAILURES_PREFIX}${jobId}/`;
+
     const totalKnown = Number.isFinite(summary.total) && summary.total > 0;
     if (totalKnown && summary.processed >= summary.total) {
       summary.status =
         summary.failureCount > 0 ? "partial_failed" : "succeeded";
+
+      try {
+        summary.successDetailsLocation = await consolidateDetails(
+          bucket,
+          jobId,
+          SUCCESSES_PREFIX,
+          "success-details.json"
+        );
+        summary.failureDetailsLocation = await consolidateDetails(
+          bucket,
+          jobId,
+          FAILURES_PREFIX,
+          "failure-details.json"
+        );
+      } catch (err: any) {
+        // The per-chunk prefixes stay readable, so reconciliation is still
+        // possible without the consolidated files.
+        log(
+          "error",
+          `Failed to consolidate details for job ${jobId}:`,
+          err?.message || err
+        );
+      }
     } else if (!summary.status) {
       summary.status = "running";
     }
@@ -245,6 +295,160 @@ async function applySummaryDelta(
       err?.message || err
     );
   }
+}
+
+// --- Reconciliation details ------------------------------------------------
+// One object per chunk, so a redelivery overwrites its own record instead of
+// appending a duplicate. The key mirrors the chunk that produced it:
+//   chunks/<jobId>/part-00001.json -> successes|failures/<jobId>/part-00001.json
+function getDetailKey(prefix: string, jobId: string, chunkKey: string) {
+  const part = chunkKey.split("/").pop();
+  return `${prefix}${jobId}/${part || "unknown.json"}`;
+}
+
+function getConsolidatedKey(jobId: string, name: string) {
+  return `${SUMMARIES_PREFIX}${jobId}/${name}`;
+}
+
+// Pulls what PRMS echoed back for the single result carried by this chunk.
+// Nothing is invented: a field the response does not carry stays null, except
+// external_reference, which falls back to the value we sent in the chunk.
+function buildSuccessDetail(
+  parsedBody: any,
+  chunk: any,
+  key: string,
+  messageId: string
+): SuccessDetail {
+  const row = parsedBody?.results?.[0] ?? {};
+  const enriched = row?.result ?? {};
+  const sent = chunk?.data ?? chunk ?? {};
+
+  const externalReference =
+    row.external_reference ??
+    enriched.external_reference ??
+    enriched.data?.external_reference ??
+    sent.external_reference ??
+    null;
+  const resultCode = enriched.result_code ?? row.result_code ?? null;
+  const resultId = enriched.result_id ?? row.result_id;
+  const type = row.resultType ?? enriched.type ?? chunk?.type;
+
+  return {
+    messageId,
+    key,
+    external_reference: externalReference,
+    result_code: resultCode,
+    ...(resultId !== undefined ? { result_id: resultId } : {}),
+    ...(type !== undefined ? { type } : {}),
+  };
+}
+
+// Compact record for reconciliation. The full payload stays out of it: it is
+// already kept by saveErrorToS3 under errors/<jobId>/.
+function buildFailureDetail(
+  messageId: string,
+  reason: string,
+  key: string,
+  payload: any
+): FailureDetail {
+  const sent = payload?.results?.[0] ?? {};
+  const data = sent?.data ?? sent ?? {};
+  return {
+    messageId,
+    reason,
+    key,
+    external_reference: data?.external_reference ?? null,
+    ...(sent?.type !== undefined ? { type: sent.type } : {}),
+  };
+}
+
+async function saveDetail(
+  bucket: string,
+  prefix: string,
+  jobId: string,
+  chunkKey: string,
+  detail: SuccessDetail | FailureDetail
+) {
+  if (jobId === "unknown-job" || !chunkKey) {
+    log("warn", `Skipping detail record (jobId=${jobId}, key=${chunkKey})`);
+    return;
+  }
+  const key = getDetailKey(prefix, jobId, chunkKey);
+  try {
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: JSON.stringify(detail),
+        ContentType: "application/json",
+      })
+    );
+    log("debug", `Detail saved at ${key}`);
+  } catch (err: any) {
+    // Reconciliation is best-effort: never fail a message that PRMS accepted,
+    // a redelivery would post it twice.
+    log("error", `Failed to save detail ${key}:`, err?.message || err);
+  }
+}
+
+async function listDetailKeys(bucket: string, prefix: string) {
+  const keys: string[] = [];
+  let token: string | undefined;
+  do {
+    const page: any = await s3.send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: prefix,
+        ContinuationToken: token,
+      })
+    );
+    for (const obj of page?.Contents ?? []) if (obj?.Key) keys.push(obj.Key);
+    token = page?.IsTruncated ? page?.NextContinuationToken : undefined;
+  } while (token);
+  return keys.sort();
+}
+
+// Compacts the per-chunk objects into a single file next to summary.json.
+// The per-chunk prefix stays the source of truth; `count` lets a consumer
+// check this file against the summary counters.
+async function consolidateDetails(
+  bucket: string,
+  jobId: string,
+  prefix: string,
+  outName: string
+): Promise<DetailsLocation | undefined> {
+  const keys = await listDetailKeys(bucket, `${prefix}${jobId}/`);
+  const records: any[] = [];
+
+  for (let i = 0; i < keys.length; i += DETAIL_READ_CONCURRENCY) {
+    const batch = keys.slice(i, i + DETAIL_READ_CONCURRENCY);
+    const parsed = await Promise.all(
+      batch.map(async (key) => {
+        try {
+          const obj = await s3.send(
+            new GetObjectCommand({ Bucket: bucket, Key: key })
+          );
+          return JSON.parse(await streamToString(obj.Body));
+        } catch (err: any) {
+          log("error", `Failed to read detail ${key}:`, err?.message || err);
+          return null;
+        }
+      })
+    );
+    records.push(...parsed.filter((r) => r !== null));
+  }
+
+  const key = getConsolidatedKey(jobId, outName);
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: JSON.stringify({ jobId, count: records.length, results: records }, null, 2),
+      ContentType: "application/json",
+    })
+  );
+  log("info", `Consolidated ${records.length} records at ${key}`);
+  return { bucket, key };
 }
 
 // Save error details to S3
@@ -379,6 +583,15 @@ export const handler = async (event: any) => {
       }
 
       log("info", `PRMS OK for ${key} (message ${messageId})`);
+
+      await saveDetail(
+        bucket,
+        SUCCESSES_PREFIX,
+        jobId,
+        key,
+        buildSuccessDetail(parsedBody, chunkData.chunk, key, messageId)
+      );
+
       if (jobId !== "unknown-job") {
         const delta = ensureDelta(jobId, bucket);
         delta.success += 1;
@@ -391,14 +604,17 @@ export const handler = async (event: any) => {
         await saveErrorToS3(bucket, key, messageId, payload, err);
       }
 
+      const failureDetail = buildFailureDetail(
+        messageId,
+        err?.message || "Unknown error",
+        key,
+        payload
+      );
+      await saveDetail(bucket, FAILURES_PREFIX, jobId, key, failureDetail);
+
       if (jobId !== "unknown-job") {
         const delta = ensureDelta(jobId, bucket);
-        delta.failures.push({
-          messageId,
-          reason: err?.message || "Unknown error",
-          key,
-          payload,
-        });
+        delta.failures.push({ ...failureDetail, payload });
       }
 
       failures.push({ itemIdentifier: messageId });
