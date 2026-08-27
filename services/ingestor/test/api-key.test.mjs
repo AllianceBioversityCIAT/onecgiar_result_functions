@@ -260,6 +260,75 @@ test("x-forwarded-for wins over the request context for the client ip", async ()
   assert.equal(clarisaCalls[0].body.ip_address, "198.51.100.4");
 });
 
+// --- observability -----------------------------------------------------------
+
+function captureConsole(run) {
+  const lines = [];
+  const original = { log: console.log, warn: console.warn, error: console.error };
+  for (const level of ["log", "warn", "error"]) {
+    console[level] = (...args) => lines.push(`${level}: ${args.join(" ")}`);
+  }
+  return run().finally(() => Object.assign(console, original)).then(() => lines);
+}
+
+test("a valid key logs the decision, the platform and the elapsed time", async () => {
+  clarisaImpl = VALID;
+
+  const lines = await captureConsole(() =>
+    handler({
+      ...bulkRequest({ "x-api-key": "star-secret-key-9f2c" }),
+      requestContext: {
+        identity: { sourceIp: "203.0.113.7" },
+        requestId: "req-42",
+      },
+    })
+  );
+
+  const line = lines.find((l) => l.includes("[clarisa-auth]"));
+  assert.ok(line, `no [clarisa-auth] line in:\n${lines.join("\n")}`);
+  assert.match(line, /outcome=valid/);
+  assert.match(line, /mis=STAR\(7\)/);
+  assert.match(line, /environment=TEST/);
+  assert.match(line, /host=clarisa\.test/);
+  assert.match(line, /requestId=req-42/);
+  assert.match(line, /ms=\d+/);
+});
+
+test("the api key is never written to the logs in full", async () => {
+  clarisaImpl = clarisaSays({ valid: false });
+
+  const lines = await captureConsole(() =>
+    handler(bulkRequest({ "x-api-key": "star-secret-key-9f2c" }))
+  );
+
+  const all = lines.join("\n");
+  assert.ok(!all.includes("star-secret-key-9f2c"), `key leaked in:\n${all}`);
+  assert.match(all, /outcome=invalid/);
+  assert.match(all, /key=\*\*\*\*9f2c/);
+});
+
+test("an unavailable CLARISA logs the reason", async () => {
+  clarisaImpl = clarisaThrows("AbortError");
+
+  const lines = await captureConsole(() =>
+    handler(bulkRequest({ "x-api-key": "good-key" }))
+  );
+
+  const line = lines.find((l) => l.includes("outcome=unavailable"));
+  assert.ok(line, `no outcome line in:\n${lines.join("\n")}`);
+  assert.match(line, /reason=timeout/);
+  assert.ok(line.startsWith("error:"), "an outage should be logged at error level");
+});
+
+test("a missing header is logged too, without calling CLARISA", async () => {
+  const lines = await captureConsole(() =>
+    handler(bulkRequest({ "content-type": "application/json" }))
+  );
+
+  assert.ok(lines.some((l) => l.includes("outcome=missing_header")));
+  assert.equal(clarisaCalls.length, 0);
+});
+
 // --- body validation still runs after auth -----------------------------------
 
 test("auth is checked before the body: a bad key on a malformed body is 401, not 400", async () => {
