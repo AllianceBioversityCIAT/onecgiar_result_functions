@@ -15,6 +15,11 @@ const CHUNKS_PREFIX =
 const SUMMARIES_PREFIX =
   (process.env.SUMMARIES_PREFIX || "summaries/").replace(/^\/+|\/+$/g, "") +
   "/";
+const SUCCESSES_PREFIX =
+  (process.env.SUCCESSES_PREFIX || "successes/").replace(/^\/+|\/+$/g, "") +
+  "/";
+const FAILURES_PREFIX =
+  (process.env.FAILURES_PREFIX || "failures/").replace(/^\/+|\/+$/g, "") + "/";
 
 async function streamToString(stream: any): Promise<string> {
   const src = stream instanceof Readable ? stream : Readable.fromWeb(stream);
@@ -41,6 +46,8 @@ function buildInitialSummary(
     bucket,
     rawKey,
     chunksPrefix: `${CHUNKS_PREFIX}${jobId}/`,
+    successesPrefix: `${SUCCESSES_PREFIX}${jobId}/`,
+    failuresPrefix: `${FAILURES_PREFIX}${jobId}/`,
     createdAt: nowIso,
     updatedAt: nowIso,
   };
@@ -88,6 +95,12 @@ export const handler = async (event: any): Promise<void> => {
       );
     }
 
+    // 2b) API key travels with the job so the worker can forward it
+    const apiKey =
+      !Array.isArray(parsed) && parsed && typeof parsed === "object"
+        ? (parsed as any).apiKey
+        : undefined;
+
     // 3) jobId from raw/<jobId>.json
     const jobId = (key.split("/")[1] || "job").replace(/\.json$/i, "");
 
@@ -103,7 +116,9 @@ export const handler = async (event: any): Promise<void> => {
         new PutObjectCommand({
           Bucket: bucket,
           Key: outKey,
-          Body: Buffer.from(JSON.stringify(item)),
+          Body: Buffer.from(
+            JSON.stringify(apiKey ? { apiKey, result: item } : item)
+          ),
           ContentType: "application/json",
         })
       );

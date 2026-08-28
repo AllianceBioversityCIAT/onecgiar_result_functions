@@ -5,6 +5,7 @@ import {
   GetObjectCommand,
 } from "@aws-sdk/client-s3";
 import crypto from "node:crypto";
+import { validateApiKey } from "./auth/clarisa-api-key.client.mjs";
 
 const s3 = new S3Client({});
 const BUCKET = process.env.BUCKET || "my-bulk-pipeline";
@@ -69,12 +70,110 @@ async function getSummaryIfChanged(
   return { etag, data };
 }
 
+function getHeader(headers: any, name: string) {
+  if (!headers) return undefined;
+  const target = name.toLowerCase();
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === target) return value as string | undefined;
+  }
+  return undefined;
+}
+
+// A repeated header reaches us as an array (REST v1 multiValueHeaders) or joined
+// by commas (HTTP v2 collapses duplicates). Taking the first value keeps
+// "key1,key2" from being sent to CLARISA as if it were one key.
+function getApiKey(headers: any) {
+  const raw = getHeader(headers, "x-api-key");
+  const first = Array.isArray(raw) ? raw[0] : raw;
+  return typeof first === "string" ? first.split(",")[0].trim() : undefined;
+}
+
+function getSourceIp(event: any) {
+  const forwardedFor = getHeader(event?.headers, "x-forwarded-for");
+  if (typeof forwardedFor === "string" && forwardedFor)
+    return forwardedFor.split(",")[0].trim();
+  const ctx = event?.requestContext;
+  return ctx?.identity?.sourceIp ?? ctx?.http?.sourceIp ?? undefined;
+}
+
+// The id a producer can quote to support when a request is rejected.
+function getRequestId(event: any) {
+  return (
+    getHeader(event?.headers, "x-amzn-trace-id") ??
+    event?.requestContext?.requestId
+  );
+}
+
 export const handler = async (event: any) => {
+  const apiKey = getApiKey(event.headers);
+  if (!apiKey) {
+    console.warn(
+      `[clarisa-auth] outcome=missing_header requestId=${getRequestId(event)}`
+    );
+    return {
+      statusCode: 401,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: "Missing x-api-key header" }),
+    };
+  }
+
+  // Fail fast at the edge: an invalid key would otherwise be accepted with a 202
+  // and only surface as a failed job after the whole pipeline had run. The
+  // Fetcher still validates every request the worker sends; this does not
+  // replace that check, it just refuses the work up front.
+  const validation = await validateApiKey(apiKey, {
+    ipAddress: getSourceIp(event),
+    requestId: getRequestId(event),
+  });
+
+  if (validation.status === "unavailable") {
+    // CLARISA could not answer. The key may well be fine, so this is retryable
+    // and must not be reported as an authentication failure. The client already
+    // logged the outcome and the reason.
+    return {
+      statusCode: 503,
+      headers: { "content-type": "application/json", "retry-after": "30" },
+      body: JSON.stringify({
+        message: "Authentication service unavailable. Retry later.",
+      }),
+    };
+  }
+
+  if (validation.status !== "valid") {
+    return {
+      statusCode: 401,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: "Invalid x-api-key" }),
+    };
+  }
+
   const body =
     typeof event.body === "string"
       ? event.body
       : JSON.stringify(event.body ?? "[]");
-  const items = JSON.parse(body);
+  const parsedBody = JSON.parse(body);
+  // Accept both a bare array and an envelope with results
+  const items = Array.isArray(parsedBody)
+    ? parsedBody
+    : Array.isArray(parsedBody?.results)
+      ? parsedBody.results
+      : null;
+
+  if (!items) {
+    return {
+      statusCode: 400,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        message: "Body must be an array of results or an object with a results array",
+      }),
+    };
+  }
+
+  // Keep the incoming envelope (tenant, op, ...) and carry the API key with it
+  const rawEnvelope = Array.isArray(parsedBody)
+    ? { apiKey, results: items }
+    : { ...parsedBody, apiKey, results: items };
+
   const jobId = crypto.randomUUID();
   const key = `raw/${jobId}.json`;
 
@@ -82,7 +181,7 @@ export const handler = async (event: any) => {
     new PutObjectCommand({
       Bucket: BUCKET,
       Key: key,
-      Body: Buffer.from(JSON.stringify(items)),
+      Body: Buffer.from(JSON.stringify(rawEnvelope)),
       ContentType: "application/json",
     })
   );
