@@ -19,6 +19,12 @@
       "type": "string",
       "maxLength": 191
     },
+    "keep_editing": {
+      "description": "P2-3428. Create the result in PRMS Reporting as 'editing' instead of 'pending review', so the reporting user completes the non-MDS fields in PRMS and submits it from there. Absent or false keeps the default ('pending review'). Send it per result, inside data: the ingest handler rebuilds the envelope as {tenant, op, jobId, results} and drops top-level extras, so a batch-level flag never reaches validation.",
+      "type": "boolean",
+      "default": false
+    },
+
 
     "result_id": {
       "description": "Identifier of the result in the source system (optional).",

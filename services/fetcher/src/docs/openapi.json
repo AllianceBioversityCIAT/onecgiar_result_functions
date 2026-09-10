@@ -2396,6 +2396,12 @@
             "description": "Your own identifier for this result \u2014 a consecutive number, a UUID, or any string your system already uses. Optional. Stored verbatim in PRMS and returned verbatim on the decision webhook (top-level `external_reference`) and on every row of the ingest response: `results[].external_reference` for a row that was processed (success or failure) and `rejected[].external_reference` for a row rejected before processing. Null when you send none. Lets you map any response or callback back to your record without parsing anything.",
             "example": "STAR-9f2c-4471"
           },
+          "keep_editing": {
+            "type": "boolean",
+            "default": false,
+            "example": false,
+            "description": "Create the result in PRMS Reporting as 'editing' instead of 'pending review', so the reporting user completes the non-MDS fields in PRMS and submits it from there. Absent or false keeps the default ('pending review'). Send it per result, inside `data`: the ingest handler rebuilds the envelope as {tenant, op, jobId, results} and drops top-level extras, so a batch-level flag never reaches validation. A non-boolean is rejected with the row's external_reference."
+          },
           "result_id": {
             "description": "Identifier of the result in the source system (optional)",
             "oneOf": [
