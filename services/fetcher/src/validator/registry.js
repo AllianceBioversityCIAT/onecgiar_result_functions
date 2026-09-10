@@ -1,4 +1,5 @@
 import ajv from "./ajv.js";
+import { validateInnovationUseMds } from "./innovation-use-mds.js";
 import common from "./schemas/common_fields.json" with { type: "json" };
 import kp from "./schemas/knowledge_product.json" with { type: "json" };
 import cs from "./schemas/capacity_sharing.json" with { type: "json" };
@@ -25,6 +26,18 @@ const validators = {
   oc: ajv.compile(oc),
   policy_change: ajv.compile(pc),
   pc: ajv.compile(pc),
+};
+
+/**
+ * Completeness gates that run once a type's schema is satisfied.
+ *
+ * Kept out of the schemas because these are rules about whether a result says enough to be
+ * reported, not about the shape of the JSON — and because expressing "exactly one of a positive
+ * amount or an explicit not-yet-known" in draft-07 produces an error a producer cannot act on.
+ */
+const minimumDataSets = {
+  innovation_use: validateInnovationUseMds,
+  iu: validateInnovationUseMds,
 };
 
 export function validateByType(type, data) {
@@ -68,5 +81,15 @@ export function validateByType(type, data) {
       detailedErrors: errors,
     };
   }
+
+  // Only after the shape holds: the minimum-data-set rules read fields the schema has already
+  // type-checked, and running them on a payload that failed above would bury the real error
+  // under complaints about fields the caller has not written yet.
+  const mds = minimumDataSets[type];
+  if (mds) {
+    const complete = mds(data);
+    if (!complete.ok) return complete;
+  }
+
   return { ok: true, data };
 }

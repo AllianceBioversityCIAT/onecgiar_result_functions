@@ -11,6 +11,22 @@
         "innovation_use": {
           "type": "object",
           "properties": {
+            "innovation_use_level": {
+              "type": "object",
+              "description": "Stage of use being claimed. Required for every innovation use, including one whose numbers are yet to be determined. Provide 'level' if you hold the PRMS code, 'name' if you only have the label.",
+              "properties": {
+                "level": {
+                  "description": "PRMS code for the innovation use level.",
+                  "oneOf": [{ "type": "integer" }, { "type": "string" }]
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Label of the innovation use level, matched by name."
+                }
+              },
+              "additionalProperties": false,
+              "anyOf": [{ "required": ["level"] }, { "required": ["name"] }]
+            },
             "current_innovation_use_numbers": {
               "type": "object",
               "properties": {
@@ -155,32 +171,24 @@
                 },
                 "measures": {
                   "type": "array",
+                  "description": "What the innovation use is counted in. At least one measure must carry both a 'unit_of_measure' and a numeric 'quantity'; a quantity of 0 is a valid answer.",
                   "items": {
                     "type": "object",
                     "properties": {
-                      "unit_of_measure": { "type": "string" },
+                      "unit_of_measure": {
+                        "type": "string",
+                        "description": "Unit the quantity is expressed in, e.g. '# of Innovations' or 'Hectares'."
+                      },
                       "quantity": {
-                        "oneOf": [
-                          { "type": "string" },
-                          { "type": "integer" },
-                          { "type": "number" }
-                        ]
+                        "description": "How much of that unit. Explicitly 0 is accepted; blank or absent is not.",
+                        "$comment": "Not oneOf [string, integer, number]: a whole number matches both 'integer' and 'number', so every integer quantity failed as 'must match exactly one schema in oneOf'. 'number' already covers integers.",
+                        "type": ["string", "number"]
                       }
-                    },
-                    "anyOf": [{ "required": ["unit_of_measure"] }]
+                    }
                   }
                 }
               },
-              "required": ["innov_use_to_be_determined"],
-              "if": {
-                "required": ["innov_use_to_be_determined"],
-                "properties": {
-                  "innov_use_to_be_determined": { "const": false }
-                }
-              },
-              "then": {
-                "required": ["actors"]
-              }
+              "required": ["innov_use_to_be_determined"]
             }
           },
           "required": ["current_innovation_use_numbers"]

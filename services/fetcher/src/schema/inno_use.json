@@ -9,6 +9,10 @@
         "result_level_id": 3,
         "created_date": "2025-10-24T19:36:04Z",
         "created_by": { "name": "Sara Jani", "email": "s.jani@cgiar.org" },
+        "lead_contact_person": {
+          "name": "Sara Jani",
+          "email": "s.jani@cgiar.org"
+        },
         "submitted_by": {
           "email": "mohammad.salem@codeobia.com",
           "name": "Mohammad Salem",
@@ -49,10 +53,12 @@
         ],
         "contributing_bilateral_projects": [
           {
-            "grant_title": "D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia"
+            "grant_title": "D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia",
+            "usd_budget": 320000
           }
         ],
         "innovation_use": {
+          "innovation_use_level": { "level": 2, "name": "Scaling" },
           "current_innovation_use_numbers": {
             "innov_use_to_be_determined": false,
             "actors": [
@@ -65,7 +71,8 @@
                 "men": 900,
                 "men_youth": 200
               }
-            ]
+            ],
+            "measures": [{ "unit_of_measure": "# of Innovations", "quantity": 1 }]
           }
         }
       }

@@ -166,6 +166,7 @@
     "/ingest": {
       "post": {
         "summary": "Ingest 1..n results",
+        "description": "Validates every row, then forwards the ones that pass to Reporting.\n\nA row is checked twice before it goes anywhere: against its result type's schema, and then against that type's minimum data set \u2014 the same completeness rules Reporting applies. A row that fails either check is returned in `rejected[]` and is never offloaded, forwarded or indexed.\n\n**Innovation Use** additionally requires: an `innovation_use.innovation_use_level`; at least one measure carrying both a `unit_of_measure` and a numeric `quantity`; actors, unless `innov_use_to_be_determined` is `true`; and, for every entry in `contributing_bilateral_projects`, exactly one of a positive `usd_budget` or `is_determined: true`.",
         "requestBody": {
           "required": true,
           "content": {
@@ -914,6 +915,10 @@
                             "email": "innovation.team@cgiar.org",
                             "name": "Innovation Analyst"
                           },
+                          "lead_contact_person": {
+                            "email": "innovation.team@cgiar.org",
+                            "name": "Innovation Analyst"
+                          },
                           "submitted_by": {
                             "email": "c.martinez@cgiar.org",
                             "name": "Carlos Martinez",
@@ -962,7 +967,8 @@
                           ],
                           "contributing_bilateral_projects": [
                             {
-                              "grant_title": "Seed Adoption Initiative"
+                              "grant_title": "Seed Adoption Initiative",
+                              "usd_budget": 250000
                             }
                           ],
                           "contributing_programs": [
@@ -982,6 +988,10 @@
                             }
                           ],
                           "innovation_use": {
+                            "innovation_use_level": {
+                              "level": 2,
+                              "name": "Scaling"
+                            },
                             "current_innovation_use_numbers": {
                               "innov_use_to_be_determined": false,
                               "actors": [
@@ -1075,6 +1085,10 @@
                             "email": "research.team@cgiar.org",
                             "name": "Research Coordinator"
                           },
+                          "lead_contact_person": {
+                            "email": "research.team@cgiar.org",
+                            "name": "Research Coordinator"
+                          },
                           "submitted_by": {
                             "email": "e.rodriguez@cgiar.org",
                             "name": "Elena Rodriguez",
@@ -1116,7 +1130,8 @@
                           ],
                           "contributing_bilateral_projects": [
                             {
-                              "grant_title": "Innovation Monitoring Fund"
+                              "grant_title": "Innovation Monitoring Fund",
+                              "is_determined": true
                             }
                           ],
                           "contributing_programs": [
@@ -1136,6 +1151,9 @@
                             }
                           ],
                           "innovation_use": {
+                            "innovation_use_level": {
+                              "name": "Scaling"
+                            },
                             "current_innovation_use_numbers": {
                               "innov_use_to_be_determined": false,
                               "actors": [
@@ -1197,6 +1215,10 @@
                             "email": "research.team@cgiar.org",
                             "name": "Research Coordinator"
                           },
+                          "lead_contact_person": {
+                            "email": "research.team@cgiar.org",
+                            "name": "Research Coordinator"
+                          },
                           "submitted_by": {
                             "email": "d.kim@cgiar.org",
                             "name": "Diana Kim",
@@ -1238,7 +1260,8 @@
                           ],
                           "contributing_bilateral_projects": [
                             {
-                              "grant_title": "Innovation Scaling Fund"
+                              "grant_title": "Innovation Scaling Fund",
+                              "usd_budget": 180000
                             }
                           ],
                           "contributing_programs": [
@@ -1258,8 +1281,18 @@
                             }
                           ],
                           "innovation_use": {
+                            "innovation_use_level": {
+                              "level": 2,
+                              "name": "Scaling"
+                            },
                             "current_innovation_use_numbers": {
-                              "innov_use_to_be_determined": true
+                              "innov_use_to_be_determined": true,
+                              "measures": [
+                                {
+                                  "unit_of_measure": "# of Innovations",
+                                  "quantity": 1
+                                }
+                              ]
                             }
                           }
                         }
@@ -1712,10 +1745,10 @@
         ],
         "responses": {
           "200": {
-            "description": "All results processed successfully"
+            "description": "Every result was accepted and processed. Nothing in `rejected[]`, nothing failed."
           },
           "207": {
-            "description": "Processed with per-result failures. Every entry in `results[]` carries `external_reference` (null when none was sent), so a failed row can be matched to the record it came from."
+            "description": "Some part of the batch did not make it: rows turned away by validation (`rejected[]`), rows Reporting refused (`results[]` with `success: false`), or both. `ok` is `false` for either \u2014 a batch half of which was dropped is not a success. Every entry in `results[]` and `rejected[]` carries `external_reference` (null when none was sent), so a failed row can be matched to the record it came from."
           },
           "400": {
             "description": "Bad Request (missing wrapper fields)"
@@ -2715,7 +2748,7 @@
           "contributing_bilateral_projects": {
             "type": "array",
             "minItems": 1,
-            "description": "Array of bilateral project grants that contributed to this result (required, must have at least one item)",
+            "description": "Array of bilateral project grants that contributed to this result (required, must have at least one item). Innovation Use requires each entry to state its investment: a positive 'usd_budget', or 'is_determined: true'.",
             "items": {
               "type": "object",
               "required": [
@@ -2729,6 +2762,14 @@
                 "is_lead": {
                   "type": "boolean",
                   "description": "Indicates if this bilateral project is the lead project"
+                },
+                "usd_budget": {
+                  "type": "number",
+                  "description": "Budget in USD this grant contributed. For Innovation Use it must be positive, and must not be combined with 'is_determined: true'."
+                },
+                "is_determined": {
+                  "type": "boolean",
+                  "description": "True when the contributed amount is yet to be determined. For Innovation Use, every grant must send either this or a positive 'usd_budget' \u2014 exactly one of the two."
                 }
               }
             }

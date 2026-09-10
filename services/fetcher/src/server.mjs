@@ -1,6 +1,9 @@
 import express from "express";
-import { normalizeCommon } from "./normalizer.mjs";
-import { validateByType } from "./validator/registry.js";
+import {
+  externalReferenceOf,
+  ingestOutcome,
+  prepareResults,
+} from "./ingest/batch.mjs";
 import { offloadRequestBody } from "./utils.js";
 import { ProcessorFactory } from "./processors/factory.mjs";
 import { Logger } from "./utils/logger.mjs";
@@ -14,20 +17,6 @@ import openapi from "./docs/openapi.json" with { type: "json" };
 
 const DEFAULT_OP = (process.env.DEFAULT_OP || "create").toLowerCase();
 const BATCH_SIZE = parseInt(process.env.BATCH_SIZE || "10");
-
-/**
- * The reporting platform's own id for a result, read wherever it sits.
- *
- * The value travels on `data`, but by the time a result reaches the processing loop it
- * has been through `normalizeCommon` and re-wrapped, so the same field can be found one
- * level up or nested under `data`. Returning null rather than undefined keeps the key
- * present in the JSON response: a caller reading `external_reference` gets an explicit
- * "we have none for this row" instead of a missing property.
- */
-function externalReferenceOf(source) {
-  if (!source || typeof source !== "object") return null;
-  return source.external_reference ?? source.data?.external_reference ?? null;
-}
 
 const app = express();
 app.use(express.json({ limit: "5mb" }));
@@ -140,110 +129,14 @@ app.post("/ingest", requireApiKey, async (req, res) => {
     });
   }
 
-  const rejected = [];
-  const acceptedResults = [];
   const nowIso = new Date().toISOString();
-
-  for (let i = 0; i < list.length; i++) {
-    const it = list[i] || {};
-    const type = String(it.type || "").toLowerCase();
-    const op = String(it.op || opDefault).toLowerCase();
-    const data = it.data;
-    // Echoed on every rejection below. A rejected row is exactly where the caller needs
-    // it — that is the row it has to show its own user — and it used to come back with
-    // nothing but an array index to go on.
-    const externalReference = externalReferenceOf(it.data);
-
-    if (!type) {
-      rejected.push({
-        index: i,
-        external_reference: externalReference,
-        reason: "type is required",
-      });
-      continue;
-    }
-    if (!data || typeof data !== "object") {
-      rejected.push({
-        index: i,
-        type,
-        external_reference: externalReference,
-        reason: "data is required",
-      });
-      continue;
-    }
-
-    let normalized;
-    try {
-      normalized = normalizeCommon ? normalizeCommon({ ...data }) : { ...data };
-    } catch (normErr) {
-      console.error("[ingest] normalizeCommon failed", {
-        index: i,
-        type,
-        error: normErr?.message,
-        stack: normErr?.stack,
-        requestId,
-      });
-      rejected.push({
-        index: i,
-        type,
-        external_reference: externalReference,
-        reason: `normalization_error: ${normErr?.message}`,
-      });
-      continue;
-    }
-
-    const v = validateByType(type, normalized);
-    if (!v.ok) {
-      rejected.push({
-        index: i,
-        type,
-        external_reference: externalReference,
-        errors: v.errors,
-        // Include detailed errors if available for better debugging
-        ...(v.detailedErrors ? { detailedErrors: v.detailedErrors } : {}),
-      });
-      continue;
-    }
-
-    const normalizedData =
-      normalized && typeof normalized === "object" ? normalized : {};
-    const crypto = await import("crypto");
-    const handle = normalizedData?.knowledge_product?.handle;
-    const resultId =
-      normalizedData?.result_id !== undefined
-        ? normalizedData.result_id
-        : normalizedData?.id;
-    let uniqueId = resultId ?? handle;
-
-    if (!uniqueId) {
-      const contentHash = crypto
-        .createHash("sha256")
-        .update(JSON.stringify(normalizedData))
-        .digest("hex")
-        .slice(0, 16);
-      uniqueId = `auto-${contentHash}`;
-    }
-
-    const idempotencyKey = `${tenant}:${type}:${op}:${uniqueId}`;
-    const payloadData =
-      normalizedData?.data &&
-      typeof normalizedData.data === "object" &&
-      Object.keys(normalizedData.data).length
-        ? { ...normalizedData.data }
-        : { ...normalizedData };
-
-    acceptedResults.push({
-      type,
-      received_at: nowIso,
-      idempotencyKey,
-      tenant,
-      op,
-      ...(jobId ? { jobId } : {}),
-      ...(resultId !== undefined ? { result_id: resultId } : {}),
-      ...normalizedData,
-      data: payloadData,
-    });
-  }
+  const { accepted: acceptedResults, rejected } = prepareResults(list, {
+    tenant,
+    opDefault,
+    jobId,
+    nowIso,
+    requestId,
+  });
 
   if (!acceptedResults.length) {
     return res.status(422).json({
@@ -476,12 +369,14 @@ app.post("/ingest", requireApiKey, async (req, res) => {
     processingTimeMs,
   );
 
-  return res.status(totalFailed === 0 ? 200 : 207).json({
-    ok: totalFailed === 0,
-    message:
-      totalFailed === 0
-        ? "All results processed successfully"
-        : `Processed with ${totalFailed} failures`,
+  const outcome = ingestOutcome({
+    rejectedCount: rejected.length,
+    totalFailed,
+  });
+
+  return res.status(outcome.status).json({
+    ok: outcome.ok,
+    message: outcome.message,
     processed: acceptedResults.length,
     successful: totalSuccessful,
     failed: totalFailed,
