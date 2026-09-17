@@ -2786,11 +2786,7 @@
             "items": {
               "type": "object",
               "required": [
-                "science_program_id",
-                "aow_compose_code",
-                "result_title",
-                "result_indicator_description",
-                "result_indicator_type_name"
+                "science_program_id"
               ],
               "properties": {
                 "science_program_id": {

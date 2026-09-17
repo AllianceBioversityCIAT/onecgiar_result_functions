@@ -371,13 +371,7 @@
       "description": "Array of science programs contributing to the result",
       "items": {
         "type": "object",
-        "required": [
-          "science_program_id",
-          "aow_compose_code",
-          "result_title",
-          "result_indicator_description",
-          "result_indicator_type_name"
-        ],
+        "required": ["science_program_id"],
         "properties": {
           "science_program_id": { "type": "string" },
           "aow_compose_code": { "type": "string" },
