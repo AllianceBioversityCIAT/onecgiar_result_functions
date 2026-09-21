@@ -2519,6 +2519,16 @@
               },
               "result_indicator_type_name": {
                 "type": "string"
+              },
+              "usd_budget": {
+                "type": "number",
+                "example": 150000,
+                "description": "Budget in USD allocated from the lead science program to this result. Reporting persists it for Innovation Development and Innovation Use, the two types that carry investment tables."
+              },
+              "is_determined": {
+                "type": "boolean",
+                "example": false,
+                "description": "Indicates whether the budget amount is YET TO BE determined"
               }
             }
           },
