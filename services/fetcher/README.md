@@ -32,6 +32,8 @@ GET  /result, GET /result/{code}  → OpenSearch
 POST /ingest                      → validate, process, external API, OpenSearch  (requires x-api-key)
 POST /version                     → carry an approved result into the current phase (requires x-api-key)
 POST /webhook, GET /webhook       → register / read your callback destination     (requires x-api-key)
+POST /webhook/inbox               → internal sink: records a delivery PRMS sends       (no key — PRMS sends none)
+GET  /webhook/inbox               → read the deliveries the sink captured             (requires x-api-key)
 GET  /health, GET /openapi.json, GET /docs
 ```
 
@@ -101,6 +103,31 @@ apart. What matters is that a destination exists before that decision: a decisio
 is registered is not delivered afterwards, because no delivery is ever queued for it.
 
 The URL must be `https` and publicly reachable. Addresses inside private networks are refused.
+
+### Checking the webhook works, from either environment
+
+`POST /webhook/inbox` on this service is a sink for PRMS's own callbacks. Register it as your
+destination and every approval or rejection lands there, where `GET /webhook/inbox` reads it back —
+no CloudWatch, and no waiting for the receiving platform to confirm it got something.
+
+```bash
+# point your destination at the sink
+curl -X POST "$FETCHER_URL/webhook" \
+  -H "x-api-key: $API_KEY" -H "content-type: application/json" \
+  -d "{\"url\": \"$FETCHER_URL/webhook/inbox\"}"
+
+# after a Science Program approves or rejects something, read what arrived
+curl "$FETCHER_URL/webhook/inbox?limit=5" -H "x-api-key: $API_KEY"
+```
+
+The POST takes no API key, because PRMS's dispatcher sends none — only `x-prms-delivery-id`, plus
+`x-prms-signature` when the endpoint has a secret. Reading the inbox does require one: the stored
+records carry the result the delivery was about.
+
+**A platform has one destination.** While it points at the sink, real deliveries land here *instead
+of* at your own endpoint — they are marked delivered and are not sent again once you register your
+URL back. In test that costs nothing; in production, either use a separate platform key or accept
+that window deliberately.
 
 ### Matching a callback to your own record
 

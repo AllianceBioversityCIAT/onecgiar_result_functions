@@ -12,6 +12,7 @@ import { ExternalApiClient } from "./clients/external-api.mjs";
 import { requireApiKey } from "./auth/require-api-key.mjs";
 import { AUTH_REQUEST_KEY } from "./auth/constants.mjs";
 import resultsRouter from "./controllers/results.controllers.mjs";
+import * as webhookInbox from "./webhook/inbox.mjs";
 
 import openapi from "./docs/openapi.json" with { type: "json" };
 
@@ -554,6 +555,82 @@ app.post("/version", requireApiKey, async (req, res) => {
         error?.apiResponse?.message ?? error?.message ?? "Unknown error",
       result_code: resultCode,
       external_reference: externalReference,
+      requestId,
+    });
+  }
+});
+
+/**
+ * A sink for Reporting's own callbacks, so the team can confirm a decision produced a delivery
+ * without waiting for the receiving platform to say so.
+ *
+ * **Unauthenticated, and it has to be.** Reporting's dispatcher sends `x-prms-delivery-id` and, when
+ * the endpoint has a secret, `x-prms-signature` — never an API key. Guarding this with
+ * `requireApiKey` would reject every real delivery. What protects it is that it only records: it
+ * forwards nothing, acts on nothing, and a forged POST buys an attacker a row in our own inbox.
+ *
+ * Reading it back is a different matter and is guarded, since the stored payloads carry result data.
+ */
+app.post("/webhook/inbox", async (req, res) => {
+  const receivedAt = new Date().toISOString();
+  const deliveryId = req.headers["x-prms-delivery-id"] ?? null;
+
+  try {
+    const key = await webhookInbox.record({
+      headers: req.headers,
+      body: req.body,
+      receivedAt,
+    });
+
+    console.log("[webhook-inbox] delivery recorded", { deliveryId, key });
+
+    return res.status(200).json({
+      ok: true,
+      received_at: receivedAt,
+      delivery_id: deliveryId,
+      key,
+    });
+  } catch (error) {
+    // 503 rather than 200: Reporting retries five times with backoff, so refusing buys another
+    // chance to capture this delivery. Acknowledging one we failed to store would lose it for good,
+    // and an inbox that silently drops what it was built to observe is worse than no inbox.
+    console.error("[webhook-inbox] could not record the delivery", {
+      deliveryId,
+      message: error?.message,
+    });
+
+    return res.status(503).json({
+      ok: false,
+      error: "inbox_unavailable",
+      message: "The delivery arrived but could not be stored. Retry it.",
+      delivery_id: deliveryId,
+      received_at: receivedAt,
+    });
+  }
+});
+
+/**
+ * Reads back what the sink captured, newest first. `limit` defaults to 20 and is capped.
+ *
+ * Guarded, unlike the POST: these records hold the enriched result Reporting sent.
+ */
+app.get("/webhook/inbox", requireApiKey, async (req, res) => {
+  const requestId =
+    req.headers["x-amzn-trace-id"] || req.headers["x-request-id"];
+
+  try {
+    const inbox = await webhookInbox.list(req.query?.limit);
+    return res.status(200).json({ ok: true, ...inbox, requestId });
+  } catch (error) {
+    console.error("[webhook-inbox] could not read the inbox", {
+      requestId,
+      message: error?.message,
+    });
+
+    return res.status(503).json({
+      ok: false,
+      error: "inbox_unavailable",
+      message: error?.message ?? "The inbox could not be read.",
       requestId,
     });
   }

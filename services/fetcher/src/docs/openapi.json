@@ -1868,6 +1868,64 @@
         }
       }
     },
+    "/webhook/inbox": {
+      "post": {
+        "summary": "Receive a PRMS webhook delivery (internal sink)",
+        "description": "Records the callback PRMS sends when a Science Program approves or rejects a result, so the team can confirm from either environment that a decision actually produced a delivery.\n\n**Unauthenticated by necessity.** PRMS's dispatcher sends `x-prms-delivery-id`, and `x-prms-signature` when the endpoint has a secret, but never an API key \u2014 requiring one here would reject every real delivery. The route only records: it forwards nothing and acts on nothing.\n\nRegister it with `POST /webhook` like any other destination, then read it back with `GET /webhook/inbox`. Note that a platform has one destination: pointing it here means real deliveries land here instead of at the platform's own endpoint until it is registered back.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The delivery was recorded. Returns the storage key."
+          },
+          "503": {
+            "description": "The delivery arrived but could not be stored, so it is refused rather than acknowledged \u2014 PRMS retries, which is another chance to capture it."
+          }
+        }
+      },
+      "get": {
+        "summary": "Read the deliveries the sink captured",
+        "description": "The most recent deliveries, newest first, with the headers PRMS sent and the payload it carried.\n\nGuarded, unlike the POST: these records hold the enriched result from the delivery.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "How many to return. Defaults to 20, capped at 100.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The captured deliveries."
+          },
+          "401": {
+            "description": "Missing or invalid API key."
+          },
+          "503": {
+            "description": "The inbox could not be read."
+          }
+        }
+      }
+    },
     "/version": {
       "post": {
         "summary": "Carry an approved result from a previous phase into the current one",
