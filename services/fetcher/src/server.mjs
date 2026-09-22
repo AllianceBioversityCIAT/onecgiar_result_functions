@@ -397,19 +397,17 @@ app.post("/ingest", requireApiKey, async (req, res) => {
 });
 
 /**
- * Webhook registration — where a platform tells PRMS how to call it back when a Science Program
- * approves or rejects one of its results.
+ * The Reporting client for a forwarding route, or `undefined` once the failure is already
+ * answered — every caller must therefore `return` on a falsy result rather than press on.
  *
- * Exposed here rather than pointing integrators at Reporting directly: they hold one base URL and
- * one key, and they do not need to know Reporting exists. This is a forward and nothing more —
- * Reporting resolves the recipient from the key and guards the URL.
+ * Shared by the three routes that only forward (`/webhook` both ways and `/version`), because a
+ * per-route copy is what let `/version` ship calling a helper that was never written: the call
+ * sits before the handler's `try`, so the ReferenceError escaped the async handler and the caller
+ * got API Gateway's bare 500 instead of ours.
  *
- * Ordering worth knowing, because the obvious assumption is wrong: registering is **not** a
- * prerequisite for submitting results. The destination is resolved when a Science Program decides,
- * not when a result is ingested. What matters is that one exists before that decision — a decision
- * taken with none registered is not delivered later, because no delivery is ever queued.
+ * `scope` only tags the log line, so a failure says which route could not build its client.
  */
-function webhookClientFor(req, res, requestId) {
+function externalClientFor(req, res, requestId, scope) {
   const auth = req[AUTH_REQUEST_KEY];
 
   // `requireApiKey` guarantees the key, so this is unreachable today. Caught anyway for the same
@@ -418,7 +416,7 @@ function webhookClientFor(req, res, requestId) {
   try {
     return new ExternalApiClient(undefined, 30000, auth?.apiKey);
   } catch (error) {
-    console.error("[webhook] cannot build the external API client", {
+    console.error(`[${scope}] cannot build the external API client`, {
       requestId,
       message: error?.message,
     });
@@ -451,11 +449,24 @@ function respondWithUpstreamFailure(res, error, requestId) {
   });
 }
 
+/**
+ * Webhook registration — where a platform tells PRMS how to call it back when a Science Program
+ * approves or rejects one of its results.
+ *
+ * Exposed here rather than pointing integrators at Reporting directly: they hold one base URL and
+ * one key, and they do not need to know Reporting exists. This is a forward and nothing more —
+ * Reporting resolves the recipient from the key and guards the URL.
+ *
+ * Ordering worth knowing, because the obvious assumption is wrong: registering is **not** a
+ * prerequisite for submitting results. The destination is resolved when a Science Program decides,
+ * not when a result is ingested. What matters is that one exists before that decision — a decision
+ * taken with none registered is not delivered later, because no delivery is ever queued.
+ */
 app.post("/webhook", requireApiKey, async (req, res) => {
   const requestId =
     req.headers["x-amzn-trace-id"] || req.headers["x-request-id"];
 
-  const client = webhookClientFor(req, res, requestId);
+  const client = externalClientFor(req, res, requestId, "webhook");
   if (!client) return undefined;
 
   try {
@@ -472,7 +483,7 @@ app.get("/webhook", requireApiKey, async (req, res) => {
   const requestId =
     req.headers["x-amzn-trace-id"] || req.headers["x-request-id"];
 
-  const client = webhookClientFor(req, res, requestId);
+  const client = externalClientFor(req, res, requestId, "webhook");
   if (!client) return undefined;
 
   try {
@@ -514,7 +525,7 @@ app.post("/version", requireApiKey, async (req, res) => {
     });
   }
 
-  const client = versionClientFor(req, res, requestId);
+  const client = externalClientFor(req, res, requestId, "version");
   if (!client) return undefined;
 
   try {
