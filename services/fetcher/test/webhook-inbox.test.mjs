@@ -33,9 +33,21 @@ function bodyOf(command) {
 const DELIVERY = {
   result_id: 11876,
   external_reference: "19973",
-  decision: "approved",
+  decision: "APPROVE",
   decided_at: "2026-09-22T10:00:00.000Z",
-  data: { title: "test result" },
+  reviewed_by: {
+    id: 82,
+    first_name: "Luis",
+    last_name: "Pérez",
+    email: "luis@example.org",
+  },
+  data: {
+    id: 11876,
+    version_id: 6,
+    reported_year_id: 2026,
+    obj_version: { id: 6, phase_year: 2026, phase_name: "Reporting 2026" },
+    title: "test result",
+  },
 };
 
 const HEADERS = {

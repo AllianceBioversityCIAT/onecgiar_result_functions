@@ -1813,7 +1813,7 @@
     "/webhook": {
       "post": {
         "summary": "Register or update your webhook destination",
-        "description": "Registers the HTTPS URL that PRMS POSTs to when a Science Program approves or rejects one of your results.\n\nThe destination is bound to the platform that owns the API key \u2014 there is no recipient field, and one platform cannot register another's callback. Calling this again replaces the URL; there is one destination per platform.\n\n**Registering is not a prerequisite for submitting results.** The destination is looked up when a Science Program decides on a result, not when the result is ingested. What matters is that a destination exists before that decision \u2014 a decision taken with none registered is not delivered afterwards.",
+        "description": "Registers the HTTPS URL that PRMS POSTs to when a Science Program approves or rejects one of your results. The callback body is described by `WebhookDecision` below; it includes the complete enriched result in `data` and the deciding user's id, name, and email in `reviewed_by`.\n\nThe destination is bound to the platform that owns the API key \u2014 there is no recipient field, and one platform cannot register another's callback. Calling this again replaces the URL; there is one destination per platform.\n\n**Registering is not a prerequisite for submitting results.** The destination is looked up when a Science Program decides on a result, not when the result is ingested. What matters is that a destination exists before that decision \u2014 a decision taken with none registered is not delivered afterwards.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -1877,7 +1877,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "$ref": "#/components/schemas/WebhookDecision"
               }
             }
           }
@@ -2874,6 +2874,73 @@
                 }
               }
             }
+          }
+        }
+      },
+      "WebhookDecision": {
+        "type": "object",
+        "description": "Decision callback sent by PRMS. The inbox records this body without changing its fields; it does not validate the schema.",
+        "required": [
+          "result_id",
+          "external_reference",
+          "decision",
+          "decided_at",
+          "reviewed_by",
+          "data"
+        ],
+        "properties": {
+          "result_id": {
+            "type": "integer",
+            "description": "Internal id of this result version."
+          },
+          "external_reference": {
+            "type": "string",
+            "nullable": true,
+            "description": "Your identifier for this result, or null when absent."
+          },
+          "decision": {
+            "type": "string",
+            "enum": ["APPROVE", "REJECT"]
+          },
+          "decided_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when PRMS assembled the callback body."
+          },
+          "reviewed_by": {
+            "type": "object",
+            "nullable": true,
+            "description": "PRMS user who made this decision; null if the review history cannot be read.",
+            "required": ["id", "first_name", "last_name", "email"],
+            "properties": {
+              "id": { "type": "integer" },
+              "first_name": { "type": "string", "nullable": true },
+              "last_name": { "type": "string", "nullable": true },
+              "email": { "type": "string", "format": "email", "nullable": true }
+            }
+          },
+          "justification": {
+            "type": "string",
+            "description": "Review comment, omitted when empty or unavailable."
+          },
+          "data": {
+            "type": "object",
+            "description": "Complete enriched bilateral result. Its fields and type-specific summary vary by result type; the fields shown here identify the result version.",
+            "properties": {
+              "id": { "type": "integer" },
+              "result_code": { "type": "integer" },
+              "version_id": { "type": "integer" },
+              "reported_year_id": { "type": "integer", "nullable": true },
+              "obj_version": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "integer" },
+                  "phase_year": { "type": "integer", "nullable": true },
+                  "phase_name": { "type": "string" }
+                }
+              }
+            },
+            "additionalProperties": true
           }
         }
       },
