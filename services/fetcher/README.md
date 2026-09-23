@@ -59,11 +59,10 @@ continue and derives the target Science Program from the result itself — there
 id to keep and no programme to look up. `external_reference` is optional and comes back
 verbatim, as everywhere else.
 
-**The new version lands in `Draft`.** This continues a result; it does not report on it.
-Whoever edits it next — through the API or in the PRMS reporting tool — is who submits it for
-review, and that submission is what starts the Science Program's approval workflow. The
-decision then reaches you through your registered callback, so the previous section applies
-unchanged.
+**The new version lands in `Editing` (`status_id = 1`).** This continues a result; it does not report on it.
+A centre user completes it in the PRMS reporting tool and then selects Submit for Review.
+That submission starts the Science Program's approval workflow. The decision then reaches
+you through your registered callback, so the previous section applies unchanged.
 
 A result is carried forward **once**. If a version already exists in the current phase there
 is nothing left to do and the call is refused.

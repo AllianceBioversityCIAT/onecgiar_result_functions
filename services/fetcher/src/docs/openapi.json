@@ -1929,7 +1929,7 @@
     "/version": {
       "post": {
         "summary": "Carry an approved result from a previous phase into the current one",
-        "description": "Creates a new version of an approved W3/Bilateral result in the open reporting phase, linked to the original by its result code. The approved prior-phase record is not modified.\n\n**Send only the result code.** It is stable across phases, so PRMS resolves which version to continue, and it derives the target Science Program from the result's own primary initiative \u2014 there is no internal id to keep and no programme to look up.\n\n**The new version lands in Draft.** This operation continues a result; it does not report on it. Whoever edits it afterwards \u2014 through the API or in the PRMS reporting tool \u2014 is who submits it for review, and it is that submission that starts the Science Program's approval workflow. The decision then reaches you through your registered webhook.\n\nA result is carried forward **once**: if a version already exists in the current phase there is nothing left to do, and the call is refused.\n\n**Knowledge Products cannot be carried forward.** Their metadata is owned by CGSpace, so a new knowledge product is reported with its own handle instead.\n\nOnly the platform that reported a result may carry it forward.",
+        "description": "Creates a new version of an approved W3/Bilateral result in the open reporting phase, linked to the original by its result code. The approved prior-phase record is not modified.\n\n**Send only the result code.** It is stable across phases, so PRMS resolves which version to continue, and it derives the target Science Program from the result's own primary initiative \u2014 there is no internal id to keep and no programme to look up.\n\n**The new version lands in Editing (`status_id = 1`).** This operation continues a result; it does not report on it. A centre user completes it in the PRMS reporting tool and then selects Submit for Review, starting the Science Program's approval workflow. The decision then reaches you through your registered webhook.\n\nA result is carried forward **once**: if a version already exists in the current phase there is nothing left to do, and the call is refused.\n\n**Knowledge Products cannot be carried forward.** Their metadata is owned by CGSpace, so a new knowledge product is reported with its own handle instead.\n\nOnly the platform that reported a result may carry it forward.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -1963,7 +1963,7 @@
         },
         "responses": {
           "200": {
-            "description": "Carried forward. The response names the new version's id, its phase, and its status (Draft), plus the previous phase it came from."
+            "description": "Carried forward. The response names the new version's id, its phase, and its status (Editing), plus the previous phase it came from."
           },
           "400": {
             "description": "`result_code` missing, or the result is not a W3/Bilateral result."
