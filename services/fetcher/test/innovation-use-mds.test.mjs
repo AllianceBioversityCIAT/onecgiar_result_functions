@@ -30,6 +30,12 @@ describe("innovation use minimum data set", () => {
     assert.equal(validate(validInnovationUse()).ok, true);
   });
 
+  it("does not require organizations", () => {
+    const data = validInnovationUse();
+    delete data.innovation_use.current_innovation_use_numbers.organization;
+    assert.equal(validate(data).ok, true);
+  });
+
   describe("bilateral project investment", () => {
     it("accepts a positive amount", () => {
       const data = validInnovationUse();
@@ -136,16 +142,16 @@ describe("innovation use minimum data set", () => {
   });
 
   describe("measures", () => {
-    it("refuses a row with no measures", () => {
+    it("accepts a row with no measures", () => {
       const data = validInnovationUse();
       delete data.innovation_use.current_innovation_use_numbers.measures;
-      refusedAt(data, "/current_innovation_use_numbers/measures");
+      assert.equal(validate(data).ok, true);
     });
 
-    it("refuses an empty measures array", () => {
+    it("accepts an empty measures array", () => {
       const data = validInnovationUse();
       data.innovation_use.current_innovation_use_numbers.measures = [];
-      refusedAt(data, "/current_innovation_use_numbers/measures");
+      assert.equal(validate(data).ok, true);
     });
 
     it("refuses a measure with no quantity", () => {
@@ -214,12 +220,12 @@ describe("innovation use minimum data set", () => {
       assert.equal(validate(data).ok, true);
     });
 
-    it("still requires a measure when the numbers are to be determined", () => {
+    it("accepts TBD numbers without measures", () => {
       const data = validInnovationUse();
       data.innovation_use.current_innovation_use_numbers = {
         innov_use_to_be_determined: true,
       };
-      refusedAt(data, "/current_innovation_use_numbers/measures");
+      assert.equal(validate(data).ok, true);
     });
   });
 
@@ -232,7 +238,7 @@ describe("innovation use minimum data set", () => {
 
     const result = validate(data);
     assert.equal(result.ok, false);
-    assert.equal(result.errors.length, 2);
+    assert.equal(result.errors.length, 1);
     for (const error of result.detailedErrors) {
       assert.equal(error.keyword, "mds");
     }

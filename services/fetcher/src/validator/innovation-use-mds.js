@@ -67,22 +67,13 @@ function checkActors(numbers, errors) {
 }
 
 /**
- * Required even for a to-be-determined result: the measure says *what* is being counted, which
- * is known long before *how many*. A measure missing either half counts for nothing, so the
- * batch has to carry one complete pair.
+ * Optional. When current use is known and a producer supplies measures, at least one row must
+ * carry both parts of a valid pair. When the use is marked TBD, the measure list is not applicable.
  */
 function checkMeasures(numbers, errors) {
   const measures = numbers?.measures;
 
-  if (!Array.isArray(measures) || measures.length === 0) {
-    errors.push(
-      error(
-        MEASURES,
-        "is required: provide at least one measure with a 'unit_of_measure' and a numeric 'quantity'",
-      ),
-    );
-    return;
-  }
+  if (!Array.isArray(measures) || measures.length === 0) return;
 
   const complete = measures.some(
     (measure) =>
@@ -138,7 +129,9 @@ export function validateInnovationUseMds(data) {
   const numbers = data?.innovation_use?.current_innovation_use_numbers;
 
   checkActors(numbers, errors);
-  checkMeasures(numbers, errors);
+  if (numbers?.innov_use_to_be_determined !== true) {
+    checkMeasures(numbers, errors);
+  }
   checkContradictoryBilateralInvestment(
     data?.contributing_bilateral_projects,
     errors,
