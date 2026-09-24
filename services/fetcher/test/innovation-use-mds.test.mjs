@@ -47,17 +47,29 @@ describe("innovation use minimum data set", () => {
       assert.equal(validate(data).ok, true);
     });
 
-    it("refuses a grant that states neither", () => {
+    it("accepts an identified project with no budget", () => {
       const data = validInnovationUse();
       data.contributing_bilateral_projects = [{ grant_title: "Unfunded grant" }];
-      refusedAt(data, "/contributing_bilateral_projects/0");
+      assert.equal(validate(data).ok, true);
     });
 
-    it("refuses a zero amount — a grant that contributed nothing is not a contributor", () => {
+    it("accepts a zero amount as an unspecified budget", () => {
       const data = validInnovationUse();
       data.contributing_bilateral_projects = [
         { grant_title: "Zeroed grant", usd_budget: 0 },
       ];
+      assert.equal(validate(data).ok, true);
+    });
+
+    it("still requires at least one identified bilateral project", () => {
+      const data = validInnovationUse();
+      data.contributing_bilateral_projects = [];
+      refusedAt(data, "/contributing_bilateral_projects");
+    });
+
+    it("still requires grant_title on each bilateral project", () => {
+      const data = validInnovationUse();
+      data.contributing_bilateral_projects = [{}];
       refusedAt(data, "/contributing_bilateral_projects/0");
     });
 
@@ -70,11 +82,11 @@ describe("innovation use minimum data set", () => {
       assert.match(error, /not both/);
     });
 
-    it("names the offending grant when only one of several is wrong", () => {
+    it("names the grant with contradictory budget data", () => {
       const data = validInnovationUse();
       data.contributing_bilateral_projects = [
         { grant_title: "Funded", usd_budget: 5000 },
-        { grant_title: "Silent" },
+        { grant_title: "Contradictory", usd_budget: 5000, is_determined: true },
       ];
       const errors = refusedAt(data, "/contributing_bilateral_projects/1");
       assert.equal(errors.length, 1);
@@ -92,10 +104,16 @@ describe("innovation use minimum data set", () => {
   });
 
   describe("innovation use level", () => {
-    it("refuses a row with no level", () => {
+    it("accepts a row with no level", () => {
       const data = validInnovationUse();
       delete data.innovation_use.innovation_use_level;
-      refusedAt(data, "/innovation_use/innovation_use_level");
+      assert.equal(validate(data).ok, true);
+    });
+
+    it("accepts a null level as omitted", () => {
+      const data = validInnovationUse();
+      data.innovation_use.innovation_use_level = null;
+      assert.equal(validate(data).ok, true);
     });
 
     it("refuses a level object carrying neither half", () => {
@@ -196,7 +214,7 @@ describe("innovation use minimum data set", () => {
       assert.equal(validate(data).ok, true);
     });
 
-    it("still requires a level and a measure when the numbers are to be determined", () => {
+    it("still requires a measure when the numbers are to be determined", () => {
       const data = validInnovationUse();
       data.innovation_use.current_innovation_use_numbers = {
         innov_use_to_be_determined: true,
@@ -214,7 +232,7 @@ describe("innovation use minimum data set", () => {
 
     const result = validate(data);
     assert.equal(result.ok, false);
-    assert.equal(result.errors.length, 4);
+    assert.equal(result.errors.length, 2);
     for (const error of result.detailedErrors) {
       assert.equal(error.keyword, "mds");
     }

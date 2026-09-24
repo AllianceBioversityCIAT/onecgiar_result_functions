@@ -1,5 +1,5 @@
 /**
- * Innovation Use minimum data set (P2-3428).
+ * Innovation Use minimum data set (P2-3428, P2-3785, P2-3819).
  *
  * Mirrors the gate the bilateral server applies before a result can be submitted, so an
  * external producer hears about an incomplete row here — in the same `rejected[]` entry as a
@@ -14,7 +14,6 @@
  */
 
 const IU = "/innovation_use";
-const LEVEL = `${IU}/innovation_use_level`;
 const NUMBERS = `${IU}/current_innovation_use_numbers`;
 const MEASURES = `${NUMBERS}/measures`;
 const BILATERALS = "/contributing_bilateral_projects";
@@ -46,29 +45,6 @@ function error(path, message) {
     params: { mds: "innovation_use" },
     fullMessage: `${path} ${message}`,
   };
-}
-
-/**
- * The level is what tells Reporting which stage of use is being claimed, so it is required
- * whether or not the numbers behind it are known yet. Either half identifies it: `level` for a
- * producer that holds our codes, `name` for one that only has the label — the same choice
- * innovation_readiness_level offers on Innovation Development.
- */
-function checkLevel(innovationUse, errors) {
-  const level = innovationUse?.innovation_use_level;
-
-  if (!level || typeof level !== "object") {
-    errors.push(
-      error(LEVEL, "is required: provide the innovation use level or its name"),
-    );
-    return;
-  }
-
-  if (!isNumeric(level.level) && !isFilled(level.name)) {
-    errors.push(
-      error(LEVEL, "must provide at least one of: 'level', 'name'"),
-    );
-  }
 }
 
 /**
@@ -130,14 +106,8 @@ function checkMeasures(numbers, errors) {
   });
 }
 
-/**
- * Every contributing grant has to say what it put in — an amount, or an explicit "not determined
- * yet". Exactly one of the two: a grant carrying both an amount and the to-be-determined flag is
- * making two contradictory claims, and Reporting refuses it rather than picking one.
- *
- * Zero is not an amount here. A grant that contributed nothing is not a contributing grant.
- */
-function checkBilateralInvestment(projects, errors) {
+/** A positive amount and an explicit TBD flag are contradictory budget claims. */
+function checkContradictoryBilateralInvestment(projects, errors) {
   if (!Array.isArray(projects)) return;
 
   projects.forEach((project, index) => {
@@ -155,14 +125,6 @@ function checkBilateralInvestment(projects, errors) {
       return;
     }
 
-    if (!hasAmount && !isDetermined) {
-      errors.push(
-        error(
-          path,
-          "must provide a positive 'usd_budget', or 'is_determined': true when the amount is yet to be determined",
-        ),
-      );
-    }
   });
 }
 
@@ -173,13 +135,14 @@ function checkBilateralInvestment(projects, errors) {
  */
 export function validateInnovationUseMds(data) {
   const errors = [];
-  const innovationUse = data?.innovation_use;
-  const numbers = innovationUse?.current_innovation_use_numbers;
+  const numbers = data?.innovation_use?.current_innovation_use_numbers;
 
-  checkLevel(innovationUse, errors);
   checkActors(numbers, errors);
   checkMeasures(numbers, errors);
-  checkBilateralInvestment(data?.contributing_bilateral_projects, errors);
+  checkContradictoryBilateralInvestment(
+    data?.contributing_bilateral_projects,
+    errors,
+  );
 
   if (errors.length === 0) return { ok: true };
 

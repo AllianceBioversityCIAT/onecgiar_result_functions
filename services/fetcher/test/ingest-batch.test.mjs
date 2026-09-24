@@ -14,12 +14,12 @@ const CONTEXT = {
 function incompleteInnovationUse() {
   const data = validInnovationUse();
   data.external_reference = "STAR-0002";
-  delete data.innovation_use.innovation_use_level;
+  delete data.innovation_use.current_innovation_use_numbers.actors;
   return data;
 }
 
 describe("ingest batch", () => {
-  it("keeps an incomplete innovation use out of the accepted rows", () => {
+  it("keeps an Innovation Use missing required actors out of accepted rows", () => {
     const { accepted, rejected } = prepareResults(
       [innovationUseRow(incompleteInnovationUse())],
       CONTEXT,
@@ -31,10 +31,31 @@ describe("ingest batch", () => {
     assert.equal(rejected[0].type, "innovation_use");
     assert.equal(rejected[0].external_reference, "STAR-0002");
     assert.ok(
-      rejected[0].errors.some((e) => e.includes("innovation_use_level")),
-      `expected the level error, got: ${JSON.stringify(rejected[0].errors)}`,
+      rejected[0].errors.some((e) => e.includes("current_innovation_use_numbers/actors")),
+      `expected the actors error, got: ${JSON.stringify(rejected[0].errors)}`,
     );
     assert.equal(rejected[0].detailedErrors[0].keyword, "mds");
+  });
+
+  it("forwards Innovation Use without a level or bilateral project budget", () => {
+    const data = validInnovationUse();
+    data.external_reference = "STAR-NO-BUDGET";
+    delete data.innovation_use.innovation_use_level;
+    delete data.contributing_bilateral_projects[0].usd_budget;
+
+    const { accepted, rejected } = prepareResults(
+      [innovationUseRow(data)],
+      CONTEXT,
+    );
+
+    assert.equal(rejected.length, 0);
+    assert.equal(accepted.length, 1);
+    assert.equal(accepted[0].external_reference, "STAR-NO-BUDGET");
+    assert.equal(
+      "usd_budget" in accepted[0].contributing_bilateral_projects[0],
+      false,
+    );
+    assert.equal("innovation_use_level" in accepted[0].innovation_use, false);
   });
 
   it("splits a mixed batch and keeps each row's position", () => {
