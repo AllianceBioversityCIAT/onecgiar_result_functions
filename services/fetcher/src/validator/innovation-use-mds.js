@@ -1,5 +1,5 @@
 /**
- * Innovation Use minimum data set (P2-3428).
+ * Innovation Use minimum data set (P2-3428, P2-3785, P2-3819).
  *
  * Mirrors the gate the bilateral server applies before a result can be submitted, so an
  * external producer hears about an incomplete row here — in the same `rejected[]` entry as a
@@ -14,7 +14,6 @@
  */
 
 const IU = "/innovation_use";
-const LEVEL = `${IU}/innovation_use_level`;
 const NUMBERS = `${IU}/current_innovation_use_numbers`;
 const MEASURES = `${NUMBERS}/measures`;
 const BILATERALS = "/contributing_bilateral_projects";
@@ -49,29 +48,6 @@ function error(path, message) {
 }
 
 /**
- * The level is what tells Reporting which stage of use is being claimed, so it is required
- * whether or not the numbers behind it are known yet. Either half identifies it: `level` for a
- * producer that holds our codes, `name` for one that only has the label — the same choice
- * innovation_readiness_level offers on Innovation Development.
- */
-function checkLevel(innovationUse, errors) {
-  const level = innovationUse?.innovation_use_level;
-
-  if (!level || typeof level !== "object") {
-    errors.push(
-      error(LEVEL, "is required: provide the innovation use level or its name"),
-    );
-    return;
-  }
-
-  if (!isNumeric(level.level) && !isFilled(level.name)) {
-    errors.push(
-      error(LEVEL, "must provide at least one of: 'level', 'name'"),
-    );
-  }
-}
-
-/**
  * Actors are the count the indicator is built on, so they are required unless the producer has
  * explicitly said the numbers are not known yet. `innov_use_to_be_determined` is that statement,
  * and only an explicit `true` waives the requirement: an absent flag is not a claim.
@@ -91,22 +67,13 @@ function checkActors(numbers, errors) {
 }
 
 /**
- * Required even for a to-be-determined result: the measure says *what* is being counted, which
- * is known long before *how many*. A measure missing either half counts for nothing, so the
- * batch has to carry one complete pair.
+ * Optional. When current use is known and a producer supplies measures, at least one row must
+ * carry both parts of a valid pair. When the use is marked TBD, the measure list is not applicable.
  */
 function checkMeasures(numbers, errors) {
   const measures = numbers?.measures;
 
-  if (!Array.isArray(measures) || measures.length === 0) {
-    errors.push(
-      error(
-        MEASURES,
-        "is required: provide at least one measure with a 'unit_of_measure' and a numeric 'quantity'",
-      ),
-    );
-    return;
-  }
+  if (!Array.isArray(measures) || measures.length === 0) return;
 
   const complete = measures.some(
     (measure) =>
@@ -130,14 +97,8 @@ function checkMeasures(numbers, errors) {
   });
 }
 
-/**
- * Every contributing grant has to say what it put in — an amount, or an explicit "not determined
- * yet". Exactly one of the two: a grant carrying both an amount and the to-be-determined flag is
- * making two contradictory claims, and Reporting refuses it rather than picking one.
- *
- * Zero is not an amount here. A grant that contributed nothing is not a contributing grant.
- */
-function checkBilateralInvestment(projects, errors) {
+/** A positive amount and an explicit TBD flag are contradictory budget claims. */
+function checkContradictoryBilateralInvestment(projects, errors) {
   if (!Array.isArray(projects)) return;
 
   projects.forEach((project, index) => {
@@ -155,14 +116,6 @@ function checkBilateralInvestment(projects, errors) {
       return;
     }
 
-    if (!hasAmount && !isDetermined) {
-      errors.push(
-        error(
-          path,
-          "must provide a positive 'usd_budget', or 'is_determined': true when the amount is yet to be determined",
-        ),
-      );
-    }
   });
 }
 
@@ -173,13 +126,16 @@ function checkBilateralInvestment(projects, errors) {
  */
 export function validateInnovationUseMds(data) {
   const errors = [];
-  const innovationUse = data?.innovation_use;
-  const numbers = innovationUse?.current_innovation_use_numbers;
+  const numbers = data?.innovation_use?.current_innovation_use_numbers;
 
-  checkLevel(innovationUse, errors);
   checkActors(numbers, errors);
-  checkMeasures(numbers, errors);
-  checkBilateralInvestment(data?.contributing_bilateral_projects, errors);
+  if (numbers?.innov_use_to_be_determined !== true) {
+    checkMeasures(numbers, errors);
+  }
+  checkContradictoryBilateralInvestment(
+    data?.contributing_bilateral_projects,
+    errors,
+  );
 
   if (errors.length === 0) return { ok: true };
 

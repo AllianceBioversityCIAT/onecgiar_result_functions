@@ -12,8 +12,8 @@
           "type": "object",
           "properties": {
             "innovation_use_level": {
-              "type": "object",
-              "description": "Stage of use being claimed. Required for every innovation use, including one whose numbers are yet to be determined. Provide 'level' if you hold the PRMS code, 'name' if you only have the label.",
+              "type": ["object", "null"],
+              "description": "Optional stage of use being claimed. If provided, supply 'level' if you hold the PRMS code, or 'name' if you only have the label. Null is accepted as omitted.",
               "properties": {
                 "level": {
                   "description": "PRMS code for the innovation use level.",
@@ -171,7 +171,7 @@
                 },
                 "measures": {
                   "type": "array",
-                  "description": "What the innovation use is counted in. At least one measure must carry both a 'unit_of_measure' and a numeric 'quantity'; a quantity of 0 is a valid answer.",
+                  "description": "Optional: what the innovation use is counted in. When current use is known and measures are supplied, at least one measure must carry both a 'unit_of_measure' and a numeric 'quantity'; a quantity of 0 is a valid answer.",
                   "items": {
                     "type": "object",
                     "properties": {
