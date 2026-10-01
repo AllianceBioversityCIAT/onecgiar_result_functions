@@ -2020,7 +2020,8 @@
               "update",
               "delete"
             ],
-            "default": "dataset.ingest.requested"
+            "default": "dataset.ingest.requested",
+            "description": "Not read by the Fetcher or by PRMS: every request is handled as an ingest that creates results. `update` and `delete` are not implemented. To carry an earlier-phase result forward with new data, send `data.result_code` on the result instead."
           },
           "results": {
             "type": "array",
@@ -2050,7 +2051,8 @@
                     "create",
                     "update",
                     "delete"
-                  ]
+                  ],
+                  "description": "Not read by the Fetcher or by PRMS: every result is sent to PRMS `POST /api/bilateral/create`. `update` and `delete` are not implemented. To carry an earlier-phase result forward with new data, send `data.result_code` instead."
                 },
                 "data": {
                   "$ref": "#/components/schemas/ResultData"
@@ -2448,6 +2450,14 @@
           "contributing_bilateral_projects"
         ],
         "properties": {
+          "result_code": {
+            "oneOf": [
+              { "type": "string", "pattern": "^\\d+$" },
+              { "type": "integer", "minimum": 0 }
+            ],
+            "description": "Optional. The PRMS result code of a result you already reported in an earlier phase, to carry it into the open reporting phase with the data in this payload (a new version that keeps the same `result_code`; the earlier-phase result is not modified). Send it as a string of digits (`\"28565\"`) or as an integer (`28565`); both are accepted. Send the full result, as for a new one: nothing is copied from the earlier phase. Omit it to create a new result, exactly as before. PRMS rejects the result, and writes nothing for it, when the code: is not found (404); belongs to another platform (403); is a Knowledge Product, or its most recent earlier-phase version is not Approved, or the code already has a result in the open phase (409); or is not a W3/Bilateral result (400). The successful response carries `response.outcomes[]` with `{ result_code, operation, status_id, status, external_reference }`, where `operation` is `created` or `versioned`. Updating a result that is already in the open phase is not available.",
+            "example": "28565"
+          },
           "external_reference": {
             "type": "string",
             "maxLength": 191,
