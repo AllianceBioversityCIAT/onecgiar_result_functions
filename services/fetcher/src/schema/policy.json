@@ -9,6 +9,7 @@
         "result_level_id": 3,
         "created_date": "2025-10-24T19:36:04Z",
         "created_by": { "name": "Sara Jani", "email": "s.jani@cgiar.org" },
+        "lead_contact_person": { "name": "Jane Doe", "email": "jane.doe@cgiar.org" },
         "submitted_by": {
           "email": "mohammad.salem@codeobia.com",
           "name": "Mohammad Salem",
@@ -30,8 +31,6 @@
           "scope_label": "National",
           "countries": [{ "id": 788, "name": "Tunisia" }]
         },
-        "contributing_center": [],
-        "contributing_partners": [],
         "evidence": [
           {
             "link": "www.gipiti.com",
