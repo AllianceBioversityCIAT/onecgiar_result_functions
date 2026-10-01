@@ -611,6 +611,9 @@ export class ResultResponseMapper {
     this.result_code = Number(rawData?.result_code);
     this.status_id = Number(rawData?.status_id);
     this.year = rawData?.obj_version?.phase_year;
+    // PRMS reporting phase id (obj_version.id): the same value the links carry in `?phase=`,
+    // exposed so consumers can build deep links to any section without parsing a URL.
+    this.phase_id = Number(phaseParam);
     // PRMS structures these links on /api/bilateral/list (the sync stores them in the
     // indexed document), carrying the real version_id in `?phase=`. Prefer the stored
     // links; fall back to computing them with the real phase instead of a hardcoded one.

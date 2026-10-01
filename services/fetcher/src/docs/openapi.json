@@ -1841,7 +1841,10 @@
           "503": {
             "description": "The delivery arrived but could not be stored, so it is refused rather than acknowledged \u2014 PRMS retries, which is another chance to capture it."
           }
-        }
+        },
+        "tags": [
+          "Webhooks"
+        ]
       },
       "get": {
         "summary": "Read the deliveries the sink captured",
@@ -1875,7 +1878,10 @@
           "503": {
             "description": "The inbox could not be read."
           }
-        }
+        },
+        "tags": [
+          "Webhooks"
+        ]
       }
     },
     "/version": {
@@ -2029,6 +2035,11 @@
             "type": "integer",
             "nullable": true,
             "description": "A\u00f1o (pendiente de versi\u00f3n)"
+          },
+          "phase_id": {
+            "type": "integer",
+            "description": "PRMS reporting phase id (`obj_version.id`). The same value `pdf_link` and `prms_link` carry in `?phase=`; use it to build deep links to any PRMS section. One `year` can map to more than one phase.",
+            "example": 8
           },
           "pdf_link": {
             "type": "string",
@@ -2879,7 +2890,10 @@
           },
           "decision": {
             "type": "string",
-            "enum": ["APPROVE", "REJECT"]
+            "enum": [
+              "APPROVE",
+              "REJECT"
+            ]
           },
           "decided_at": {
             "type": "string",
@@ -2890,12 +2904,29 @@
             "type": "object",
             "nullable": true,
             "description": "PRMS user who made this decision; null if the review history cannot be read.",
-            "required": ["id", "first_name", "last_name", "email"],
+            "required": [
+              "id",
+              "first_name",
+              "last_name",
+              "email"
+            ],
             "properties": {
-              "id": { "type": "integer" },
-              "first_name": { "type": "string", "nullable": true },
-              "last_name": { "type": "string", "nullable": true },
-              "email": { "type": "string", "format": "email", "nullable": true }
+              "id": {
+                "type": "integer"
+              },
+              "first_name": {
+                "type": "string",
+                "nullable": true
+              },
+              "last_name": {
+                "type": "string",
+                "nullable": true
+              },
+              "email": {
+                "type": "string",
+                "format": "email",
+                "nullable": true
+              }
             }
           },
           "justification": {
@@ -2906,16 +2937,32 @@
             "type": "object",
             "description": "Complete enriched bilateral result. Its fields and type-specific summary vary by result type; the fields shown here identify the result version.",
             "properties": {
-              "id": { "type": "integer" },
-              "result_code": { "type": "integer" },
-              "version_id": { "type": "integer" },
-              "reported_year_id": { "type": "integer", "nullable": true },
+              "id": {
+                "type": "integer"
+              },
+              "result_code": {
+                "type": "integer"
+              },
+              "version_id": {
+                "type": "integer"
+              },
+              "reported_year_id": {
+                "type": "integer",
+                "nullable": true
+              },
               "obj_version": {
                 "type": "object",
                 "properties": {
-                  "id": { "type": "integer" },
-                  "phase_year": { "type": "integer", "nullable": true },
-                  "phase_name": { "type": "string" }
+                  "id": {
+                    "type": "integer"
+                  },
+                  "phase_year": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "phase_name": {
+                    "type": "string"
+                  }
                 }
               }
             },
