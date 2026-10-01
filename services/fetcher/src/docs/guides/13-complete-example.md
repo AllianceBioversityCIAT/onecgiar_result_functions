@@ -1,3 +1,9 @@
+# Complete Valid Example
+
+The two fields added in 2026-08 are shown first: `external_reference` (yours, optional but  
+needed for webhooks) and `lead_contact_person` (mandatory for every result type).
+
+```json
 {
   "tenant": "prms.result-management.api",
   "op": "dataset.ingest.requested",
@@ -5,6 +11,8 @@
     {
       "type": "knowledge_product",
       "data": {
+        "external_reference": "9d1d9aac-45b5-47cf-99d9-d78b8d6d0997" || "2342" || "STAR-9f2c-4471",
+        "keep_editing": false,
         "created_date": "2025-10-24T19:36:04Z",
         "created_by": {
           "name": "Sara Jani",
@@ -27,7 +35,7 @@
         },
         "contributing_bilateral_projects": [
           {
-            "grant_title": "D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia"
+            "grant_title": "D-200358"
           }
         ],
         "knowledge_product": {
@@ -37,3 +45,4 @@
     }
   ]
 }
+```

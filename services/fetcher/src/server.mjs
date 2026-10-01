@@ -25,33 +25,41 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "normalizer", ts: new Date().toISOString() });
 });
 
-app.get("/openapi.json", (_req, res) => res.json(openapi));
+// Also under /docs/: the page fetches the spec relatively, and links in the wild point at "/docs/".
+app.get(["/openapi.json", "/docs/openapi.json"], (_req, res) => res.json(openapi));
 
-const swaggerHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>PRMS Normalizer API</title>
-      <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui.css" />
-    </head>
-    <body>
-      <div id="swagger-ui"></div>
-      <script src="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui-bundle.js"></script>
-      <script>
-        SwaggerUIBundle({
-          url: '/openapi.json',
-          dom_id: '#swagger-ui',
-          presets: [
-            SwaggerUIBundle.presets.apis,
-            SwaggerUIBundle.presets.standalone
-          ]
-        });
-      </script>
-    </body>
-    </html>`;
+// Scalar renders the guides baked into openapi.json (see docs/build-openapi.mjs) as a docs site:
+// the introduction plus one section per tag, each followed by its endpoints. Pinned so a Scalar
+// release cannot change the page under integrators without a commit here.
+//
+// The spec URL is relative on purpose: behind API Gateway the page may be served under a stage
+// prefix, and an absolute '/openapi.json' would miss it.
+const docsHtml = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PRMS Normalizer API</title>
+  </head>
+  <body>
+    <script
+      id="api-reference"
+      data-url="openapi.json"
+      data-configuration='${JSON.stringify({
+        defaultHttpClient: { targetKey: "shell", clientKey: "curl" },
+        authentication: { preferredSecurityScheme: "ApiKeyAuth" },
+        // Scalar's hosted extras (its toolbar, AI chat, MCP generator) are not ours to offer.
+        showDeveloperTools: "never",
+        agent: { disabled: true },
+        mcp: { disabled: true },
+      })}'
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.72.3"></script>
+  </body>
+</html>`;
 
 app.get("/docs", (_req, res) => {
-  res.send(swaggerHtml);
+  res.type("html").send(docsHtml);
 });
 
 app.post("/ingest", requireApiKey, async (req, res) => {

@@ -3,7 +3,7 @@
   "info": {
     "title": "PRMS Normalizer API",
     "version": "1.2.0",
-    "description": "Read PRMS results from OpenSearch (GET /result, GET /result/{code}), ingest via POST /ingest (validate, process, external API, OpenSearch). Update, delete, and bulk sync are handled elsewhere. Supports Knowledge Products, Capacity Sharing, Innovation Development, Innovation Use, Other Output, Other Outcome, and Policy Change."
+    "description": "# Quickstart\n\nEverything you need before your first call: where the API lives and how to authenticate with your API key.\n\n## Service URLs \u2014 Production\n\n| **Description** | **URL** | Type |\n| --- | --- | --- |\n| **API Reference (this page)** | [https://v6a9z2e4y5.execute-api.us-east-1.amazonaws.com/docs](https://v6a9z2e4y5.execute-api.us-east-1.amazonaws.com/docs) | **Documentation** |\n| **API Normal Ingest (Recommended for submitting a single result)** | [https://v6a9z2e4y5.execute-api.us-east-1.amazonaws.com/](https://v6a9z2e4y5.execute-api.us-east-1.amazonaws.com/ingest) | **1-10 Results** |\n| **API Bulk Ingest (Recommended for sending multiple results)** | [https://bla4fsvgni.execute-api.us-east-1.amazonaws.com/ingest](https://bla4fsvgni.execute-api.us-east-1.amazonaws.com/ingest) | Bulk Upload |\n\n## Service URLs \u2014 Test\n\n| **Description** | **URL** | Type |\n| --- | --- | --- |\n| **API Reference (this page)** | [https://v2f4lv8av4.execute-api.us-east-1.amazonaws.com/docs/](https://v2f4lv8av4.execute-api.us-east-1.amazonaws.com/docs/#/default/post_ingest) | **Documentation** |\n| **API Normal Ingest (Recommended for submitting a single result)** | [https://v2f4lv8av4.execute-api.us-east-1.amazonaws.com/](https://v2f4lv8av4.execute-api.us-east-1.amazonaws.com/) | **1-10 Results** |\n| **API Bulk Ingest (Recommended for sending multiple results)** | [https://0w16ghmybe.execute-api.us-east-1.amazonaws.com](https://0w16ghmybe.execute-api.us-east-1.amazonaws.com/)[/ingest](https://v2f4lv8av4.execute-api.us-east-1.amazonaws.com/ingest) | **Bulk Upload** |\n\n---\n\n## Authentication\n\nEvery call to the **Normal Ingest API and Bulk Ingest API** requires a CLARISA API key in the `x-api-key` header.  \nThere is no anonymous access and no `Authorization: Bearer` alternative.\n\nFor Bulk Ingest, the key is validated before the job is accepted. An invalid or missing key does not create a bulk job.\n\n| **Endpoint** | **Key required** |\n| --- | --- |\n| `POST /ingest` | \u2705 |\n| `POST /webhook` <br>`GET /webhook` | \u2705 |\n| `GET /docs` <br>`GET /openapi.json` <br>`GET /health` | \u274c Open |\n\n```bash\ncurl -X POST \"<Normal Ingest URL>/ingest\" \\\n  -H \"x-api-key: <your-api-key>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d @payload.json\n```\n\n## How to get your key\n\n**Keys are issued by the PRMS team \u2014 one per tool and per environment.** Do not reuse a key across tools, and do not share it between environments: your key is what identifies your platform, so a shared key makes two systems indistinguishable to PRMS.\n\nRequest yours before you start testing:\n\n- Open a ticket with **PRMS Tech Support**, or\n- Contact the PRMS team directly.\nTell us which tool it is for (STAR, MEL, TIP, \u2026) and which environment you need (TEST or PRODUCTION).\n\n## Your key is your identity\n\nPRMS resolves your platform from the key on every call. Two consequences worth knowing:\n\n- **Webhook registration needs no platform field.** You cannot register a callback destination for anybody but yourself, and nobody can register one for you.\n- **`external_reference` round-trips per platform.** The identifier you send comes back to you, and only to you.\n\n## Error responses\n\n| **HTTP** | **Body** | **What it means** |\n| --- | --- | --- |\n| **401** | `{\"ok\": false, \"error\": \"unauthorized\", \"message\": \"Unauthorized\", \"requestId\": \"\u2026\"}` | No key sent, or CLARISA says the key is not valid. Do not retry \u2014 fix the key. |\n| **503** | `{\"ok\": false, \"error\": \"\u2026\", \"message\": \"\u2026\", \"requestId\": \"\u2026\"}` | CLARISA could not be reached to validate your key. **Retryable** \u2014 your key may be perfectly fine. |\n\n> The `requestId` in the body is the one to quote when you contact support about a rejected call.\n\n# Breaking changes & new capabilities\n\n| **Date** | **Change** | **Action required** |\n| --- | --- | --- |\n| **2026-10** | **New:** `data.result_code` on `/ingest`. Send the code of a result you reported and had approved in a previous phase, together with the full result, and PRMS creates its version in the current phase with **your new data** and the **same result code**. The prior-phase record is not modified. The code can be sent as a string (`\"28565\"`) or as an integer (`28565`). Also: the `op` field is not read, so `update` and `delete` are not implemented. | **Action required:** None to keep ingesting: without `result_code`, nothing changes. Use it instead of `/version` when you already have the new phase's data, so you don't need a second step to complete the result. |\n| **2026-09-24** | **Innovation Use MDS relaxed:** quantitative measures may be omitted or sent as an empty array. When `innov_use_to_be_determined` is `true`, measures are ignored; otherwise, a non-empty list must contain at least one row with both a non-blank `unit_of_measure` and numeric `quantity`. `organization` is optional and is not an MDS requirement. Bilateral project budgets are optional; the project `grant_title` remains required. Reporting stores an omitted or zero budget as yet to be determined. | **Action required:** stop treating measures or bilateral project budgets as required. Keep sending at least one identified bilateral project. If a measure is sent for known use, include one complete row. |\n| **2026-09** | **Partially superseded on 2026-09-24; see the update above. \u26a0\ufe0f<br>Breaking:** `contributing_bilateral_projects[].grant_title` must now resolve to a project of the **current reporting phase**, and is matched by registry **code** first. Send the CLARISA project `code` on its own \u2014 not the full title, and not code and title concatenated. A value that resolves to nothing is now **rejected with 400**. <br><br>\u26a0\ufe0f\u00a0**Superseded on 2026-09-24; see the update above.** Innovation Use previously required investment data for every `contributing_bilateral_projects[]` entry: a positive `usd_budget` or `is_determined: true`. \\| **No action required.** `usd_budget` and `is_determined` may now be omitted. Reporting treats an omitted or zero budget as yet to be determined; every project must still include a resolvable `grant_title` | **Yes, if you send project titles.** A concatenated or title-only `grant_title` used to match a legacy catalogue row under an old phase: the result and its investment were saved against a project no PRMS screen can show, which looked exactly like nothing being saved. Both new investment blocks are optional and outside the MDS. An amount on `contributing_programs[]` is still not stored \u2014 complete it in PRMS. |\n| **2026-09** | **Breaking:** Innovation Use now requires investment data for every `contributing_bilateral_projects[]` entry. Send exactly one: a positive `usd_budget`, or `is_determined: true`. | **Yes, for Innovation Use.** `usd_budget: 0`, `is_determined: false` alone, an omitted pair, or sending<br>both values is rejected before the result reaches Reporting. |\n| **2026-09** | **New:** `keep_editing` in `data` \u2014 optional boolean. `true` creates the result in PRMS Reporting as **Editing** instead of **Pending review**, so the reporting user completes the non-MDS fields in PRMS and submits it from there. Absent or `false` keeps today's behaviour. |  None. Opt in **per result**, inside `data` \u2014 a flag sent at the top level of the request never reaches validation. See **keep_editing** below. |\n| **2026-08** | **Breaking:** `evidence[].link` must carry an `http(s)` scheme, and links hosted on file storage platforms (SharePoint, OneDrive, Google Drive, Dropbox) are rejected. | **Yes.** Stop sending storage links and bare file names \u2014 both used to be accepted. See **Evidence links** below. |\n| **2026-08** | `innovation_use` actors: `actor_type_name` is now resolved against the actor type catalogue. An unresolvable name or id is rejected. | **Yes, if you send names.** An actor identified by name alone was previously **dropped without any error**. See **Innovation use \u2014 actors** below. |\n| **2026-08** | `innovation_use` actors: `women_youth` / `men_youth` are validated against their sex total and rejected when greater. | **Yes.** Check the figures before submitting. Youth is a subset of each sex, not a separate group. |\n| **2026-08** | Conditional validation corrected across `common_fields`, `knowledge_product` and `innovation_use`. Several conditions used to fire when a field was **absent**, demanding fields that were never actually required. | **None.** Payloads that were wrongly rejected now pass. Nothing that was accepted before is rejected now. |\n| **2026-08** | `external_reference` is returned on **every** row of the ingest response, including rows that failed and rows rejected before processing. The previously documented path now exists. | **None.** See the updated table in **external_reference**. |\n| **2026-08** | **New:** `external_reference` in `data` \u2014 your own identifier for the result (consecutive, UUID, any string). Optional. Stored verbatim and returned verbatim on the decision webhook and in the ingest response. | None to keep ingesting. **Required in practice if you want to use webhooks**: without it a callback carries no field pointing at your record. |\n| **2026-08** | **New:** self-service **decision webhooks**. Register an HTTPS callback with `POST /webhook` using your existing API key, and PRMS notifies you when a Science Program approves or rejects one of your results. See **[Webhooks](#tag/webhooks)**. | None to keep ingesting. To receive decisions, register a callback **before your results go under review** \u2014 decisions taken with no destination registered are not replayed. |\n| **2026-08** | `lead_contact_person` (with `email` + `name`) is now **mandatory** in `data` for all result types. | Producers must add it to every payload, otherwise the request is rejected at validation (`(root) must have required property 'lead_contact_person'`). |\n\n# Request structure \u2014 `POST /ingest`\n\nEach request must follow this structure:\n\n```json\n{\n  \"tenant\": \"prms.result-management.api\",\n  \"op\": \"dataset.ingest.requested\",\n  \"results\": [\n    {\n      \"type\": \"knowledge_product\",\n      \"data\": { ... }\n    }\n  ]\n}\n```\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **tenant** | string | \u2705 | **Identifier of the system or instance submitting the data.** | \"prms.result-management.api\u201d |\n| **op** | string | \u2705 | **Operation type: create.** | \"dataset.ingest.requested\" |\n| **results** | array | \u2705 | **List of results to be processed. Each item includes type and data.** | `[ <br>{ <br>\"`**`type`**`\": \"knowledge_product\", <br>\"`**`data`**`\": {...} <br>} <br>]` |\n| **type** | string | \u2705 | **Type of result to validate (knowledge_product, policy_change, etc.).** | \"knowledge_product\" |\n| **data** | object | \u2705 | **Payload containing the result data according to its type.** | { \"title\": \"Improved seed varieties...\" } |\n\n# Common fields\n\n---\n\n## External reference \ud83c\udd95\n\n`external_reference`\n\nYour own identifier for this result \u2014 the consecutive number, UUID, or internal id your system already uses. PRMS stores it exactly as you send it and hands it back exactly as you sent it, so you never have to keep a PRMS id to know which of your records a response is about.\n\n| **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- |\n| **string** | \u2699\ufe0f Optional \u26a0\ufe0f | Your identifier for this result. Max 191 characters. Stored and returned verbatim \u2014 no prefix, no transformation. | `\"STAR-9f2c-4471\"` |\n\n**Where it comes back to you:**\n\n| **Where** | **Field** |\n| --- | --- |\n| Ingest response \u2014 a row that was processed, success or failure | `results[].external_reference` |\n| Ingest response \u2014 a row rejected before processing (schema, missing `type`/`data`) | `rejected[].external_reference` |\n| Decision webhook | `external_reference` (top level) |\n\n> \u2139\ufe0f It comes back on **every** row, including the ones that failed. A rejected row is the one you most need to find again \u2014 it is the row you have to show your own user. `null` when you sent none.\n\n```json\n{\n  \"type\": \"knowledge_product\",\n  \"data\": {\n    \"external_reference\": \"STAR-9f2c-4471\",\n    \"created_date\": \"2025-10-24T19:36:04Z\",\n    \"...\": \"resto de campos\"\n  }\n}\n```\n\n> \u2139\ufe0f **It is optional and will stay optional.** Not every producer has an id of its own, and a bilateral result created inside the PRMS Reporting Tool has no external system behind it \u2014 those are stored as `null`, which is the honest answer rather than an invented value.\n> \u26a0\ufe0f **But without it you cannot correlate.** The decision webhook tells you what was decided and why, and carries nothing that points at your row. If you plan to consume webhooks, send it.\n> \n\n> \u2757 One value per result, not per request. In a payload with several results, each one carries its own.\n\n---\n\n## Keep editing \ud83c\udd95\n\n`keep_editing`\n\nWhere the result lands in PRMS Reporting once it is created. By default a result arrives in **Pending review** and goes straight to the Science Program. Set this to `true` when the reporting user still has to complete the fields PRMS asks for beyond the minimum data set: the result is created in **Editing**, visible to them, and **they** submit it for review from PRMS.\n\n| **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- |\n| **boolean** | \u2699\ufe0f Optional | `true` \u2192 created as **Editing**, completed and submitted by the reporting user in PRMS. `false` or absent \u2192 **Pending review**, today's behaviour. | `true` |\n\n```json\n\"data\": {\n  \"keep_editing\": true,\n  \"title\": \"Adoption of climate-resilient seed varieties\"\n}\n```\n\n> \u26a0\ufe0f **Send it per result, inside `data`.** A flag at the top level of the request is dropped before validation: the ingest handler rebuilds the envelope as `{tenant, op, jobId, results}` and keeps nothing else. Sending the same value on every result of a batch is fine \u2014 that is how you get a batch-wide effect.\n\n> \u2705\n> **Validation rules (schema):**\n> \n\n- Optional on every result type. Absent is treated as `false`.\n- Must be a **boolean**. A string, a number or `\"true\"` in quotes is rejected.\n\n> \u26a0\ufe0f **New 2026-09.** The field was silently discarded before it was declared: the schemas set `additionalProperties: true`, so `keep_editing` was passed through untouched and then dropped further down by Reporting's whitelist. Sending it produced no error **and no effect**. Two things changed \u2014 it is now declared on all seven types, so a non-boolean is rejected here with the row's `external_reference` instead of being forwarded; and Reporting reads it.\n\n---\n\n## Result code \ud83c\udd95\n\n`result_code`\n\nThe PRMS result code of a result you already reported and had **approved in a previous phase**. Send it to carry that result into the current phase with the data in this payload, instead of creating a new result.\n\n- **Type:** string or integer\n- **Required:** \u2699\ufe0f Optional\n- **Description:** Digits only. `\"28565\"` and `28565` are both accepted. Omit it to create a new result, exactly as before.\n- **Example:** `28565`\n\n```json\n{\n  \"type\": \"capacity_sharing\",\n  \"data\": {\n    \"result_code\": 28565,\n    \"external_reference\": \"STAR-9f2c-4471\",\n    \"title\": \"...\",\n    \"...\": \"the rest of the result, complete, as for a new one\"\n  }\n}\n```\n\n> \u26a0\ufe0f **Send the full result.** Nothing is copied from the previous phase: the new version is built only from this payload. Anything you don't send is not in the new version.\n\n> \u2139\ufe0f **The status follows `keep_editing`**, as for a new result: `false` \u2192 `Pending Review`, `true` \u2192 `Editing`.\n\n---\n\n## Created date \ud83c\udd95\n\n`created_date`\n\n| **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- |\n| **string (ISO date)** | \u2705 | **Original creation date of the result (if no date is available, use the current timestamp).** | \"2025-10-09T12:00:00Z\" |\n\n---\n\n## Created by \ud83c\udd95\n\n`created_by`\n\nInformation about the user who created the result.\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **email** | string (email) | \u2705 | **User\u2019s email address.** | \"j.doe@cgiar.org\" |\n| **name** | string | \u2705 | **Full name of the user.** | \"John Doe\" |\n\n---\n\n## Submitted by\n\n`submitted_by`\n\nInformation about the user submitting the result.\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **email** | string (email) | \u2705 | **User\u2019s email address.** | \"j.doe@cgiar.org\" |\n| **name** | string | \u2705 | **Full name of the user.** | \"John Doe\" |\n| **submitted_date** | string (ISO date) | \u2705 | **Submission timestamp.** | \"2025-10-09T12:00:00Z\" |\n| **comment** | string | \u274c | **Optional comment or note.** | \"Initial batch upload from STAR\" |\n\n---\n\n## Lead center\n\n`lead_center`\n\n| id | acronym | name |\n| --- | --- | --- |\n| 5 | IRRI | International Rice Research Institute |\n| 45 | IITA | International Institute of Tropical Agriculture |\n| 46 | CIAT (Alliance) | Alliance of Bioversity and CIAT - Regional Hub |\n| 49 | Bioversity (Alliance) | Alliance of Bioversity and CIAT - Headquarter (Bioversity International) |\n| 50 | CIMMYT | International Maize and Wheat Improvement Center / Centro Internacional de Mejoramiento de Ma\u00edz y Trigo |\n| 52 | AfricaRice | Africa Rice Center |\n| 66 | ILRI | International Livestock Research Institute |\n| 67 | CIP | International Potato Center / Centro Internacional de la Papa |\n| 88 | ICRAF | World Agroforestry Centre |\n| 89 | IFPRI | International Food Policy Research Institute |\n| 99 | WorldFish | WorldFish |\n| 115 | CIFOR | Center for International Forestry Research |\n| 172 | IWMI | International Water Management Institute |\n| 11605 | SO | CGIAR System Organization |\n| 1273 | ICRISAT | International Crops Research Institute for the Semi-Arid Tropics |\n| 1279 | ICARDA | International Center for Agricultural Research in the Dry Areas |\n\n\u26a0\ufe0f\u00a0At least one option\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **name** | string | \u2699\ufe0f Optional \u26a0\ufe0f | **Name of the main center responsible for the result.** | \u201cAlliance of Bioversity and CIAT - Regional Hub (International Center for Tropical Agriculture / Centro Internacional de Agricultura Tropical)\u201d |\n| **acronym** | string | \u2699\ufe0f Optional \u26a0\ufe0f | **Acronym of the main center responsible for the result.** | \u201cCIAT (Alliance)\u201d |\n| **institution_id** | number | \u2699\ufe0f Optional \u26a0\ufe0f | **Code of the main center responsible for the result.** | 46 |\n\n---\n\n## Lead contact person \ud83d\udea8 BREAKING \u2014 now MANDATORY\n\n`lead_contact_person`\n\n> \u26a0\ufe0f **Change (2026-08):** `lead_contact_person` is now a **required** field for **all result types** (P2-3227 \u2014 MDS transversal). Payloads that omit it will be **rejected** at validation with `(root) must have required property 'lead_contact_person'`. Producers must start sending it.\n\nLead contact person for the result (MDS field, mandatory). The server matches/creates the AD/PRMS user record by email; if no match is found, it falls back to storing the name only.\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **email** | string (email) | \u2705 | **Email address of the lead contact person.** | \"[jane.doe@cgiar.org](mailto:jane.doe@cgiar.org)\" |\n| **name** | string | \u2705 | **Full name of the lead contact person.** | \"Jane Doe\" |\n\n> \u2757 No additional properties other than `email` and `name` are allowed.\n\n---\n\n## Title and description\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **title** | string | \u2705 | **Short title (max 30 words).** | \"Improved seed varieties adoption in drylands\" |\n| **description** | string | \u2705 | **Detailed description (max 150 words).** | \"Summarizes adoption barriers and enabling factors across regions to inform policy and practice.\" |\n\n---\n\n## ToC mapping\n\n`toc_mapping`\n\nAssociates the result with elements of the Theory of Change (ToC).\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **science_program_id** | string | \u2705 | **ID of the Science Program (SP01\u2013SP13).** | \"SP12\" |\n| **aow_compose_code** | string | \u274c | **Composite code of the Area of Work (AoW).** | \"SP12-AOW01\" |\n| **result_title** | string | \u274c | **Title of the associated ToC result.** | \"Adoption of improved seed varieties\" |\n| **result_indicator_description** | string | \u274c | **Indicator description.** | \"Share of farmers adopting improved seeds\" |\n| **result_indicator_type_name** | string | \u274c | **Indicator type name.** | \"# Of Knowledge Products\" |\n| **target_contribution** | integer | \u274c | **Contribution of this result to the matched indicator's target. Non-negative whole number. Stored only when the ToC match resolves an indicator that has a target. If omitted, 1 is stored. If sent but no indicator with a target is matched, the value is ignored and the result is still created.** | 12 |\n\n---\n\n## Contributing programs\n\n`contributing_programs`\n\nArray of science programs contributing to the result (alternative to single `toc_mapping`).\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **science_program_id** | string | \u2705 | **ID of the Science Program (SP01\u2013SP13).** | \"SP02\" |\n| **aow_compose_code** | string | \u274c | **Composite code of the Area of Work (AoW).** | \"SP02-AOW03\" |\n| **result_title** | string | \u274c | **Title of the associated ToC result.** | \"Nutrition outcomes improved\" |\n| **result_indicator_description** | string | \u274c | **Indicator description.** | \"Households reached with nutrition interventions\" |\n| **result_indicator_type_name** | string | \u274c | **Indicator type name.** | \"Outcome\" |\n\n---\n\n## Geo focus\n\n`geo_focus`\n\nDefines the geographical scope of the result.\n\n- **CLARISA Geo Scope:** [https://api.clarisa.cgiar.org/api/geographic-scopes](https://api.clarisa.cgiar.org/api/geographic-scopes)\n- **CLARISA Regions:** [https://api.clarisa.cgiar.org/api/regions/un-regions](https://api.clarisa.cgiar.org/api/regions/un-regions)\n- **CLARISA Countries:** [https://api.clarisa.cgiar.org/api/countries](https://api.clarisa.cgiar.org/api/countries)\n- **CLARISA Sub-National Scopes:** [https://api.clarisa.cgiar.org/api/subnational-scope](https://api.clarisa.cgiar.org/api/subnational-scope)\n\u26a0\ufe0f\u00a0At least one option\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **scope_code** | number | \u2699\ufe0f Optional (If **scope_label** is defined) \u26a0\ufe0f | **Geographical scope (1=Global, 2=Regional, 3=Multi-national, 4=National, 5=Sub-national, 50=To be determined).** | 2 |\n| **scope_label** | string | \u2699\ufe0f Optional (If **scope_code** is defined) \u26a0\ufe0f | **Descriptive label for the scope.** | \"Regional\" |\n| **regions** | array | Conditional (scope_code=2) | **List of regions covered.** | [ { \"um49code\": 145, \"name\": \"Sub-Saharan Africa\" } ] |\n| **countries** | array | Conditional (scope_code=3\u20135) | **List of countries involved.** | [ { \"id\": 170, \"name\": \"Colombia\", \"iso_alpha_3\": \"COL\", \"iso_alpha_2\": \"CO\" } ] |\n| **subnational_areas** | array | Conditional (scope_code=5) | **List of first-level administrative areas.** | [ { \"id\": 1, \"name\": \"Nairobi County\" } ] |\n\n**Important note:**\n\n- `scope_code = 3` (Multi-national): Requires a minimum of **2 countries** in the `countries` array.\n- `scope_code = 4` (National): Requires a minimum of **1 country** in the `countries` array.\n- `scope_code = 5` (Sub-national): Requires a minimum of **1 country** and **1 sub-national area**.\n\n---\n\n## Contributing center\n\n`contributing_center`\n\n- **CLARISA Institutions:** [https://api.clarisa.cgiar.org/api/institutions](https://api.clarisa.cgiar.org/api/institutions)\n\n| id | acronym | name |\n| --- | --- | --- |\n| 5 | IRRI | International Rice Research Institute |\n| 45 | IITA | International Institute of Tropical Agriculture |\n| 46 | CIAT (Alliance) | Alliance of Bioversity and CIAT - Regional Hub (International Center for Tropical Agriculture / Centro Internacional de Agricultura Tropical) |\n| 49 | Bioversity (Alliance) | Alliance of Bioversity and CIAT - Headquarter (Bioversity International) |\n| 50 | CIMMYT | International Maize and Wheat Improvement Center / Centro Internacional de Mejoramiento de Ma\u00edz y Trigo |\n| 52 | AfricaRice | Africa Rice Center |\n| 66 | ILRI | International Livestock Research Institute |\n| 67 | CIP | International Potato Center / Centro Internacional de la Papa |\n| 88 | ICRAF | World Agroforestry Centre |\n| 89 | IFPRI | International Food Policy Research Institute |\n| 99 | WorldFish | WorldFish |\n| 115 | CIFOR | Center for International Forestry Research |\n| 172 | IWMI | International Water Management Institute |\n| 221 | SMO | CGIAR System Organization |\n| 1273 | ICRISAT | International Crops Research Institute for the Semi-Arid Tropics |\n| 1279 | ICARDA | International Center for Agricultural Research in the Dry Areas |\n\n\u26a0\ufe0f\u00a0If send the array: At least one option\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **institution_id** | number | Optional | **Numeric identifier of the center.** | 1279 |\n| **acronym** | string | Optional | **Center acronym.** | \"ICARDA\" |\n| **name** | string | Optional | **Full name of the center.** | \"International Center for Agricultural Research in the Dry Areas\" |\n\n---\n\n## Contributing partners\n\n`contributing_partners`\n\n\u26a0\ufe0f\u00a0If send the array: At least one option\n\n- **CLARISA Institutions:** [https://api.clarisa.cgiar.org/api/institutions](https://api.clarisa.cgiar.org/api/institutions)\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **institution_id** | number | Optional | **Partner institution ID.** | 7 |\n| **acronym** | string | Optional | **Institution acronym.** | \"NARO\" |\n| **name** | string | Optional | **Full name of the partner institution.** | \u201cNational Agricultural Research Organization\u201d |\n| **usd_budget** | number | Optional | **Budget in USD contributed by this partner institution.** Stored for **Innovation Development** and **Innovation Use**; ignored for other result types. Optional \u2014 not part of the MDS. Must not be sent together with `is_determined: true`. | 75000 |\n| **is_determined** | boolean | Optional | Send `true` when this partner's contribution amount is **not yet determined**. Stores the amount as \"yet to be determined\" and nulls any value sent in `usd_budget`. | false |\n\n---\n\n## Evidence\n\n`evidence`\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| link | string (`http(s)` URL) | \u2705 | **Publicly accessible link to the supporting evidence** (paper, report, dataset, etc.). Must include the scheme. File storage platforms are not accepted \u2014 see the rules below. | `\"https://cgspace.cgiar.org/handle/10568/181939\"` |\n| description | string | \u274c | **Brief description of the evidence.** | `\"Peer-reviewed article summarizing multi-country trials.\"` |\n\nPRMS stores the link and **never copies the document**. Everything about what is accepted follows from that: whoever opens the link later \u2014 a reviewer, the CGIAR Results Dashboard \u2014 gets exactly what you sent, or nothing.\n\n| Rule | Detail |\n| --- | --- |\n| **Scheme required** \u26a0\ufe0f 2026-08 | The link must start with `http://` or `https://`. A bare file name is rejected. |\n| **No file storage platforms** \u26a0\ufe0f 2026-08 | SharePoint, OneDrive, Google Drive and Dropbox links are rejected, whatever the tenant. |\n| **Publicly reachable** | A link nobody outside your organisation can open is of no use as evidence, even when it is technically accepted. |\n\n\u2705 `https://cgspace.cgiar.org/handle/10568/181939`  \n\u2705 `https://doi.org/10.1234/abcd.2025.01`  \n\u274c `result-28808-Document-202607042143-8310.pdf` \u2014 no scheme  \n\u274c `https://cgiar.sharepoint.com/sites/\u2026` \u2014 file storage platform\n\n> \u26a0\ufe0f **Both rules were already in force in the PRMS reporting tool** and stated on screen there; this API simply did not apply them. Until 2026-08 the same link was refused in the form and accepted here.\n\n> \u2139\ufe0f **Confidential evidence has no route through this API.** The API accepts links only. Evidence that cannot be public is reported through the PRMS reporting tool with **Upload file** and answering **No** to the public question: the file is then stored in the PRMS repository, kept off the Results Dashboard, and reachable only by CGIAR staff holding the repository link.\n\n**Where the rejection appears:** these two rules are applied by PRMS, not by this service's pre-checks. A bad link comes back as a failed row in `results[]` (HTTP 207), not in `rejected[]` (HTTP 422). Validate on your side if you want to catch it before submitting.\n\n---\n\n## Contributing bilateral projects\n\n`contributing_bilateral_projects`\n\n- **CLARISA bilateral Projects:** [https://api.clarisa.cgiar.org/api/projects](https://api.clarisa.cgiar.org/api/projects)\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **grant_title** | string | \u2705 | **Registry code of the bilateral / NPP project** \u2014 the `code` field of the CLARISA projects catalogue, sent on its own. Do **not** send the full project title, and do not send code and title concatenated: the catalogue holds legacy rows under a past reporting phase whose name fields carry that concatenated form, and matching one of those binds the result to a project that no PRMS screen can show. A `grant_title` that resolves to no project of the current reporting phase is **rejected with 400** \u2014 before 2026-09-21 it was skipped silently and the result was created without the project or its investment. | D-200358 |\n| **is_lead** | boolean | \u2699\ufe0f Optional | **Flag to identify an Bilateral Project Lead** | false |\n| usd_budget | number | \u2699\ufe0f Optional | **Optional**. If the contribution amount is known, send a positive USD value. Zero is treated as not supplied by Reporting. Do not combine a positive amount with `is_determined: true`. | 15000 |\n| is_determined | boolean | \u2699\ufe0f Optional | **Optional**. Send `true` when the amount is unknown. The budget may also be omitted; the project itself still needs `grant_title`. | false |\n\nThese budget fields are stored for Innovation Development and Innovation Use, but are optional for both and never gate submission. For Innovation Use, an omitted or zero amount is stored by Reporting as yet to be determined. `grant_title` remains required for every bilateral project entry, and at least one project entry is required.\n\n# Knowledge Product\n\n## Overview\n\n`knowledge_product`\n\nDescribes the knowledge product attributes.\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **handle** | string | \u2705 | **Handle or DOI identifier.** | \"hdl:20.500.12345/abc-2025\" |\n\n## Full example\n\n```json\n{\n  \"tenant\": \"prms.result-management.api\",\n  \"op\": \"dataset.ingest.requested\",\n  \"results\": [\n    {\n      \"type\": \"knowledge_product\",\n      \"data\": {\n        \"created_date\": \"2025-10-24T19:36:04Z\",\n        \"created_by\": {\n          \"name\": \"Sara Jani\",\n          \"email\": \"s.jani@cgiar.org\"\n        },\n        \"lead_contact_person\": {\n          \"name\": \"Jane Doe\",\n          \"email\": \"jane.doe@cgiar.org\"\n        },\n        \"lead_center\": {\n          \"institution_id\": 1279,\n          \"acronym\": \"ICARDA\"\n        },\n        \"toc_mapping\": {\n          \"science_program_id\": \"SP01\",\n          \"aow_compose_code\": \"SP01-AOW05\",\n          \"result_title\": \"HLO20.AOW5.IO3 Assess performance\",\n          \"result_indicator_description\": \"Availability of MELIA Report on AoWs (performance data)\",\n          \"result_indicator_type_name\": \"Number of knowledge products\"\n        },\n        \"contributing_bilateral_projects\": [\n          {\n            \"grant_title\": \"D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia\"\n          }\n        ],\n        \"knowledge_product\": {\n          \"handle\": \"https://hdl.handle.net/20.500.1176/70001\"\n        }\n      }\n    }\n  ]\n}\n```\n\n# Innovation Development\n\n## Overview\n\n`innovation_development`\n\nDescribe los atributos espec\u00edficos del resultado de **Innovation Development**.\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **innovation_typology** | object | \u2705 | Typology of the innovation (by code or descriptive name). | { \"code\": 12, \"name\": \"Technological innovation\" } |\n| **innovation_developers** | string | \u274c | Semicolon-separated list of main developers or organizations. | \"John Doe; Marie Curie; CGIAR Breeding Team\" |\n| **innovation_readiness_level** | object | \u2705 | Readiness level of the innovation, using PRMS readiness scale (id or name). | { \"id\": 14, \"name\": \"Phase 3 - Available for uptake\" } |\n\n---\n\n## Innovation typology\n\n`innovation_typology`\n\n- **CLARISA Type of Innovations:** [https://api.clarisa.cgiar.org/api/innovation-types](https://api.clarisa.cgiar.org/api/innovation-types)\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **code** | number | \u2699\ufe0f Optional (if **name** is provided) \u26a0\ufe0f | Numeric code representing the innovation typology. | 12 |\n| **name** | string | \u2699\ufe0f Optional (if **code** is provided) \u26a0\ufe0f | Descriptive name of the innovation typology. | \"Technological innovation\" |\n\n> \u26a0\ufe0f\n> **At least one is required:**\n> \n> **code**\n> \n> **name**\n> \n\n---\n\n## Innovation readiness level\n\n`innovation_readiness_level`\n\n- **CLARISA Innovation Readiness Levels:** [https://api.clarisa.cgiar.org/api/innovation-readiness-levels](https://api.clarisa.cgiar.org/api/innovation-readiness-levels)\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **id** | number | \u2699\ufe0f Optional (if **name** is provided) \u26a0\ufe0f | Identifier of the innovation readiness level in PRMS. | 14 |\n| **name** | string | \u2699\ufe0f Optional (if **id** is provided) \u26a0\ufe0f | Descriptive label of the readiness level. | \"Phase 3 - Available for uptake\" |\n\n> \u26a0\ufe0f\n> **At least one is required:**\n> \n> **id**\n> \n> **name**\n> \n\n---\n\n## Data usage example\n\n```json\n\"innovation_development\": {\n  \"innovation_typology\": {\n    \"code\": 12,\n    \"name\": \"Technological innovation\"\n  },\n  \"innovation_developers\": \"John Doe; Marie Curie; CGIAR Breeding Team\",\n  \"innovation_readiness_level\": {\n    \"id\": 14,\n    \"name\": \"Phase 3 - Available for uptake\"\n  }\n}\n```\n\n## Full example\n\n```json\n{\n  \"tenant\": \"prms.result-management.api\",\n  \"op\": \"dataset.ingest.requested\",\n  \"results\": [\n    {\n      \"type\": \"innovation_development\",\n      \"data\": {\n        \"created_date\": \"2025-10-24T19:36:04Z\",\n        \"created_by\": {\n          \"name\": \"Sara Jani\",\n          \"email\": \"s.jani@cgiar.org\"\n        },\n        \"lead_contact_person\": {\n          \"name\": \"Jane Doe\",\n          \"email\": \"jane.doe@cgiar.org\"\n        },\n        \"submitted_by\": {\n          \"email\": \"mohammad.salem@codeobia.com\",\n          \"name\": \"Mohammad Salem\",\n          \"comment\": \"\",\n          \"submitted_date\": \"2025-11-24T14:28:02Z\"\n        },\n        \"lead_center\": {\n          \"institution_id\": 1279,\n          \"acronym\": \"ICARDA\"\n        },\n        \"title\": \"Climate-resilient wheat variety development toolkit\",\n        \"description\": \"Innovative toolkit for accelerating drought-tolerant wheat variety development through participatory breeding approaches\",\n        \"toc_mapping\": {\n          \"science_program_id\": \"SP01\",\n          \"aow_compose_code\": \"SP01-AOW05\",\n          \"result_title\": \"HLO20.AOW5.IO3 Assess performance\",\n          \"result_indicator_description\": \"Availability of MELIA Report on AoWs (performance data)\",\n          \"result_indicator_type_name\": \"Number of innovations (innovation development)\"\n        },\n        \"geo_focus\": {\n          \"scope_code\": 4,\n          \"scope_label\": \"National\",\n          \"countries\": [\n            {\n              \"id\": 788,\n              \"name\": \"Tunisia\"\n            }\n          ]\n        },\n        \"contributing_center\": [\n          {\n            \"institution_id\": 1279,\n            \"acronym\": \"ICARDA\"\n          }\n        ],\n        \"contributing_partners\": [\n          {\n            \"name\": \"Partner Organization\"\n          }\n        ],\n        \"evidence\": [\n          {\n            \"link\": \"https://hdl.handle.net/20.500.1176/70001\",\n            \"description\": \"\"\n          }\n        ],\n        \"contributing_bilateral_projects\": [\n          {\n            \"grant_title\": \"D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia\"\n          }\n        ],\n        \"innovation_development\": {\n          \"innovation_typology\": {\n            \"code\": 12,\n            \"name\": \"Technological innovation\"\n          },\n          \"innovation_developers\": \"ICARDA Wheat Breeding Team\",\n          \"innovation_readiness_level\": {\n            \"level\": 0\n          }\n        }\n      }\n    }\n  ]\n}\n```\n\n# Capacity Sharing\n\n## Overview\n\n`capacity_sharing`\n\nDescribes the attributes of **Capacity Sharing / Training**\u2013related results.\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **number_people_trained** | object | \u2705 | Disaggregation of participants trained by gender/unknown. At least one sub-field must be provided. | { \"women\": 12, \"men\": 20 } |\n| **length_training** | string (enum) | \u2705 | Duration/type of the training. | \"Short-term\" |\n| **delivery_method** | string (enum) | \u2705 | How the training was delivered (online, in person, blended). | \"Blended (in-person and virtual)\" |\n\n---\n\n## Number people trained\n\n`number_people_trained`\n\nBreakdown of how many people were trained.\n\n> \u26a0\ufe0f\n> **At least one field is required**\n> \n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **women** | number | \u2699\ufe0f Optional (at least one of the four is required) \u26a0\ufe0f | Number of women trained. | 25 |\n| **men** | number | \u2699\ufe0f Optional (at least one of the four is required) \u26a0\ufe0f | Number of men trained. | 18 |\n| **non_binary** | number | \u2699\ufe0f Optional (at least one of the four is required) \u26a0\ufe0f | Number of non-binary participants trained. | 2 |\n| **unknown** | number | \u2699\ufe0f Optional (at least one of the four is required) \u26a0\ufe0f | Number of participants whose gender is not reported / unknown. | 5 |\n\n> \u2139\ufe0f\n> **Validation rule:**\n> \n> **at least one**\n> \n\n---\n\n## Length training\n\n`length_training`\n\nSpecifies the duration or type of training.\n\n| **Value** | **Description** |\n| --- | --- |\n| **\u201cPhD\u201d** | Doctoral-level training. |\n| **\u201cMaster\u201d** | Master-level training. |\n| **\u201cShort-term\u201d** | Short-term training (workshop, short course, etc.). |\n| **\u201cLong-term\u201d** | Long-term training not classified as Master/PhD (e.g. multi-month programs). |\n\n> \u2705\n> **Required**\n> \n\n> \u2757 Must be one of: \"PhD\", \"Master\", \"Short-term\", \"Long-term\".\n\n---\n\n## Delivery method\n\n`delivery_method`\n\nHow the training or capacity sharing activity was delivered.\n\n| **Value** | **Description** |\n| --- | --- |\n| **\u201cVirtual / Online\u201d** | Training delivered fully online. |\n| **\u201cIn person\u201d** | Training delivered fully face-to-face. |\n| **\u201cBlended (in-person and virtual)\u201d** | Training combining online and in-person components. |\n\n> \u2705\n> **Required**\n> \n\n> \u2757 Must be one of: \"Virtual / Online\", \"In person\", \"Blended (in-person and virtual)\".\n\n---\n\n## Data usage example\n\n```text\n\"capacity_sharing\": {\n  \"number_people_trained\": {\n    \"women\": 25,\n    \"men\": 18,\n    \"non_binary\": 2,\n    \"unknown\": 5\n  },\n  \"length_training\": \"Short-term\",\n  \"delivery_method\": \"Blended (in-person and virtual)\"\n}\n```\n\n## Full example\n\n```json\n{\n  \"tenant\": \"prms.result-management.api\",\n  \"op\": \"dataset.ingest.requested\",\n  \"results\": [\n    {\n      \"type\": \"capacity_sharing\",\n      \"data\": {\n        \"result_type_id\": 3,\n        \"result_level_id\": 3,\n        \"created_date\": \"2025-10-24T19:36:04Z\",\n        \"created_by\": {\n          \"name\": \"Sara Jani\",\n          \"email\": \"s.jani@cgiar.org\"\n        },\n        \"lead_contact_person\": {\n          \"name\": \"Jane Doe\",\n          \"email\": \"jane.doe@cgiar.org\"\n        },\n        \"submitted_by\": {\n          \"email\": \"mohammad.salem@codeobia.com\",\n          \"name\": \"Mohammad Salem\",\n          \"comment\": \"\",\n          \"submitted_date\": \"2025-11-24T14:28:02Z\"\n        },\n        \"lead_center\": {\n          \"institution_id\": 1279,\n          \"acronym\": \"ICARDA\"\n        },\n        \"title\": \"Training workshop on climate-smart agriculture practices\",\n        \"description\": \"Comprehensive training program for extension agents on climate adaptation strategies and sustainable farming techniques\",\n        \"toc_mapping\": {\n          \"science_program_id\": \"SP01\",\n          \"aow_compose_code\": \"SP01-AOW05\",\n          \"result_title\": \"HLO20.AOW5.IO3 Assess performance\",\n          \"result_indicator_description\": \"Availability of MELIA Report on AoWs (performance data)\",\n          \"result_indicator_type_name\": \"Number of people trained\"\n        },\n        \"geo_focus\": {\n          \"scope_code\": 4,\n          \"scope_label\": \"National\",\n          \"countries\": [\n            {\n              \"id\": 788,\n              \"name\": \"Tunisia\"\n            }\n          ]\n        },\n        \"contributing_center\": [\n          {\n            \"institution_id\": 1279,\n            \"acronym\": \"ICARDA\"\n          }\n        ],\n        \"contributing_partners\": [\n          {\n            \"name\": \"Partner Organization\"\n          }\n        ],\n        \"evidence\": [\n          {\n            \"link\": \"https://hdl.handle.net/20.500.1176/70003\",\n            \"description\": \"Training materials and participant feedback\"\n          }\n        ],\n        \"contributing_bilateral_projects\": [\n          {\n            \"grant_title\": \"D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia\"\n          }\n        ],\n        \"capacity_sharing\": {\n          \"number_people_trained\": {\n            \"women\": 45,\n            \"men\": 78,\n            \"non_binary\": 2\n          },\n          \"length_training\": \"Short-term\",\n          \"delivery_method\": \"Blended (in-person and virtual)\"\n        }\n      }\n    }\n  ]\n}\n```\n\n# Innovation Use\n\n## Overview\n\n`innovation_use`\n\nCaptures how the innovation is currently being used, by **actors**, **organizations**, and optional **measures**.\n\n**Innovation Use minimum data set**\n\nAn Innovation Use result is accepted only when it includes:\n\n- At least one identified entry in `contributing_bilateral_projects[]`; every entry must include `grant_title`.\n- At least one actor in `current_innovation_use_numbers.actors`, unless `innov_use_to_be_determined` is `true`.\n- `measures` is optional. If current use is known and a non-empty list is sent, at least one row must include both a non-blank `unit_of_measure` and a numeric `quantity`. When `innov_use_to_be_determined` is `true`, measures are ignored.\n- Bilateral project budgets are optional. If supplied, use a positive `usd_budget` when known or `is_determined: true` when unknown; omitting the amount or sending zero is treated by Reporting as yet to be determined.\n- `organization` is optional and is not an MDS requirement.\n`innovation_use_level` is optional and is not part of the minimum data set.\n\n---\n\n## Innovation use level \ud83c\udd95\n\n`innovation_use_level`\n\nThe stage of use being claimed. Optional. When supplied, it may be identified by level or name; omitting it does not block Innovation Use creation or submission.\n\n| id | name | level | definition |\n| --- | --- | --- | --- |\n| 1 | No use | 0 | Innovation is not used. |\n| 2 | Project lead organization | 1 | Innovation is used by organization(s) leading the innovation development. |\n| 3 | Partners | 2 | Innovation is used by some partners involved in initial innovation development. |\n| 4 | Partners | 3 | Innovation is commonly used by partners involved in initial innovation development. |\n| 5 | Connected next-user | 4 | Innovation is used by some organizations connected to partners involved in the initial innovation development. |\n| 6 | Connected next-user | 5 | Innovation is commonly used by organizations connected to partners involved in the initial innovation development. |\n| 7 | Unconnected next-user | 6 | Innovation is used by organizations not connected to partners involved in the initial innovation development. |\n| 8 | Unconnected next-user | 7 | Innovation is commonly used by organizations not connected to partners involved in the initial innovation development. |\n| 9 | End-user / Beneficiaries | 8 | Innovation is used by some end-users or beneficiaries who were not involved in the initial innovation development. |\n| 10 | End-user / Beneficiaries | 9 | Innovation is commonly used by end-users or beneficiaries who were not involved in the initial innovation development. |\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **level** | integer or string | \u2699\ufe0f Optional (if **name** is provided) | Coded level, from the table above. **Preferred over the name.** | 2 |\n| **name** | string | \u2699\ufe0f Optional (if **level** is provided) | Descriptive label of the level, matched against the table above. | \"Scaling\" |\n\n```json\n\"innovation_use\": {\n  \"innovation_use_level\": { \"level\": 2 },\n  \"current_innovation_use_numbers\": { }\n}\n```\n\n---\n\n## Current innovation use numbers\n\n`current_innovation_use_numbers`\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **innov_use_to_be_determined** | boolean | \u2705 | Whether current use figures are still to be determined. When `true`, actors are not required and measures are ignored by the MDS. | false |\n| **actors** | array[object] | \u2705 Required unless **innov_use_to_be_determined** is `true` \u26a0\ufe0f | Actor groups using the innovation, with optional sex/age disaggregation. Must hold at least one. | [{ \"actor_type_id\": 1, \"how_many\": 120 }] |\n| **organization** | array[object] | \u2699\ufe0f Optional | Organizations/institutions using the innovation. | [{ \"institution_types_id\": 10, \"how_many\": 3 }] |\n| **measures** | array[object] | \u2699\ufe0f Optional | Optional quantitative measure rows. When current use is known, a non-empty list must contain at least one row with both unit and numeric quantity. Ignored when use is marked TBD. | [{ \"unit_of_measure\": \"Hectares\", \"quantity\": 2500 }] |\n\n\u2705\u00a0**Validation rules (schema):**\n\n- `innov_use_to_be_determined` is required.\n- `actors` must contain at least one entry unless `innov_use_to_be_determined` is `true`.\n- `measures` may be omitted or empty. When use is known, a non-empty list must contain at least one complete measure; other incomplete rows alongside that complete row are tolerated. When use is TBD, measures are not validated by the MDS.\n- `organization` is optional and does not satisfy or replace any MDS requirement.\n- `innovation_use_level` is optional; see its subsection.\n\n> \u26a0\ufe0f **Changed 2026-09.** Two things read differently before:\n> - The rule was an **or**: any one of `actors`, `organization` or `measures` satisfied it. Now `actors` and `measures` are demanded separately, and `organization` satisfies neither.\n> - The **Required** column had the condition backwards on all three rows \u2014 it said they were needed when `innov_use_to_be_determined` was `true`, which is exactly when actors are not.\n\n---\n\n## Actors\n\n`actors`\n\nRepresents groups of actors using the innovation.\n\n| actor_type_id | name |\n| --- | --- |\n| 1 | Farmers/ (agro)pastoralist/ herders/ fishers |\n| 2 | Researchers |\n| 3 | Extension agents |\n| 4 | Policy actors (public or private) |\n| 5 | Other |\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **result_actors_id** | string or integer | \u274c | Internal identifier for the actor record (if available). | 105 |\n| **actor_type_id** | string or integer | \u2699\ufe0f Optional (if **actor_type_name** is provided) | Coded type of actor, from the table above. **Preferred over the name.** | 5 |\n| **actor_type_name** | string | \u2699\ufe0f Optional (if **actor_type_id** is provided) \u26a0\ufe0f | Descriptive label of the actor type, matched against the table above. Case-insensitive and tolerant of spacing around the slashes. An unresolvable name is rejected. | \"Researchers\" |\n| **other_actor_type** | string or null | Conditional | Required when `actor_type_id` = 5. Describes the specific actor type when \"Other\" is selected. | \"Youth farmer groups\" |\n| **sex_and_age_disaggregation** | boolean or null | \u274c | \u26a0\ufe0f **Reads as \"does not apply\".** `false` (or omitted) \u2192 report `women` / `men` with their youth. `true` \u2192 the disaggregation is **not** available for this group, so report `how_many` only. | false |\n| **how_many** | string, integer or null | Conditional | Total number of actors in this group. Required when `sex_and_age_disaggregation` = `true`. | 120 |\n| **women** | string, integer or null | \u274c | Number of women in this actor group. | 60 |\n| **women_youth** | string, integer or null | \u274c | Number of women in this group who are youth. **Counted within `women`**, so it can never exceed it. | 25 |\n| **men** | string, integer or null | \u274c | Number of men in this actor group. | 40 |\n| **men_youth** | string, integer or null | \u274c | Number of men in this group who are youth. **Counted within `men`**, so it can never exceed it. | 15 |\n| **previousWomen** | string, integer or null | \u274c | Historical value of women in previous reporting (if applicable). | 50 |\n\n**How youth is reported**\n\nYouth is a subset of each sex, not a separate group:\n\n```json\n{\n  \"actor_type_id\": 1,\n  \"sex_and_age_disaggregation\": false,\n  \"women\": 400, \"women_youth\": 100,\n  \"men\": 450,   \"men_youth\": 50\n}\n```\n\nPRMS derives non-youth as the difference and does not store it. **There is no total-youth field** \u2014 a youth figure that is not split by sex has nowhere to go.\n\n> \u2705\n> **Validation rules (schema):**\n> \n\n- At least **one** must be provided: `actor_type_id` **or** `actor_type_name`.\n- If `sex_and_age_disaggregation` **is present and** = `true` \u2192 `how_many` is **required**.\n- If `actor_type_id` **is present and** is `\"5\"` or `5` \u2192 `other_actor_type` is **required**.\n- `women_youth` \u2264 `women`, and `men_youth` \u2264 `men`. \u26a0\ufe0f new 2026-08\n\n> \u26a0\ufe0f **Changed 2026-08.** Three things behaved differently before, all now fixed:\n> - An actor sent with `actor_type_name` and no `actor_type_id` was **silently dropped** \u2014 stored with no type, and the request still returned `200` with \"All results processed successfully\". If you send names, verify the actors you expect came back.\n> - Youth was never checked against its sex total: `women: 10, women_youth: 999` was stored as sent, and the derived non-youth clamped to 0.\n> - The last two conditional rules fired when the field was **absent**, not just when it held the triggering value. Omitting `sex_and_age_disaggregation` demanded `how_many`, and identifying an actor by name demanded `other_actor_type`. Both now require the field to be present.\n\n---\n\n## Measures\n\n`measures`\n\nWhat the innovation use is counted in. **At least one entry must carry both halves** \u2014 a unit and a quantity. A measure with only one of the two counts for nothing.\n\nMeasures are optional. When `innov_use_to_be_determined` is `true`, they are ignored by the MDS. Otherwise, if a non-empty measure list is supplied, at least one entry must have both a non-blank unit and numeric quantity. A quantity of `0` is valid.\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **unit_of_measure** | string | \u2705 | Unit the quantity is expressed in. Must not be blank or whitespace. | \"# of Innovations\" |\n| **quantity** | string or number | \u2705 | How much of that unit. | 2 |\n\n```json\n\"measures\": [\n  { \"unit_of_measure\": \"# of Innovations\", \"quantity\": 2 },\n  { \"unit_of_measure\": \"Hectares\", \"quantity\": 1500.5 }\n]\n```\n\n\u2705\u00a0**Validation rules (schema):**\n\n- The `measures` property may be omitted or be an empty array.\n- For known current use, a non-empty array must contain at least one complete row: a non-blank `unit_of_measure` and numeric `quantity`.\n- `quantity: 0` is valid.\n- Extra incomplete entries alongside a complete one are tolerated.\n- When `innov_use_to_be_determined` is `true`, measures are ignored by the MDS.\n\n> \u26a0\ufe0f **Updated 2026-09-24.** `measures` may be omitted or sent as an empty array. When current use is known and a non-empty array is supplied, at least one row must include both a non-blank `unit_of_measure` and a numeric `quantity`. Whole-number quantities such as `2` are valid. When `innov_use_to_be_determined` is `true`, measures are ignored  by the MDS.\n\n---\n\n## Data usage example\n\n```json\n\"innovation_use\": {\n  \"innovation_use_level\": { \"level\": 2, \"name\": \"Scaling\" },\n  \"current_innovation_use_numbers\": {\n    \"innov_use_to_be_determined\": false,\n    \"actors\": [\n      {\n        \"actor_type_id\": 1,\n        \"sex_and_age_disaggregation\": false,\n        \"how_many\": 120,\n        \"women\": 60,\n        \"women_youth\": 25,\n        \"men\": 40,\n        \"men_youth\": 15\n      },\n      {\n        \"actor_type_id\": 5,\n        \"other_actor_type\": \"Local agribusinesses\",\n        \"sex_and_age_disaggregation\": true,\n        \"how_many\": 10\n      }\n    ],\n    \"measures\": [\n      { \"unit_of_measure\": \"Hectares\", \"quantity\": 2500 },\n      { \"unit_of_measure\": \"Households\", \"quantity\": 800 }\n    ]\n  }\n}\n```\n\n## Full example\n\n```json\n{\n  \"tenant\": \"prms.result-management.api\",\n  \"op\": \"dataset.ingest.requested\",\n  \"results\": [\n    {\n      \"type\": \"innovation_use\",\n      \"data\": {\n        \"result_type_id\": 2,\n        \"result_level_id\": 3,\n        \"created_date\": \"2025-10-24T19:36:04Z\",\n        \"created_by\": {\n          \"name\": \"Sara Jani\",\n          \"email\": \"s.jani@cgiar.org\"\n        },\n        \"lead_contact_person\": {\n          \"name\": \"Sara Jani\",\n          \"email\": \"s.jani@cgiar.org\"\n        },\n        \"submitted_by\": {\n          \"email\": \"mohammad.salem@codeobia.com\",\n          \"name\": \"Mohammad Salem\",\n          \"comment\": \"\",\n          \"submitted_date\": \"2025-11-24T14:28:02Z\"\n        },\n        \"lead_center\": {\n          \"institution_id\": 1279,\n          \"acronym\": \"ICARDA\"\n        },\n        \"title\": \"Adoption of improved wheat varieties by smallholder farmers\",\n        \"description\": \"Documentation of farmer adoption and use of drought-tolerant wheat varieties across multiple communities\",\n        \"toc_mapping\": {\n          \"science_program_id\": \"SP01\",\n          \"aow_compose_code\": \"SP01-AOW05\",\n          \"result_title\": \"HLO20.AOW5.IO3 Assess performance\",\n          \"result_indicator_description\": \"Availability of MELIA Report on AoWs (performance data)\",\n          \"result_indicator_type_name\": \"Number of innovations (innovation use)\"\n        },\n        \"geo_focus\": {\n          \"scope_code\": 4,\n          \"scope_label\": \"National\",\n          \"countries\": [\n            {\n              \"id\": 788,\n              \"name\": \"Tunisia\"\n            }\n          ]\n        },\n        \"contributing_center\": [\n          {\n            \"institution_id\": 1279,\n            \"acronym\": \"ICARDA\"\n          }\n        ],\n        \"contributing_partners\": [\n          {\n            \"name\": \"Partner Organization\"\n          }\n        ],\n        \"evidence\": [\n          {\n            \"link\": \"www.google.com.co\",\n            \"description\": \"Adoption survey report\"\n          }\n        ],\n        \"contributing_bilateral_projects\": [\n          {\n            \"grant_title\": \"D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia\",\n            \"usd_budget\": 320000\n          }\n        ],\n        \"innovation_use\": {\n          \"innovation_use_level\": {\n            \"level\": 2,\n            \"name\": \"Scaling\"\n          },\n          \"current_innovation_use_numbers\": {\n            \"innov_use_to_be_determined\": false,\n            \"actors\": [\n              {\n                \"actor_type_id\": 1,\n                \"sex_and_age_disaggregation\": true,\n                \"how_many\": 1500,\n                \"women\": 600,\n                \"women_youth\": 150,\n                \"men\": 900,\n                \"men_youth\": 200\n              }\n            ],\n            \"measures\": [\n              {\n                \"unit_of_measure\": \"# of Innovations\",\n                \"quantity\": 1\n              }\n            ]\n          }\n        }\n      }\n    }\n  ]\n}\n```\n\n# Policy Change\n\n## Overview\n\n`policy_change`\n\nDescribes the attributes of a **Policy Change** result.\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **policy_type** | object | \u2705 | Type of policy change and (for some cases) the amount and status. | { \"id\": 1, \"name\": \"Budget or investment\", \"status_amount\": { \"id\": 2, \"name\": \"Increased\" }, \"amount\": 500000 } |\n| **policy_stage** | object | \u2705 | Stage of the policy in the policy cycle. | { \"id\": 3, \"name\": \"Implemented\" } |\n| **implementing_organization** | array[object] | \u2705 (min 1) | List of organizations/institutions implementing the policy change. | [ { \"institutions_id\": 1279 }, { \"institutions_acronym\": \"ICARDA\" } ] |\n\n> \u2705\n> **Validation:**\n> \n\n> policy_change is an object required in the payload when type = \"policy_change\".\n\n---\n\n## Policy type\n\n`policy_type`\n\nDefines the **type of policy change** and, when applicable, the **amount** and its **status**.\n\n- **CLARISA Policy Types:** [https://api.clarisa.cgiar.org/api/policy-types](https://api.clarisa.cgiar.org/api/policy-types)\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **id** | integer | \u2699\ufe0f Optional (if **name** is provided) \u26a0\ufe0f | Identifier of the policy type. | 1 |\n| **name** | string | \u2699\ufe0f Optional (if **id** is provided) \u26a0\ufe0f | Descriptive name of the policy type. | \"Budget or investment\" |\n| **status_amount** | object | Conditional | Required **only if** id = 1. Describes the status of the budget/investment amount. | { \"id\": 2, \"name\": \"Increased\" } |\n| **amount** | integer | Conditional | Required **only if** id = 1. Numeric amount associated with the policy change (e.g., budget allocation). | 500000 |\n\n> **\u26a0\ufe0f\u00a0Important validation rules (according to the schema):**\n\n- At least one of these conditions must be met:\n  - policy_type.id is present, **or**\n  - policy_type.name is present.\n- If policy_type.id = 1 \u21d2 **status_amount and amount are mandatory**.\n- If policy_type.id \u2260 1 \u21d2 **status_amount and amount fields are NOT allowed** (they must not be included in the payload).\n\n---\n\n## Status amount\n\n`status_amount`\n\nStatus of the amount associated with the policy change (only applies to policy_type.id = 1).\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **id** | integer | \u2699\ufe0f Optional (if **name** is provided) \u26a0\ufe0f | Identifier of the amount status. | 2 |\n| **name** | string | \u2699\ufe0f Optional (if **id** is provided) \u26a0\ufe0f | Descriptive label of the amount status. | \"Increased\" |\n\n> **\ud83d\udd0e As with other objects: you must provide**\n> **id**\n> \n> **name**\n> \n\n---\n\n## Policy stage\n\n`policy_stage`\n\nDefines the **stage of the policy** in the policy cycle.\n\n- **CLARISA Policy Stages:** [https://api.clarisa.cgiar.org/api/policy-stages](https://api.clarisa.cgiar.org/api/policy-stages)\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **id** | integer | \u2699\ufe0f Optional (if **name** is provided) \u26a0\ufe0f | Identifier of the policy stage. | 3 |\n| **name** | string | \u2699\ufe0f Optional (if **id** is provided) \u26a0\ufe0f | Descriptive label of the policy stage. | \"Implemented\" |\n\n> \u2705 At least one of the two: id or name.\n\n---\n\n## Implementing organization\n\n`implementing_organization`\n\nOrganizations/institutions that are **implementing** the policy change.\n\n**Array:**\n\n- Type: array[object]\n- **Required:** \u2705\n- **minItems:** 1 (al menos una organizaci\u00f3n)\n- **CLARISA Institutions:** [https://api.clarisa.cgiar.org/api/institutions](https://api.clarisa.cgiar.org/api/institutions)\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **institutions_id** | integer | \u2699\ufe0f Optional \u26a0\ufe0f | Numeric identifier of the institution (CLARISA ID). | 1279 |\n| **institutions_acronym** | string | \u2699\ufe0f Optional \u26a0\ufe0f | Acronym of the institution. | \"ICARDA\" |\n| **institutions_name** | string | \u2699\ufe0f Optional \u26a0\ufe0f | Full name of the institution. | \"International Center for Agricultural Research in the Dry Areas\" |\n\n> **\u26a0\ufe0f\u00a0Validation rules per item:**\n\n- Each organization must have **at least one** of these fields:\n  - institutions_id\n  - institutions_acronym\n  - institutions_name\n- No additional properties other than these three are allowed.\n\n---\n\n## Data usage example\n\n```json\n\"policy_change\": {\n  \"policy_type\": {\n    \"id\": 1,\n    \"name\": \"Budget or investment\",\n    \"status_amount\": {\n      \"id\": 2,\n      \"name\": \"Increased\"\n    },\n    \"amount\": 500000\n  },\n  \"policy_stage\": {\n    \"id\": 3,\n    \"name\": \"Implemented\"\n  },\n  \"implementing_organization\": [\n    {\n      \"institutions_id\": 1279,\n      \"institutions_acronym\": \"ICARDA\",\n      \"institutions_name\": \"International Center for Agricultural Research in the Dry Areas\"\n    },\n    {\n      \"institutions_acronym\": \"MoA-Uganda\"\n    }\n  ]\n}\n```\n\n## Full example\n\n```json\n{\n  \"tenant\": \"prms.result-management.api\",\n  \"op\": \"dataset.ingest.requested\",\n  \"results\": [\n    {\n      \"type\": \"policy_change\",\n      \"data\": {\n        \"result_type_id\": 1,\n        \"result_level_id\": 3,\n        \"created_date\": \"2025-10-24T19:36:04Z\",\n        \"created_by\": {\n          \"name\": \"Sara Jani\",\n          \"email\": \"s.jani@cgiar.org\"\n        },\n        \"lead_contact_person\": {\n          \"name\": \"Jane Doe\",\n          \"email\": \"jane.doe@cgiar.org\"\n        },\n        \"submitted_by\": {\n          \"email\": \"mohammad.salem@codeobia.com\",\n          \"name\": \"Mohammad Salem\",\n          \"comment\": \"\",\n          \"submitted_date\": \"2025-11-24T14:28:02Z\"\n        },\n        \"lead_center\": {\n          \"institution_id\": 1279,\n          \"acronym\": \"ICARDA\"\n        },\n        \"title\": \"National climate-smart agriculture policy framework adoption\",\n        \"description\": \"Government adoption of climate-smart agriculture policy framework with allocated budget for implementation across multiple regions\",\n        \"toc_mapping\": {\n          \"science_program_id\": \"SP01\",\n          \"aow_compose_code\": \"SP01-AOW05\",\n          \"result_title\": \"HLO20.AOW5.IO3 Assess performance\",\n          \"result_indicator_description\": \"Availability of MELIA Report on AoWs (performance data)\",\n          \"result_indicator_type_name\": \"Number of policies\"\n        },\n        \"geo_focus\": {\n          \"scope_code\": 4,\n          \"scope_label\": \"National\",\n          \"countries\": [\n            {\n              \"id\": 788,\n              \"name\": \"Tunisia\"\n            }\n          ]\n        },\n        \"evidence\": [\n          {\n            \"link\": \"www.gipiti.com\",\n            \"description\": \"Policy document and implementation plan\"\n          }\n        ],\n        \"contributing_bilateral_projects\": [\n          {\n            \"grant_title\": \"D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia\"\n          }\n        ],\n        \"policy_change\": {\n          \"policy_type\": {\n            \"name\": \"Program, budget or investment\",\n            \"status_amount\": {\n              \"id\": 1,\n              \"name\": \"Approved\"\n            },\n            \"amount\": 5000000\n          },\n          \"policy_stage\": {\n            \"name\": \"Stage 1\"\n          },\n          \"implementing_organization\": [\n            {\n              \"institutions_id\": 456,\n              \"institutions_acronym\": \"MOA\",\n              \"institutions_name\": \"Ministry of Agriculture\"\n            },\n            {\n              \"institutions_id\": 457,\n              \"institutions_acronym\": \"MOE\",\n              \"institutions_name\": \"Ministry of Environment\"\n            }\n          ]\n        }\n      }\n    }\n  ]\n}\n```\n\n# Other Output\n\nAn Other Output uses the [common fields](#description/common-fields) only \u2014 there is no type-specific block.\n\n## Full example\n\n```json\n{\n  \"tenant\": \"prms.result-management.api\",\n  \"op\": \"dataset.ingest.requested\",\n  \"results\": [\n    {\n      \"type\": \"other_output\",\n      \"data\": {\n        \"created_date\": \"2025-10-24T19:36:04Z\",\n        \"created_by\": {\n          \"name\": \"Sara Jani\",\n          \"email\": \"s.jani@cgiar.org\"\n        },\n        \"lead_contact_person\": {\n          \"name\": \"Jane Doe\",\n          \"email\": \"jane.doe@cgiar.org\"\n        },\n        \"submitted_by\": {\n          \"email\": \"mohammad.salem@codeobia.com\",\n          \"name\": \"Mohammad Salem\",\n          \"comment\": \"\",\n          \"submitted_date\": \"2025-11-24T14:28:02Z\"\n        },\n        \"lead_center\": {\n          \"institution_id\": 1279,\n          \"acronym\": \"ICARDA\"\n        },\n        \"title\": \"Improved farmer livelihoods through adoption of drought-resistant varieties\",\n        \"description\": \"Measurable improvement in household income and food security for smallholder farmers adopting improved wheat varieties\",\n        \"toc_mapping\": {\n          \"science_program_id\": \"SP01\",\n          \"aow_compose_code\": \"SP01-AOW05\",\n          \"result_title\": \"HLO20.AOW5.IO3 Assess performance\",\n          \"result_indicator_description\": \"Availability of MELIA Report on AoWs (performance data)\",\n          \"result_indicator_type_name\": \"Other outcomes\"\n        },\n        \"geo_focus\": {\n          \"scope_code\": 4,\n          \"scope_label\": \"National\",\n          \"countries\": [\n            {\n              \"id\": 788,\n              \"name\": \"Tunisia\"\n            }\n          ]\n        },\n        \"contributing_center\": [\n          {\n            \"institution_id\": 1279,\n            \"acronym\": \"ICARDA\"\n          }\n        ],\n        \"contributing_partners\": [\n          {\n            \"name\": \"Partner Organization\"\n          }\n        ],\n        \"evidence\": [\n          {\n            \"link\": \"https://hdl.handle.net/20.500.1176/70005\",\n            \"description\": \"Impact assessment report\"\n          }\n        ],\n        \"contributing_bilateral_projects\": [\n          {\n            \"grant_title\": \"D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia\"\n          }\n        ]\n      }\n    }\n  ]\n}\n```\n\n# Other Outcome\n\nAn Other Outcome uses the [common fields](#description/common-fields) only \u2014 there is no type-specific block.\n\n## Full example\n\n```json\n{\n  \"tenant\": \"prms.result-management.api\",\n  \"op\": \"dataset.ingest.requested\",\n  \"results\": [\n    {\n      \"type\": \"other_outcome\",\n      \"data\": {\n        \"created_date\": \"2025-10-24T19:36:04Z\",\n        \"created_by\": {\n          \"name\": \"Sara Jani\",\n          \"email\": \"s.jani@cgiar.org\"\n        },\n        \"lead_contact_person\": {\n          \"name\": \"Jane Doe\",\n          \"email\": \"jane.doe@cgiar.org\"\n        },\n        \"submitted_by\": {\n          \"email\": \"mohammad.salem@codeobia.com\",\n          \"name\": \"Mohammad Salem\",\n          \"comment\": \"\",\n          \"submitted_date\": \"2025-11-24T14:28:02Z\"\n        },\n        \"lead_center\": {\n          \"institution_id\": 1279,\n          \"acronym\": \"ICARDA\"\n        },\n        \"title\": \"Climate adaptation field guide for extension agents\",\n        \"description\": \"Practical field guide with illustrations and decision trees for extension agents working with farmers on climate adaptation strategies\",\n        \"toc_mapping\": {\n          \"science_program_id\": \"SP01\",\n          \"aow_compose_code\": \"SP01-AOW05\",\n          \"result_title\": \"HLO20.AOW5.IO3 Assess performance\",\n          \"result_indicator_description\": \"Availability of MELIA Report on AoWs (performance data)\",\n          \"result_indicator_type_name\": \"Other outputs\"\n        },\n        \"geo_focus\": {\n          \"scope_code\": 4,\n          \"scope_label\": \"National\",\n          \"countries\": [\n            {\n              \"id\": 788,\n              \"name\": \"Tunisia\"\n            }\n          ]\n        },\n        \"contributing_center\": [\n          {\n            \"institution_id\": 1279,\n            \"acronym\": \"ICARDA\"\n          }\n        ],\n        \"contributing_partners\": [\n          {\n            \"name\": \"Partner Organization\"\n          }\n        ],\n        \"evidence\": [\n          {\n            \"link\": \"https://hdl.handle.net/20.500.1176/70006\",\n            \"description\": \"Digital and printed field guide\"\n          }\n        ],\n        \"contributing_bilateral_projects\": [\n          {\n            \"grant_title\": \"D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia\"\n          }\n        ]\n      }\n    }\n  ]\n}\n```\n\n# Conditional Validations\n\n| **Condition** | **Validation Rule** |\n| --- | --- |\n| geo_focus.scope_code = 1 (Global) | Must NOT include regions, countries, or admin1. |\n| geo_focus.scope_code = 2 (Regional) | Must include regions. |\n| geo_focus.scope_code = 3 (Multi-national) | Must include at least **2 countries**. |\n| geo_focus.scope_code = 4 (National) | Must include at least **1 country**. |\n| geo_focus.scope_code = 5 (Sub-national) | Must include at least **1 country** and **1 admin1 region**. |\n\n# Complete Valid Example\n\nThe two fields added in 2026-08 are shown first: `external_reference` (yours, optional but  \nneeded for webhooks) and `lead_contact_person` (mandatory for every result type).\n\n```json\n{\n  \"tenant\": \"prms.result-management.api\",\n  \"op\": \"dataset.ingest.requested\",\n  \"results\": [\n    {\n      \"type\": \"knowledge_product\",\n      \"data\": {\n        \"external_reference\": \"9d1d9aac-45b5-47cf-99d9-d78b8d6d0997\" || \"2342\" || \"STAR-9f2c-4471\",\n        \"keep_editing\": false,\n        \"created_date\": \"2025-10-24T19:36:04Z\",\n        \"created_by\": {\n          \"name\": \"Sara Jani\",\n          \"email\": \"s.jani@cgiar.org\"\n        },\n        \"lead_contact_person\": {\n          \"name\": \"Jane Doe\",\n          \"email\": \"jane.doe@cgiar.org\"\n        },\n        \"lead_center\": {\n          \"institution_id\": 1279,\n          \"acronym\": \"ICARDA\"\n        },\n        \"toc_mapping\": {\n          \"science_program_id\": \"SP01\",\n          \"aow_compose_code\": \"SP01-AOW05\",\n          \"result_title\": \"HLO20.AOW5.IO3 Assess performance\",\n          \"result_indicator_description\": \"Availability of MELIA Report on AoWs (performance data)\",\n          \"result_indicator_type_name\": \"Number of knowledge products\"\n        },\n        \"contributing_bilateral_projects\": [\n          {\n            \"grant_title\": \"D-200358\"\n          }\n        ],\n        \"knowledge_product\": {\n          \"handle\": \"https://hdl.handle.net/20.500.1176/70001\"\n        }\n      }\n    }\n  ]\n}\n```\n\n# Response Examples\n\n## Successful Request\n\nWhen the payload passes validation and events are successfully published to EventBridge:\n\n```json\n{\n  \"ok\": true,\n  \"message\": \"All results processed successfully\",\n  \"processed\": 1,\n  \"successful\": 1,\n  \"failed\": 0,\n  \"rejectedCount\": 0,\n  \"rejected\": [],\n  \"results\": [\n    {...Metadata}\n}\n```\n\n**Explanation:**\n\n| **Field** | **Type** | **Description** |\n| --- | --- | --- |\n| **ok** | boolean | **Indicates if the request was processed successfully.** |\n| **status** | string | **Always \"accepted\" when all events are validated and published.** |\n| **acceptedCount** | number | **Number of accepted results.** |\n| **rejectedCount** | number | **Number of rejected results due to validation errors.** |\n| **failedCount** | number | **Number of results that failed for technical reasons (EventBridge, etc.).** |\n| **eventIds** | array[string] | **EventBridge identifiers for successfully published events.** |\n| **rejected** | array[object] | **Empty array when all results are accepted.** |\n| **failed** | array[object] | **Empty array when no events failed.** |\n| **requestId** | string | **AWS request trace ID for correlation and debugging.** |\n\n---\n\n## Validation Failure Normal API\n\nIf one or more results fail schema validation, the API will return a structured error message detailing which properties are missing or invalid.\n\n```json\n{\n  \"ok\": false,\n  \"error\": \"validation_failed\",\n  \"message\": \"Every result was rejected. See 'rejected'.\",\n  \"acceptedCount\": 0,\n  \"rejectedCount\": 1,\n  \"rejected\": [\n    {\n      \"index\": 0,\n      \"type\": \"knowledge_product\",\n      \"errors\": [\n        \"(root) must have required property 'submitted_by'\"\n      ]\n    }\n  ],\n  \"requestId\": \"Root=1-68e94068-747a2a3177dc4a6313b35cd6\"\n}\n```\n\n**Explanation:**\n\n| **Field** | **Type** | **Description** |\n| --- | --- | --- |\n| **ok** | boolean | **Indicates the request failed validation.** |\n| **error** | string | **Error type identifier (validation_failed).** |\n| **message** | string | **Describes the general reason for rejection.** |\n| **acceptedCount** | number | **Always 0 if no results passed validation.** |\n| **rejectedCount** | number | **Number of rejected results.** |\n| **rejected** | array[object] | **Detailed list of rejected entries, including index, type, and validation errors.** |\n| **requestId** | string | **AWS request trace ID for correlation.** |\n\n# Bulk Ingest\n\nThe **Bulk Ingest API** processes results asynchronously. When a request is successfully authenticated and accepted, the API returns a `202 Accepted` response with a `job_id` and the location of the job summary.\n\nThe `job_id` can be used to track the processing outcome and reconcile the submitted results.\n\n  \n\u2705 Job Accepted \u2014 `202`\n\n```text\n{\n  \"job_id\":\"415d86bf-d2a3-4955-8cc0-1037051f31de\",\n  \"summary_location\": {\n    \"bucket\":\"my-bulk-pipeline\",\n    \"key\":\"summaries/415d86bf-d2a3-4955-8cc0-1037051f31de/summary.json\"\n  },\n  \"summary_url\":\"https://my-bulk-pipeline.s3.us-east-1.amazonaws.com/summaries/415d86bf-d2a3-4955-8cc0-1037051f31de/summary.json\"\n}\n```\n\n> \u2139\ufe0f A `202` response means that the job was **accepted for asynchronous processing**. It does not mean that every result was successfully ingested.\n\n**\ud83d\udd10 Authentication Errors**\n\nThe `x-api-key` is validated against **CLARISA before the bulk job is created**.\n\n| HTTP | Meaning |\n| --- | --- |\n| `401` | The `x-api-key` header is missing, or the API key is invalid. The job is not created. |\n| `503` | CLARISA could not be reached, or the API key could not be validated due to a temporary authentication service issue. The job is not created, and the request may be retried. |\n\nRejected authentication requests do **not** generate a `job_id` or start the Bulk Ingest pipeline.  \n  \n\ud83d\udcca Job Summary\n\nOnce processing starts, the job status and processing counters are available in `summary.json`.\n\nThe summary includes the number of successfully processed and failed results and provides locations for the detailed reconciliation files.\n\nThe job can have the following statuses:\n\n- `running` \u2014 processing is still in progress.\n- `succeeded` \u2014 all results were processed successfully.\n- `partial_failed` \u2014 processing completed, but one or more results failed.\nFor completed jobs, the summary provides access to:\n\n- `success-details.json` \u2014 details of successfully processed results.\n- `failure-details.json` \u2014 details of results that could not be processed.\n\n# Versioning \u2014 `POST /version`\n\n\nUse this when a result reported in a **previous phase** also needs to be reported in the **current phase**. The new version keeps the same `result_code`; the previous version is left untouched.\n\n**Request**\n\n```json\n{\n  \"result_code\": \"28565\",\n  \"external_reference\": \"STAR-9f2c-4471\"\n}\n```\n\n| Field | Required | Description |\n| --- | --- | --- |\n| `result_code` | Yes | PRMS result code of the result in the previous phase. It is the same code shown in the reporting tool and it does not change across phases. |\n| `external_reference` | No | Your own id for this record, echoed back verbatim in the response so you can match it. |\n\n**Eligibility**\n\nThe result must meet all of these conditions:\n\n- It exists and is active in a **previous** phase.\n- It is a **W3/Bilateral** result.\n- It is **not a Knowledge Product**. To report a KP in a new phase, send it with its own CGSpace handle.\n- It is **Approved** in the previous phase.\n- It has **not** already been carried into the current phase.\n- It was reported by **your platform**. Only the platform that reported a result can carry it forward.\n\n**What happens**\n\n- A new version is created in the open reporting phase with the **same `result_code`**, copied from the approved version.\n- The new version starts in **Editing**. The centre completes or updates it in PRMS and then submits it for review.\n- The request carries **no result data**. Content changes are made in PRMS.\n\n**Response (success)**\n\n```json\n{\n  \"result_code\": \"28565\",\n  \"external_reference\": \"STAR-9f2c-4471\",\n  \"previous\": { \"result_id\": 11422, \"phase_id\": 35 },\n  \"current\": {\n    \"result_id\": 12877,\n    \"phase_id\": 36,\n    \"phase_name\": \"Reporting 2026\",\n    \"status\": \"Editing\",\n    \"status_id\": 1\n  }\n}\n```\n\n**Errors**\n\n| HTTP | When |\n| --- | --- |\n| 400 | `result_code` is missing, or the result is not W3/Bilateral |\n| 403 | The result was reported by another platform, or its lead centre is outside your scope |\n| 404 | No active result exists for that `result_code` |\n| 409 | The result is already in the current phase, only exists in the current phase, is a Knowledge Pro |\n\n# Result decision webhooks\n\n> **Related:** [Ingestion](#tag/ingestion) \u2014 how to **submit** results. This section covers how PRMS **calls you back**.\n\nWhen you submit a result through `POST /ingest`, a CGIAR Science Program reviews it. A webhook is how you find out what they decided, without polling.\n\nRegistration is **self-service**: one call, using the same API key you already use to ingest.\n\n---\n\n## Service URLs\n\nThe webhook endpoints live on the **same base URL as the Normal Ingest API** \u2014 same key, same host.\n\n| **Environment** | **URL** |\n| --- | --- |\n| **PRODUCTION \ud83d\ude80** | `https://v6a9z2e4y5.execute-api.us-east-1.amazonaws.com/webhook` |\n| **TEST \ud83e\uddea** | `https://v2f4lv8av4.execute-api.us-east-1.amazonaws.com/webhook` |\n\n> \u26a0\ufe0f The **Bulk Ingest API** is a separate service and does **not** expose `/webhook`. Register once against the Normal Ingest base URL; it applies to every result you submit, bulk included.\n\n---\n\n## Authentication\n\nIdentical to `/ingest`: your CLARISA API key in the `x-api-key` header.\n\n```bash\ncurl -X POST \"https://v6a9z2e4y5.execute-api.us-east-1.amazonaws.com/webhook\" \\\n  -H \"x-api-key: <your-api-key>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{ \"url\": \"https://your-platform.example.org/prms/callback\" }'\n```\n\n**Your key is your identity.** PRMS resolves your platform from the key and registers the callback against it. That is why the request body has no platform, tenant, or centre field \u2014 you cannot register a destination for anyone but yourself, and nobody can register one for you.\n\n---\n\n## Before you start: send `external_reference`\n\nA callback tells you a result was approved or rejected. For that to be useful you have to know **which of your records it is about** \u2014 and PRMS does not know your ids unless you send them.\n\nSo when you ingest, put your own identifier in `data.external_reference`:\n\n```json\n{\n  \"type\": \"knowledge_product\",\n  \"data\": {\n    \"external_reference\": \"STAR-9f2c-4471\",\n    \"...\": \"the rest of your payload\"\n  }\n}\n```\n\nPRMS stores it verbatim and returns it verbatim at the top level of every callback. **No prefix, no transformation, no parsing.** What you sent is what you receive.\n\n```text\nyou send:      data.external_reference = \"STAR-9f2c-4471\"\nyou get back:  external_reference      = \"STAR-9f2c-4471\"\n```\n\n> \u2139\ufe0f The field is **optional and stays optional** \u2014 a bilateral result created inside the PRMS Reporting Tool has no external system behind it, and arrives as `null`. But a callback for a result you ingested without one carries nothing pointing at your row. See **`external_reference`** in the field documentation.\n\n---\n\n## 1. Register your callback \u2014 `POST /webhook`\n\n### Request body\n\n| **Field** | **Type** | **Required** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **url** | string (URI) | \u2705 | HTTPS endpoint PRMS will POST to when a Science Program approves or rejects one of your results. Max 500 characters. | `\"https://your-platform.example.org/prms/callback\"` |\n\n> \u2757 No other properties are accepted. The recipient comes from your API key.\n\n```json\n{\n  \"url\": \"https://your-platform.example.org/prms/callback\"\n}\n```\n\n### URL requirements\n\n| **Rule** | **Why** |\n| --- | --- |\n| Must use **`https`** | Decision payloads carry full result data. |\n| Must be a **fully qualified public domain** | A bare hostname (`myserver`) is not reachable from PRMS. |\n| Must **not** be loopback or a private range | `localhost`, `127.0.0.1`, `10.x`, `172.16\u201331.x`, `192.168.x`, `169.254.x`, `.local`, `.internal` are refused. |\n| Must **not** embed credentials | `https://user:pass@host` is refused \u2014 put the secret in a path or query string instead. |\n| Max **500** characters | Storage limit. |\n\n### Registration is an upsert\n\n**One platform, one destination.** Calling `POST /webhook` again replaces the URL you registered before \u2014 it does not create a second one, and you will not receive duplicate calls. That is also how you change or restore a destination: just POST the new one.\n\nA destination that had been disabled is re-enabled by registering again.\n\n---\n\n## 2. Check what is registered \u2014 `GET /webhook`\n\nNo body. Returns the destination currently on file for your platform.\n\n```bash\ncurl \"https://v6a9z2e4y5.execute-api.us-east-1.amazonaws.com/webhook\" \\\n  -H \"x-api-key: <your-api-key>\"\n```\n\n---\n\n## 3. When do you need to register?\n\n**Registering is not a prerequisite for submitting results.** You can ingest today and register next week; already-submitted results are unaffected.\n\nWhat matters is that a destination exists **before a Science Program takes a decision**, because that is the moment the notification is created.\n\n> \ud83d\udea8 **A decision taken while you have no destination registered is not replayed later.** There is no backlog to catch up on \u2014 nothing was ever queued. Register before your results go under review.\n\n---\n\n## 4. The callback PRMS sends you\n\nWhen a Science Program approves or rejects one of your results, PRMS sends:\n\n```text\nPOST <your registered url>\nContent-Type: application/json\nx-prms-delivery-id: 4172\n```\n\n### Headers\n\n| **Header** | **Description** |\n| --- | --- |\n| **Content-Type** | Always `application/json`. |\n| **x-prms-delivery-id** | Unique id of this delivery attempt chain. **Use it to deduplicate** \u2014 the same id may arrive more than once (see Retries). |\n| **x-prms-signature** | Reserved for a future HMAC signing scheme. **Not sent today** \u2014 do not build verification on it yet. |\n\n### Body\n\n| **Field** | **Type** | **Always present** | **Description** | **Example** |\n| --- | --- | --- | --- | --- |\n| **result_id** | number | \u2705 | PRMS id of the reviewed result. | `12345` |\n| **external_reference** | string \\| null | \u2705 | **Your own identifier**, exactly as you sent it at ingest. `null` if you did not send one. **This is how you find the record on your side.** | `\"STAR-9f2c-4471\"` |\n| **decision** | string (enum) | \u2705 | `\"APPROVE\"` or `\"REJECT\"`. | `\"APPROVE\"` |\n| **decided_at** | string (ISO date) | \u2705 | When the notification was assembled, UTC. | `\"2026-08-25T14:31:02.117Z\"` |\n| **justification** | string | \u274c | Reviewer's reason. **Omitted entirely when there is none** \u2014 never an empty string. Mandatory for the reviewer on `REJECT`, so in practice it is present there. | `\"Evidence link is not publicly accessible.\"` |\n| **data** | object \\| null | \u2705 | The **full enriched result document** \u2014 the same object `GET /result/:id` returns. `null` if PRMS could not assemble it. | `{ ... }` |\n\n> \u2139\ufe0f `decision` is `\"APPROVE\"` / `\"REJECT\"` \u2014 the reviewer's action, **not** past tense (`APPROVED`).\n\n`data` also carries who we resolved you to be, from your API key rather than from anything you declared:\n\n| **Field on `data`** | **Type** | **Description** | **Example** |\n| --- | --- | --- | --- |\n| **external_platform_id** | number \\| null | Your platform's CLARISA MIS id. | `12` |\n| **external_platform_code** | string \\| null | Your platform's CLARISA acronym. | `\"STAR\"` |\n\n---\n\n`data` also returns the ToC indicators your result was matched to, with their target and your contribution, at `data.obj_results_toc_result[].toc_mappings[].indicators`. Use it to confirm PRMS matched the indicator you meant in `toc_mapping.result_indicator_description`.\n\n| **Field on `indicators[]`** | **Type** | **Description** | **Example** |\n| --- | --- | --- | --- |\n| **toc_results_indicator_id** | string | ToC id of the matched indicator. | `\"5fdeea84-1ac5-445f-bc43-3b02ca490324\"` |\n| **indicator_description** | string | null | Indicator description, from the ToC. |\n| **indicator_type** | string | null | Indicator type, from the ToC. |\n| **number_target** | number | null | Target of the indicator. `null` if it has no target. |\n| **target_date** | number | null | Target year. `null` if it has no target. |\n| **target_contribution** | number | null | Your contribution to the target: the value you sent in `toc_mapping.target_contribution`, or `1` if you did not send one. `null` if the indicator has no target. |\n\n> \u2139\ufe0f `indicators` is `[]` (never `null`) when the mapping has no indicator. The order of its elements is not guaranteed.\n\n---\n\n### Example \u2014 approved\n\n```json\n{\n  \"result_id\": 12345,\n  \"external_reference\": \"STAR-9f2c-4471\",\n  \"decision\": \"APPROVE\",\n  \"decided_at\": \"2026-08-25T14:31:02.117Z\",\n  \"reviewed_by\": {\n    \"id\": 82,\n    \"first_name\": \"Luis\",\n    \"last_name\": \"P\u00e9rez\",\n    \"email\": \"luis@example.org\"\n  },\n  \"data\": {\n    \"id\": 12345,\n    \"result_code\": 5521,\n    \"title\": \"Improved seed varieties adoption in drylands\",\n    \"description\": \"Summarizes adoption barriers and enabling factors across regions.\",\n    \"result_type_id\": 6,\n    \"version_id\": 6,\n    \"reported_year_id\": 2026,\n    \"obj_version\": {\n      \"id\": 6,\n      \"phase_year\": 2026,\n      \"phase_name\": \"Reporting 2026\"\n    },\n    \"external_reference\": \"STAR-9f2c-4471\",\n    \"external_platform_id\": 12,\n    \"external_platform_code\": \"STAR\",\n    \"knowledge_product_summary\": {\n      \"handle\": \"https://hdl.handle.net/20.500.1176/70001\"\n    },\n    \"obj_results_toc_result\": [\n      {\n        \"official_code\": \"SP04\",\n        \"name\": \"Multifunctional Landscapes\",\n        \"initiative_role\": \"Primary submitter\",\n        \"toc_mappings\": [\n          {\n            \"toc_result_id\": 7190,\n            \"official_code\": \"SP04\",\n            \"name\": \"Multifunctional Landscapes\",\n            \"aow\": \"AOW01\",\n            \"planned_result\": \"Yes\",\n            \"level\": \"High Level Output\",\n            \"title\": \"OP 1.1.1. \u2013 Bundles of farm-level solutions\",\n            \"indicators\": [\n              {\n                \"toc_results_indicator_id\": \"5fdeea84-1ac5-445f-bc43-3b02ca490324\",\n                \"indicator_description\": \"Number of stakeholders trained on participatory agroecosystem planning\",\n                \"indicator_type\": \"Number of people trained (capacity sharing for development)\",\n                \"number_target\": 6,\n                \"target_date\": 2026,\n                \"target_contribution\": 12\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}\n```\n\n### Example \u2014 rejected\n\n```json\n{\n  \"result_id\": 12346,\n  \"external_reference\": \"STAR-9f2c-4472\",\n  \"decision\": \"REJECT\",\n  \"decided_at\": \"2026-08-25T14:35:48.902Z\",\n  \"justification\": \"The evidence link is not publicly accessible.\",\n  \"data\": { \"...\": \"same enriched document\" }\n}\n```\n\n---\n\n## 5. What your endpoint must return\n\n| **Your response** | **PRMS behaviour** |\n| --- | --- |\n| **2xx** | Delivered. Nothing further. |\n| **Any other status** | Counted as a failure and retried. |\n| **No response within 15 s** | Timeout \u2014 counted as a failure and retried. |\n\n**Return `2xx` as soon as you have stored the payload \u2014 do not wait for your own downstream processing.** A slow endpoint reads as a failed one, and you will get retries you did not need.\n\n### Retries\n\n| **Attempt** | **Sent after the previous failure** |\n| --- | --- |\n| 1 | immediately |\n| 2 | 1 minute |\n| 3 | 2 minutes |\n| 4 | 4 minutes |\n| 5 | 8 minutes |\n\nAfter **5** failed attempts the delivery is abandoned and the PRMS technical team is alerted. Total window: roughly **15 minutes**. Deliveries are checked once per minute.\n\n> \u26a0\ufe0f **Deduplicate on `x-prms-delivery-id`.** If your endpoint stores the payload and then times out before responding, PRMS retries and you receive the same decision twice.\n\n### Changing your URL mid-flight\n\nA delivery already queued keeps the destination it was created with. Re-registering changes where **future** decisions go, not deliveries already in the retry window.\n\n---\n\n## Response Examples\n\n### Registration succeeded\n\n```json\n{\n  \"ok\": true,\n  \"response\": {\n    \"id\": 3,\n    \"recipient_type\": \"PLATFORM\",\n    \"recipient_id\": 12,\n    \"recipient_acronym\": \"STAR\",\n    \"url\": \"https://your-platform.example.org/prms/callback\",\n    \"is_active\": true,\n    \"last_updated_date\": \"2026-08-25T14:22:10.000Z\"\n  },\n  \"statusCode\": 200,\n  \"message\": \"Webhook endpoint registered successfully.\",\n  \"timestamp\": \"2026-08-25T14:22:10.512Z\",\n  \"path\": \"/api/bilateral/webhook\",\n  \"requestId\": \"Root=1-68e94068-747a2a3177dc4a6313b35cd6\"\n}\n```\n\n**Explanation:**\n\n| **Field** | **Type** | **Description** |\n| --- | --- | --- |\n| **ok** | boolean | `true` when the destination was stored. |\n| **[response.id](http://response.id/)** | number | Internal id of the stored destination. |\n| **response.recipient_type** | string | Always `\"PLATFORM\"` for API-key registrations. |\n| **response.recipient_id** | number | Your platform's CLARISA MIS id \u2014 resolved from your key, not from the body. |\n| **response.recipient_acronym** | string \\| null | Your platform's acronym in CLARISA. |\n| **response.url** | string | The destination now on file, normalized. |\n| **response.is_active** | boolean | `true` while the destination receives callbacks. |\n| **response.last_updated_date** | string (ISO date) | When it was last registered or changed. |\n| **message** | string | Human-readable outcome. |\n| **requestId** | string | AWS trace id \u2014 quote it when reporting a problem. |\n\n---\n\n### Retrieval \u2014 destination on file\n\nSame `response` object as above, with:\n\n```json\n\"message\": \"Webhook endpoint retrieved successfully.\"\n```\n\n---\n\n### Retrieval \u2014 nothing registered yet\n\nNot an error. `200`, with an **empty `response` object** \u2014 read the `message`, not the object:\n\n```json\n{\n  \"ok\": true,\n  \"response\": {},\n  \"statusCode\": 200,\n  \"message\": \"No webhook endpoint registered for this platform.\",\n  \"timestamp\": \"2026-08-25T14:40:03.221Z\",\n  \"path\": \"/api/bilateral/webhook\",\n  \"requestId\": \"Root=1-68e94068-747a2a3177dc4a6313b35cd6\"\n}\n```\n\n---\n\n### URL rejected\n\n`400`. The `message` names the rule you broke.\n\n```json\n{\n  \"ok\": false,\n  \"error\": \"webhook_registration_failed\",\n  \"message\": \"The url must use https.\",\n  \"requestId\": \"Root=1-68e94068-747a2a3177dc4a6313b35cd6\"\n}\n```\n\n| **message** | **Fix** |\n| --- | --- |\n| `The url is required.` | Send a non-empty `url`. |\n| `The url is not a valid absolute URL.` | Include the scheme: `https://\u2026`. |\n| `The url must use https.` | Switch from `http` to `https`. |\n| `The url must not embed credentials.` | Remove `user:pass@` from the host. |\n| `The url must point to a publicly reachable host.` | Not loopback / private range / link-local. |\n| `The url must use a fully qualified domain name.` | Use a real domain, not a bare hostname. |\n| `The url must be at most 500 characters.` | Shorten it. |\n\n---\n\n### Authentication failed\n\n`401` \u2014 the key is missing, malformed, or not valid in CLARISA.\n\n```json\n{\n  \"ok\": false,\n  \"error\": \"unauthorized\",\n  \"message\": \"A valid API key is required.\"\n}\n```\n\n### Validation service unavailable\n\n`503` with `Retry-After: 30` \u2014 PRMS could not reach CLARISA to check your key. **Your key is not the problem.** Retry.\n\n```json\n{\n  \"ok\": false,\n  \"error\": \"auth_unavailable\",\n  \"message\": \"API key validation is temporarily unavailable. Please retry.\"\n}\n```\n\n### Upstream failure\n\n`502` (or `504` on timeout) \u2014 registration could not be completed. Retry; quote `requestId` if it persists.\n\n```json\n{\n  \"ok\": false,\n  \"error\": \"upstream_timeout\",\n  \"message\": \"Timed out after 30000ms registering the webhook\",\n  \"requestId\": \"Root=1-68e94068-747a2a3177dc4a6313b35cd6\"\n}\n```\n\n---\n\n## FAQ\n\n**How do I know which of my records a callback is about?**  \nSend `data.external_reference` when you ingest and read the top-level `external_reference` on the callback. It is the same string, untouched.\n\n**Do I get a callback for results I created directly in the PRMS Reporting Tool?**  \nNo. Callbacks go to the platform that **submitted** the result through the API. A result created inside PRMS has no submitting platform, so there is nothing to call back \u2014 the responsible centre is notified inside PRMS instead. Those results also carry no `external_reference`.\n\n**Can I register more than one URL?**  \nNot today. One platform, one destination. Fan out on your side.\n\n**Can I delete a registration?**  \nThere is no delete operation. Point the URL at an endpoint that discards the payload, or contact the PRMS technical team.\n\n**Will I get a callback when a result is submitted, or only when it is decided?**  \nOnly on the Science Program's approve/reject decision.\n\n**What if my endpoint was down for an hour?**  \nThe delivery is abandoned after ~15 minutes and is not replayed. Reconcile with `GET /result/:code`."
   },
   "servers": [
     {
@@ -132,13 +132,16 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Results"
+        ]
       }
     },
     "/result/{code}": {
       "get": {
-        "summary": "Get all results",
-        "description": "Get all results",
+        "summary": "Get a result by code",
+        "description": "Get a single result by its PRMS code.",
         "parameters": [
           {
             "name": "code",
@@ -160,7 +163,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Results"
+        ]
       }
     },
     "/ingest": {
@@ -175,6 +181,558 @@
                 "$ref": "#/components/schemas/IngestRequest"
               },
               "examples": {
+                "full_kp": {
+                  "summary": "Knowledge Product \u2014 full example",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "knowledge_product",
+                        "data": {
+                          "created_date": "2025-10-24T19:36:04Z",
+                          "created_by": {
+                            "name": "Sara Jani",
+                            "email": "s.jani@cgiar.org"
+                          },
+                          "lead_contact_person": {
+                            "name": "Jane Doe",
+                            "email": "jane.doe@cgiar.org"
+                          },
+                          "lead_center": {
+                            "institution_id": 1279,
+                            "acronym": "ICARDA"
+                          },
+                          "toc_mapping": {
+                            "science_program_id": "SP01",
+                            "aow_compose_code": "SP01-AOW05",
+                            "result_title": "HLO20.AOW5.IO3 Assess performance",
+                            "result_indicator_description": "Availability of MELIA Report on AoWs (performance data)",
+                            "result_indicator_type_name": "Number of knowledge products"
+                          },
+                          "contributing_bilateral_projects": [
+                            {
+                              "grant_title": "D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia"
+                            }
+                          ],
+                          "knowledge_product": {
+                            "handle": "https://hdl.handle.net/20.500.1176/70001"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "full_inno_dev": {
+                  "summary": "Innovation Development \u2014 full example",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "innovation_development",
+                        "data": {
+                          "created_date": "2025-10-24T19:36:04Z",
+                          "created_by": {
+                            "name": "Sara Jani",
+                            "email": "s.jani@cgiar.org"
+                          },
+                          "lead_contact_person": {
+                            "name": "Jane Doe",
+                            "email": "jane.doe@cgiar.org"
+                          },
+                          "submitted_by": {
+                            "email": "mohammad.salem@codeobia.com",
+                            "name": "Mohammad Salem",
+                            "comment": "",
+                            "submitted_date": "2025-11-24T14:28:02Z"
+                          },
+                          "lead_center": {
+                            "institution_id": 1279,
+                            "acronym": "ICARDA"
+                          },
+                          "title": "Climate-resilient wheat variety development toolkit",
+                          "description": "Innovative toolkit for accelerating drought-tolerant wheat variety development through participatory breeding approaches",
+                          "toc_mapping": {
+                            "science_program_id": "SP01",
+                            "aow_compose_code": "SP01-AOW05",
+                            "result_title": "HLO20.AOW5.IO3 Assess performance",
+                            "result_indicator_description": "Availability of MELIA Report on AoWs (performance data)",
+                            "result_indicator_type_name": "Number of innovations (innovation development)"
+                          },
+                          "geo_focus": {
+                            "scope_code": 4,
+                            "scope_label": "National",
+                            "countries": [
+                              {
+                                "id": 788,
+                                "name": "Tunisia"
+                              }
+                            ]
+                          },
+                          "contributing_center": [
+                            {
+                              "institution_id": 1279,
+                              "acronym": "ICARDA"
+                            }
+                          ],
+                          "contributing_partners": [
+                            {
+                              "name": "Partner Organization"
+                            }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://hdl.handle.net/20.500.1176/70001",
+                              "description": ""
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            {
+                              "grant_title": "D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia"
+                            }
+                          ],
+                          "innovation_development": {
+                            "innovation_typology": {
+                              "code": 12,
+                              "name": "Technological innovation"
+                            },
+                            "innovation_developers": "ICARDA Wheat Breeding Team",
+                            "innovation_readiness_level": {
+                              "level": 0
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "full_cap_sharing": {
+                  "summary": "Capacity Sharing \u2014 full example",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "capacity_sharing",
+                        "data": {
+                          "result_type_id": 3,
+                          "result_level_id": 3,
+                          "created_date": "2025-10-24T19:36:04Z",
+                          "created_by": {
+                            "name": "Sara Jani",
+                            "email": "s.jani@cgiar.org"
+                          },
+                          "lead_contact_person": {
+                            "name": "Jane Doe",
+                            "email": "jane.doe@cgiar.org"
+                          },
+                          "submitted_by": {
+                            "email": "mohammad.salem@codeobia.com",
+                            "name": "Mohammad Salem",
+                            "comment": "",
+                            "submitted_date": "2025-11-24T14:28:02Z"
+                          },
+                          "lead_center": {
+                            "institution_id": 1279,
+                            "acronym": "ICARDA"
+                          },
+                          "title": "Training workshop on climate-smart agriculture practices",
+                          "description": "Comprehensive training program for extension agents on climate adaptation strategies and sustainable farming techniques",
+                          "toc_mapping": {
+                            "science_program_id": "SP01",
+                            "aow_compose_code": "SP01-AOW05",
+                            "result_title": "HLO20.AOW5.IO3 Assess performance",
+                            "result_indicator_description": "Availability of MELIA Report on AoWs (performance data)",
+                            "result_indicator_type_name": "Number of people trained"
+                          },
+                          "geo_focus": {
+                            "scope_code": 4,
+                            "scope_label": "National",
+                            "countries": [
+                              {
+                                "id": 788,
+                                "name": "Tunisia"
+                              }
+                            ]
+                          },
+                          "contributing_center": [
+                            {
+                              "institution_id": 1279,
+                              "acronym": "ICARDA"
+                            }
+                          ],
+                          "contributing_partners": [
+                            {
+                              "name": "Partner Organization"
+                            }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://hdl.handle.net/20.500.1176/70003",
+                              "description": "Training materials and participant feedback"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            {
+                              "grant_title": "D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia"
+                            }
+                          ],
+                          "capacity_sharing": {
+                            "number_people_trained": {
+                              "women": 45,
+                              "men": 78,
+                              "non_binary": 2
+                            },
+                            "length_training": "Short-term",
+                            "delivery_method": "Blended (in-person and virtual)"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "full_inno_use": {
+                  "summary": "Innovation Use \u2014 full example",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "innovation_use",
+                        "data": {
+                          "result_type_id": 2,
+                          "result_level_id": 3,
+                          "created_date": "2025-10-24T19:36:04Z",
+                          "created_by": {
+                            "name": "Sara Jani",
+                            "email": "s.jani@cgiar.org"
+                          },
+                          "lead_contact_person": {
+                            "name": "Sara Jani",
+                            "email": "s.jani@cgiar.org"
+                          },
+                          "submitted_by": {
+                            "email": "mohammad.salem@codeobia.com",
+                            "name": "Mohammad Salem",
+                            "comment": "",
+                            "submitted_date": "2025-11-24T14:28:02Z"
+                          },
+                          "lead_center": {
+                            "institution_id": 1279,
+                            "acronym": "ICARDA"
+                          },
+                          "title": "Adoption of improved wheat varieties by smallholder farmers",
+                          "description": "Documentation of farmer adoption and use of drought-tolerant wheat varieties across multiple communities",
+                          "toc_mapping": {
+                            "science_program_id": "SP01",
+                            "aow_compose_code": "SP01-AOW05",
+                            "result_title": "HLO20.AOW5.IO3 Assess performance",
+                            "result_indicator_description": "Availability of MELIA Report on AoWs (performance data)",
+                            "result_indicator_type_name": "Number of innovations (innovation use)"
+                          },
+                          "geo_focus": {
+                            "scope_code": 4,
+                            "scope_label": "National",
+                            "countries": [
+                              {
+                                "id": 788,
+                                "name": "Tunisia"
+                              }
+                            ]
+                          },
+                          "contributing_center": [
+                            {
+                              "institution_id": 1279,
+                              "acronym": "ICARDA"
+                            }
+                          ],
+                          "contributing_partners": [
+                            {
+                              "name": "Partner Organization"
+                            }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "www.google.com.co",
+                              "description": "Adoption survey report"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            {
+                              "grant_title": "D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia",
+                              "usd_budget": 320000
+                            }
+                          ],
+                          "innovation_use": {
+                            "innovation_use_level": {
+                              "level": 2,
+                              "name": "Scaling"
+                            },
+                            "current_innovation_use_numbers": {
+                              "innov_use_to_be_determined": false,
+                              "actors": [
+                                {
+                                  "actor_type_id": 1,
+                                  "sex_and_age_disaggregation": true,
+                                  "how_many": 1500,
+                                  "women": 600,
+                                  "women_youth": 150,
+                                  "men": 900,
+                                  "men_youth": 200
+                                }
+                              ],
+                              "measures": [
+                                {
+                                  "unit_of_measure": "# of Innovations",
+                                  "quantity": 1
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "full_policy": {
+                  "summary": "Policy Change \u2014 full example",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "policy_change",
+                        "data": {
+                          "result_type_id": 1,
+                          "result_level_id": 3,
+                          "created_date": "2025-10-24T19:36:04Z",
+                          "created_by": {
+                            "name": "Sara Jani",
+                            "email": "s.jani@cgiar.org"
+                          },
+                          "lead_contact_person": {
+                            "name": "Jane Doe",
+                            "email": "jane.doe@cgiar.org"
+                          },
+                          "submitted_by": {
+                            "email": "mohammad.salem@codeobia.com",
+                            "name": "Mohammad Salem",
+                            "comment": "",
+                            "submitted_date": "2025-11-24T14:28:02Z"
+                          },
+                          "lead_center": {
+                            "institution_id": 1279,
+                            "acronym": "ICARDA"
+                          },
+                          "title": "National climate-smart agriculture policy framework adoption",
+                          "description": "Government adoption of climate-smart agriculture policy framework with allocated budget for implementation across multiple regions",
+                          "toc_mapping": {
+                            "science_program_id": "SP01",
+                            "aow_compose_code": "SP01-AOW05",
+                            "result_title": "HLO20.AOW5.IO3 Assess performance",
+                            "result_indicator_description": "Availability of MELIA Report on AoWs (performance data)",
+                            "result_indicator_type_name": "Number of policies"
+                          },
+                          "geo_focus": {
+                            "scope_code": 4,
+                            "scope_label": "National",
+                            "countries": [
+                              {
+                                "id": 788,
+                                "name": "Tunisia"
+                              }
+                            ]
+                          },
+                          "evidence": [
+                            {
+                              "link": "www.gipiti.com",
+                              "description": "Policy document and implementation plan"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            {
+                              "grant_title": "D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia"
+                            }
+                          ],
+                          "policy_change": {
+                            "policy_type": {
+                              "name": "Program, budget or investment",
+                              "status_amount": {
+                                "id": 1,
+                                "name": "Approved"
+                              },
+                              "amount": 5000000
+                            },
+                            "policy_stage": {
+                              "name": "Stage 1"
+                            },
+                            "implementing_organization": [
+                              {
+                                "institutions_id": 456,
+                                "institutions_acronym": "MOA",
+                                "institutions_name": "Ministry of Agriculture"
+                              },
+                              {
+                                "institutions_id": 457,
+                                "institutions_acronym": "MOE",
+                                "institutions_name": "Ministry of Environment"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "full_other_output": {
+                  "summary": "Other Output \u2014 full example",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "other_output",
+                        "data": {
+                          "created_date": "2025-10-24T19:36:04Z",
+                          "created_by": {
+                            "name": "Sara Jani",
+                            "email": "s.jani@cgiar.org"
+                          },
+                          "lead_contact_person": {
+                            "name": "Jane Doe",
+                            "email": "jane.doe@cgiar.org"
+                          },
+                          "submitted_by": {
+                            "email": "mohammad.salem@codeobia.com",
+                            "name": "Mohammad Salem",
+                            "comment": "",
+                            "submitted_date": "2025-11-24T14:28:02Z"
+                          },
+                          "lead_center": {
+                            "institution_id": 1279,
+                            "acronym": "ICARDA"
+                          },
+                          "title": "Improved farmer livelihoods through adoption of drought-resistant varieties",
+                          "description": "Measurable improvement in household income and food security for smallholder farmers adopting improved wheat varieties",
+                          "toc_mapping": {
+                            "science_program_id": "SP01",
+                            "aow_compose_code": "SP01-AOW05",
+                            "result_title": "HLO20.AOW5.IO3 Assess performance",
+                            "result_indicator_description": "Availability of MELIA Report on AoWs (performance data)",
+                            "result_indicator_type_name": "Other outcomes"
+                          },
+                          "geo_focus": {
+                            "scope_code": 4,
+                            "scope_label": "National",
+                            "countries": [
+                              {
+                                "id": 788,
+                                "name": "Tunisia"
+                              }
+                            ]
+                          },
+                          "contributing_center": [
+                            {
+                              "institution_id": 1279,
+                              "acronym": "ICARDA"
+                            }
+                          ],
+                          "contributing_partners": [
+                            {
+                              "name": "Partner Organization"
+                            }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://hdl.handle.net/20.500.1176/70005",
+                              "description": "Impact assessment report"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            {
+                              "grant_title": "D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                "full_other_outcome": {
+                  "summary": "Other Outcome \u2014 full example",
+                  "value": {
+                    "tenant": "prms.result-management.api",
+                    "op": "dataset.ingest.requested",
+                    "results": [
+                      {
+                        "type": "other_outcome",
+                        "data": {
+                          "created_date": "2025-10-24T19:36:04Z",
+                          "created_by": {
+                            "name": "Sara Jani",
+                            "email": "s.jani@cgiar.org"
+                          },
+                          "lead_contact_person": {
+                            "name": "Jane Doe",
+                            "email": "jane.doe@cgiar.org"
+                          },
+                          "submitted_by": {
+                            "email": "mohammad.salem@codeobia.com",
+                            "name": "Mohammad Salem",
+                            "comment": "",
+                            "submitted_date": "2025-11-24T14:28:02Z"
+                          },
+                          "lead_center": {
+                            "institution_id": 1279,
+                            "acronym": "ICARDA"
+                          },
+                          "title": "Climate adaptation field guide for extension agents",
+                          "description": "Practical field guide with illustrations and decision trees for extension agents working with farmers on climate adaptation strategies",
+                          "toc_mapping": {
+                            "science_program_id": "SP01",
+                            "aow_compose_code": "SP01-AOW05",
+                            "result_title": "HLO20.AOW5.IO3 Assess performance",
+                            "result_indicator_description": "Availability of MELIA Report on AoWs (performance data)",
+                            "result_indicator_type_name": "Other outputs"
+                          },
+                          "geo_focus": {
+                            "scope_code": 4,
+                            "scope_label": "National",
+                            "countries": [
+                              {
+                                "id": 788,
+                                "name": "Tunisia"
+                              }
+                            ]
+                          },
+                          "contributing_center": [
+                            {
+                              "institution_id": 1279,
+                              "acronym": "ICARDA"
+                            }
+                          ],
+                          "contributing_partners": [
+                            {
+                              "name": "Partner Organization"
+                            }
+                          ],
+                          "evidence": [
+                            {
+                              "link": "https://hdl.handle.net/20.500.1176/70006",
+                              "description": "Digital and printed field guide"
+                            }
+                          ],
+                          "contributing_bilateral_projects": [
+                            {
+                              "grant_title": "D-200358-Enhancing Food Security and Climate Resilience in Morocco and Tunisia"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
                 "kpRegional": {
                   "summary": "Knowledge Product \u2014 Regional (scope_code=2, requires regions[])",
                   "value": {
@@ -188,6 +746,10 @@
                           "created_by": {
                             "email": "researcher@cgiar.org",
                             "name": "Research Team Lead"
+                          },
+                          "lead_contact_person": {
+                            "name": "Jane Doe",
+                            "email": "jane.doe@cgiar.org"
                           },
                           "submitted_by": {
                             "email": "j.doe@cgiar.org",
@@ -303,6 +865,10 @@
                             "email": "policy.team@cgiar.org",
                             "name": "Policy Research Team"
                           },
+                          "lead_contact_person": {
+                            "name": "Jane Doe",
+                            "email": "jane.doe@cgiar.org"
+                          },
                           "submitted_by": {
                             "email": "m.lee@cgiar.org",
                             "name": "Mar\u00eda Lee",
@@ -404,6 +970,10 @@
                           "created_by": {
                             "email": "data.team@cgiar.org",
                             "name": "Data Science Team"
+                          },
+                          "lead_contact_person": {
+                            "name": "Jane Doe",
+                            "email": "jane.doe@cgiar.org"
                           },
                           "submitted_by": {
                             "email": "l.garcia@cgiar.org",
@@ -513,6 +1083,10 @@
                             "email": "global.research@cgiar.org",
                             "name": "Global Research Coordinator"
                           },
+                          "lead_contact_person": {
+                            "name": "Jane Doe",
+                            "email": "jane.doe@cgiar.org"
+                          },
                           "submitted_by": {
                             "email": "g.khan@cgiar.org",
                             "name": "Gul Khan",
@@ -607,6 +1181,10 @@
                             "email": "test.creator@alliance.org",
                             "name": "Test Creator"
                           },
+                          "lead_contact_person": {
+                            "name": "Jane Doe",
+                            "email": "jane.doe@cgiar.org"
+                          },
                           "submitted_by": {
                             "email": "min.user@alliance.org",
                             "name": "Min User",
@@ -698,375 +1276,6 @@
                       },
                       {
                         "$ref": "#/paths/~1ingest/post/requestBody/content/application~1json/examples/kpNational/value/results/0"
-                      }
-                    ]
-                  }
-                },
-                "csExample": {
-                  "summary": "Capacity Sharing \u2014 Example with all fields",
-                  "value": {
-                    "tenant": "prms.result-management.api",
-                    "op": "dataset.ingest.requested",
-                    "results": [
-                      {
-                        "type": "capacity_sharing",
-                        "data": {
-                          "created_date": "2025-11-01T10:00:00Z",
-                          "created_by": {
-                            "email": "training.team@cgiar.org",
-                            "name": "Training Coordinator"
-                          },
-                          "submitted_by": {
-                            "email": "j.smith@cgiar.org",
-                            "name": "Jane Smith",
-                            "comment": "Capacity building workshop",
-                            "submitted_date": "2025-11-02T14:30:00Z"
-                          },
-                          "lead_center": {
-                            "institution_id": 115,
-                            "acronym": "CIFOR"
-                          },
-                          "title": "Climate-Smart Agriculture Training Program",
-                          "description": "A comprehensive training program on climate-smart agricultural practices delivered to farmers and extension agents.",
-                          "toc_mapping": {
-                            "science_program_id": "SP03",
-                            "aow_compose_code": "SP03-AOW02",
-                            "result_title": "Capacity building workshop",
-                            "result_indicator_description": "Number of people trained in climate-smart practices",
-                            "result_indicator_type_name": "Number of people trained"
-                          },
-                          "geo_focus": {
-                            "scope_code": 4,
-                            "scope_label": "National",
-                            "countries": [
-                              {
-                                "id": 404,
-                                "name": "Kenya",
-                                "iso_alpha_3": "KEN",
-                                "iso_alpha_2": "KE"
-                              }
-                            ]
-                          },
-                          "contributing_center": [
-                            {
-                              "institution_id": 1279,
-                              "acronym": "ICARDA"
-                            }
-                          ],
-                          "contributing_partners": [
-                            {
-                              "institution_id": 10,
-                              "acronym": "FAO"
-                            }
-                          ],
-                          "evidence": [
-                            {
-                              "link": "https://example.org/training-report",
-                              "description": "Training program evaluation report"
-                            }
-                          ],
-                          "contributing_bilateral_projects": [
-                            {
-                              "grant_title": "Climate Training Initiative"
-                            }
-                          ],
-                          "contributing_programs": [
-                            {
-                              "science_program_id": "SP02",
-                              "aow_compose_code": "SP02-AOW03",
-                              "result_title": "Nutrition outcomes improved",
-                              "result_indicator_description": "Households reached with nutrition interventions",
-                              "result_indicator_type_name": "Outcome"
-                            },
-                            {
-                              "science_program_id": "SP09",
-                              "aow_compose_code": "SP09.AOW01",
-                              "result_title": "Climate-resilient crop systems adopted",
-                              "result_indicator_description": "Number of climate resilient practices documented",
-                              "result_indicator_type_name": "Output"
-                            }
-                          ],
-                          "capacity_sharing": {
-                            "number_people_trained": {
-                              "women": 150,
-                              "men": 120,
-                              "non_binary": 5,
-                              "unknown": 10
-                            },
-                            "length_training": "Short-term",
-                            "delivery_method": "In person"
-                          }
-                        }
-                      }
-                    ]
-                  }
-                },
-                "idExample": {
-                  "summary": "Innovation Development \u2014 Example with all fields",
-                  "value": {
-                    "tenant": "prms.result-management.api",
-                    "op": "dataset.ingest.requested",
-                    "results": [
-                      {
-                        "type": "innovation_development",
-                        "data": {
-                          "created_date": "2025-11-03T09:00:00Z",
-                          "created_by": {
-                            "email": "innovation.team@cgiar.org",
-                            "name": "Innovation Lead"
-                          },
-                          "submitted_by": {
-                            "email": "a.johnson@cgiar.org",
-                            "name": "Alice Johnson",
-                            "comment": "New technological innovation",
-                            "submitted_date": "2025-11-04T11:00:00Z"
-                          },
-                          "lead_center": {
-                            "institution_id": 115,
-                            "acronym": "CIFOR"
-                          },
-                          "title": "AI-Powered Crop Monitoring System",
-                          "description": "Development of an innovative AI system for real-time crop monitoring and yield prediction.",
-                          "toc_mapping": {
-                            "science_program_id": "SP04",
-                            "aow_compose_code": "SP04-AOW03",
-                            "result_title": "Technological innovation development",
-                            "result_indicator_description": "Innovations developed and tested",
-                            "result_indicator_type_name": "Number of innovations"
-                          },
-                          "geo_focus": {
-                            "scope_code": 4,
-                            "scope_label": "National",
-                            "countries": [
-                              {
-                                "id": 840,
-                                "name": "United States",
-                                "iso_alpha_3": "USA",
-                                "iso_alpha_2": "US"
-                              }
-                            ]
-                          },
-                          "contributing_center": [
-                            {
-                              "institution_id": 1279,
-                              "acronym": "ICARDA"
-                            }
-                          ],
-                          "contributing_partners": [
-                            {
-                              "institution_id": 5,
-                              "acronym": "MIT"
-                            }
-                          ],
-                          "evidence": [
-                            {
-                              "link": "https://example.org/innovation-patent",
-                              "description": "Patent application for the AI monitoring system"
-                            }
-                          ],
-                          "contributing_bilateral_projects": [
-                            {
-                              "grant_title": "Tech Innovation Fund"
-                            }
-                          ],
-                          "contributing_programs": [
-                            {
-                              "science_program_id": "SP02",
-                              "aow_compose_code": "SP02-AOW03",
-                              "result_title": "Nutrition outcomes improved",
-                              "result_indicator_description": "Households reached with nutrition interventions",
-                              "result_indicator_type_name": "Outcome"
-                            },
-                            {
-                              "science_program_id": "SP09",
-                              "aow_compose_code": "SP09.AOW01",
-                              "result_title": "Climate-resilient crop systems adopted",
-                              "result_indicator_description": "Number of climate resilient practices documented",
-                              "result_indicator_type_name": "Output"
-                            }
-                          ],
-                          "innovation_development": {
-                            "innovation_typology": {
-                              "code": 12,
-                              "name": "Technological innovation"
-                            },
-                            "innovation_developers": "John Doe; Marie Curie; Nikola Tesla",
-                            "innovation_readiness_level": {
-                              "id": 14,
-                              "name": "Phase 3 - Available for uptake"
-                            }
-                          }
-                        }
-                      }
-                    ]
-                  }
-                },
-                "iuExample": {
-                  "summary": "Innovation Use \u2014 Example with actors and organizations (search by ID)",
-                  "value": {
-                    "tenant": "prms.result-management.api",
-                    "op": "dataset.ingest.requested",
-                    "results": [
-                      {
-                        "type": "innovation_use",
-                        "data": {
-                          "created_date": "2025-11-18T19:00:00Z",
-                          "created_by": {
-                            "email": "innovation.team@cgiar.org",
-                            "name": "Innovation Analyst"
-                          },
-                          "lead_contact_person": {
-                            "email": "innovation.team@cgiar.org",
-                            "name": "Innovation Analyst"
-                          },
-                          "submitted_by": {
-                            "email": "c.martinez@cgiar.org",
-                            "name": "Carlos Martinez",
-                            "comment": "Innovation use tracking",
-                            "submitted_date": "2025-11-18T20:00:00Z"
-                          },
-                          "lead_center": {
-                            "acronym": "Bioversity (Alliance)"
-                          },
-                          "title": "Adoption of Climate-Resilient Seed Varieties",
-                          "description": "Tracking the use and adoption of climate-resilient seed varieties among different actor types.",
-                          "toc_mapping": {
-                            "science_program_id": "SP06",
-                            "aow_compose_code": "SP06-AOW01",
-                            "result_title": "Innovation adoption tracking",
-                            "result_indicator_description": "Number of actors using innovations",
-                            "result_indicator_type_name": "Number of users"
-                          },
-                          "geo_focus": {
-                            "scope_code": 2,
-                            "scope_label": "Regional",
-                            "regions": [
-                              {
-                                "um49code": 145,
-                                "name": "Sub-Saharan Africa"
-                              }
-                            ]
-                          },
-                          "contributing_center": [
-                            {
-                              "institution_id": 1279,
-                              "acronym": "ICARDA"
-                            }
-                          ],
-                          "contributing_partners": [
-                            {
-                              "institution_id": 1,
-                              "acronym": "WUR"
-                            }
-                          ],
-                          "evidence": [
-                            {
-                              "link": "https://example.org/adoption-study",
-                              "description": "Adoption study report"
-                            }
-                          ],
-                          "contributing_bilateral_projects": [
-                            {
-                              "grant_title": "Seed Adoption Initiative",
-                              "usd_budget": 250000
-                            }
-                          ],
-                          "contributing_programs": [
-                            {
-                              "science_program_id": "SP02",
-                              "aow_compose_code": "SP02-AOW03",
-                              "result_title": "Nutrition outcomes improved",
-                              "result_indicator_description": "Households reached with nutrition interventions",
-                              "result_indicator_type_name": "Outcome"
-                            },
-                            {
-                              "science_program_id": "SP09",
-                              "aow_compose_code": "SP09.AOW01",
-                              "result_title": "Climate-resilient crop systems adopted",
-                              "result_indicator_description": "Number of climate resilient practices documented",
-                              "result_indicator_type_name": "Output"
-                            }
-                          ],
-                          "innovation_use": {
-                            "innovation_use_level": {
-                              "level": 2,
-                              "name": "Scaling"
-                            },
-                            "current_innovation_use_numbers": {
-                              "innov_use_to_be_determined": false,
-                              "actors": [
-                                {
-                                  "result_actors_id": "777",
-                                  "actor_type_id": "1",
-                                  "sex_and_age_disaggregation": true,
-                                  "how_many": "3"
-                                },
-                                {
-                                  "result_actors_id": "778",
-                                  "actor_type_id": "4",
-                                  "sex_and_age_disaggregation": false,
-                                  "how_many": 7,
-                                  "women": "3",
-                                  "women_youth": "1",
-                                  "men": "4",
-                                  "men_youth": "0"
-                                },
-                                {
-                                  "actor_type_id": "5",
-                                  "other_actor_type": "Community cooperatives",
-                                  "sex_and_age_disaggregation": false,
-                                  "women": 6,
-                                  "men": 8,
-                                  "how_many": 14,
-                                  "previousWomen": 4
-                                }
-                              ],
-                              "organization": [
-                                {
-                                  "how_many": 1,
-                                  "institution_types_id": 39,
-                                  "institution_sub_type_id": 39,
-                                  "other_institution": null,
-                                  "hide": false
-                                },
-                                {
-                                  "institution_types_id": 76,
-                                  "institution_sub_type_id": null,
-                                  "other_institution": null,
-                                  "hide": false,
-                                  "how_many": 2
-                                },
-                                {
-                                  "institution_types_id": 75,
-                                  "institution_sub_type_id": null,
-                                  "other_institution": null,
-                                  "hide": false,
-                                  "how_many": 3
-                                },
-                                {
-                                  "institution_types_id": 77,
-                                  "institution_sub_type_id": null,
-                                  "other_institution": null,
-                                  "hide": false,
-                                  "how_many": 4
-                                },
-                                {
-                                  "institution_types_id": 78,
-                                  "other_institution": "Test other org",
-                                  "institution_sub_type_id": null,
-                                  "hide": false,
-                                  "how_many": 5
-                                }
-                              ],
-                              "measures": [
-                                {
-                                  "unit_of_measure": "# of Innovations",
-                                  "quantity": 2
-                                }
-                              ]
-                            }
-                          }
-                        }
                       }
                     ]
                   }
@@ -1300,119 +1509,6 @@
                     ]
                   }
                 },
-                "pcBudgetAllocation": {
-                  "summary": "Policy Change \u2014 Budget Allocation (policy_type id=1, requires status_amount & amount)",
-                  "value": {
-                    "tenant": "prms.result-management.api",
-                    "op": "dataset.ingest.requested",
-                    "results": [
-                      {
-                        "type": "policy_change",
-                        "data": {
-                          "created_date": "2025-11-19T14:00:00Z",
-                          "created_by": {
-                            "email": "policy.team@cgiar.org",
-                            "name": "Policy Research Lead"
-                          },
-                          "submitted_by": {
-                            "email": "j.submitter@cgiar.org",
-                            "name": "Jane Submitter",
-                            "comment": "Budget allocation policy change",
-                            "submitted_date": "2025-11-19T14:05:00Z"
-                          },
-                          "lead_center": {
-                            "acronym": "Bioversity (Alliance)",
-                            "name": "International Center for Tropical Agriculture"
-                          },
-                          "title": "New Agricultural Policy Implementation in Kenya",
-                          "description": "Policy change focused on sustainable agriculture practices with significant budget allocation for rural development programs.",
-                          "toc_mapping": {
-                            "science_program_id": "SP12",
-                            "aow_compose_code": "SP12-AOW01",
-                            "result_title": "Policy Change Result",
-                            "result_indicator_description": "Number of policy changes",
-                            "result_indicator_type_name": "# Of Policy Changes"
-                          },
-                          "geo_focus": {
-                            "scope_code": 4,
-                            "scope_label": "National",
-                            "countries": [
-                              {
-                                "iso_alpha_3": "KEN",
-                                "name": "Kenya"
-                              }
-                            ]
-                          },
-                          "contributing_center": [
-                            {
-                              "institution_id": 1279,
-                              "acronym": "ICARDA"
-                            }
-                          ],
-                          "contributing_partners": [
-                            {
-                              "institution_id": 123,
-                              "acronym": "WUR",
-                              "name": "Wageningen University"
-                            }
-                          ],
-                          "evidence": [
-                            {
-                              "link": "https://example.org/policy-document",
-                              "description": "Official policy document"
-                            }
-                          ],
-                          "contributing_bilateral_projects": [
-                            {
-                              "grant_title": "Kenya Agriculture Innovation Project"
-                            }
-                          ],
-                          "contributing_programs": [
-                            {
-                              "science_program_id": "SP02",
-                              "aow_compose_code": "SP02-AOW03",
-                              "result_title": "Nutrition outcomes improved",
-                              "result_indicator_description": "Households reached with nutrition interventions",
-                              "result_indicator_type_name": "Outcome"
-                            },
-                            {
-                              "science_program_id": "SP09",
-                              "aow_compose_code": "SP09.AOW01",
-                              "result_title": "Climate-resilient crop systems adopted",
-                              "result_indicator_description": "Number of climate resilient practices documented",
-                              "result_indicator_type_name": "Output"
-                            }
-                          ],
-                          "policy_change": {
-                            "policy_type": {
-                              "id": 1,
-                              "name": "Budget allocation",
-                              "status_amount": {
-                                "id": 1,
-                                "name": "Approved"
-                              },
-                              "amount": 5000000
-                            },
-                            "policy_stage": {
-                              "id": 3,
-                              "name": "Implementation"
-                            },
-                            "implementing_organization": [
-                              {
-                                "institutions_id": 456,
-                                "institutions_acronym": "MOA",
-                                "institutions_name": "Ministry of Agriculture Kenya"
-                              },
-                              {
-                                "institutions_name": "Kenya Agricultural Research Institute"
-                              }
-                            ]
-                          }
-                        }
-                      }
-                    ]
-                  }
-                },
                 "pcRegulatory": {
                   "summary": "Policy Change \u2014 Regulatory (policy_type id\u22601, no status_amount/amount)",
                   "value": {
@@ -1426,6 +1522,10 @@
                           "created_by": {
                             "email": "creator@cgiar.org",
                             "name": "John Creator"
+                          },
+                          "lead_contact_person": {
+                            "name": "Jane Doe",
+                            "email": "jane.doe@cgiar.org"
                           },
                           "submitted_by": {
                             "email": "submitter@cgiar.org",
@@ -1506,166 +1606,6 @@
                               }
                             ]
                           }
-                        }
-                      }
-                    ]
-                  }
-                },
-                "ooExample": {
-                  "summary": "Other Output \u2014 Example with common fields only",
-                  "value": {
-                    "tenant": "prms.result-management.api",
-                    "op": "dataset.ingest.requested",
-                    "results": [
-                      {
-                        "type": "other_output",
-                        "data": {
-                          "created_date": "2025-11-05T08:00:00Z",
-                          "created_by": {
-                            "email": "general.team@cgiar.org",
-                            "name": "General Contributor"
-                          },
-                          "submitted_by": {
-                            "email": "b.brown@cgiar.org",
-                            "name": "Bob Brown",
-                            "comment": "Miscellaneous output",
-                            "submitted_date": "2025-11-06T10:00:00Z"
-                          },
-                          "lead_center": {
-                            "acronym": "Bioversity (Alliance)"
-                          },
-                          "title": "Miscellaneous Research Output",
-                          "description": "A general research output that doesn't fit other categories.",
-                          "toc_mapping": {
-                            "science_program_id": "SP05",
-                            "aow_compose_code": "SP05-AOW04",
-                            "result_title": "General output",
-                            "result_indicator_description": "Outputs produced",
-                            "result_indicator_type_name": "Number of outputs"
-                          },
-                          "geo_focus": {
-                            "scope_code": 1,
-                            "scope_label": "Global"
-                          },
-                          "contributing_center": [
-                            {
-                              "institution_id": 115,
-                              "acronym": "CIFOR"
-                            }
-                          ],
-                          "contributing_partners": [
-                            {
-                              "institution_id": 2,
-                              "acronym": "CGIAR"
-                            }
-                          ],
-                          "evidence": [
-                            {
-                              "link": "https://example.org/general-output",
-                              "description": "Link to the output"
-                            }
-                          ],
-                          "contributing_bilateral_projects": [
-                            {
-                              "grant_title": "General Fund"
-                            }
-                          ],
-                          "contributing_programs": [
-                            {
-                              "science_program_id": "SP02",
-                              "aow_compose_code": "SP02-AOW03",
-                              "result_title": "Nutrition outcomes improved",
-                              "result_indicator_description": "Households reached with nutrition interventions",
-                              "result_indicator_type_name": "Outcome"
-                            },
-                            {
-                              "science_program_id": "SP09",
-                              "aow_compose_code": "SP09.AOW01",
-                              "result_title": "Climate-resilient crop systems adopted",
-                              "result_indicator_description": "Number of climate resilient practices documented",
-                              "result_indicator_type_name": "Output"
-                            }
-                          ]
-                        }
-                      }
-                    ]
-                  }
-                },
-                "ocExample": {
-                  "summary": "Other Outcome \u2014 Example with common fields only",
-                  "value": {
-                    "tenant": "prms.result-management.api",
-                    "op": "dataset.ingest.requested",
-                    "results": [
-                      {
-                        "type": "other_outcome",
-                        "data": {
-                          "created_date": "2025-11-19T14:00:00Z",
-                          "created_by": {
-                            "email": "outcome.team@cgiar.org",
-                            "name": "Outcome Contributor"
-                          },
-                          "submitted_by": {
-                            "email": "s.green@cgiar.org",
-                            "name": "Sarah Green",
-                            "comment": "Other outcome result",
-                            "submitted_date": "2025-11-19T14:15:00Z"
-                          },
-                          "lead_center": {
-                            "acronym": "ICARDA"
-                          },
-                          "title": "Miscellaneous Research Outcome",
-                          "description": "A general research outcome that doesn't fit into other specific categories.",
-                          "toc_mapping": {
-                            "science_program_id": "SP10",
-                            "aow_compose_code": "SP10-AOW03",
-                            "result_title": "General outcome",
-                            "result_indicator_description": "Outcomes achieved",
-                            "result_indicator_type_name": "Number of outcomes"
-                          },
-                          "geo_focus": {
-                            "scope_code": 1,
-                            "scope_label": "Global"
-                          },
-                          "contributing_center": [
-                            {
-                              "institution_id": 1279,
-                              "acronym": "ICARDA"
-                            }
-                          ],
-                          "contributing_partners": [
-                            {
-                              "institution_id": 10,
-                              "acronym": "FAO"
-                            }
-                          ],
-                          "evidence": [
-                            {
-                              "link": "https://example.org/outcome-report",
-                              "description": "Link to the outcome report"
-                            }
-                          ],
-                          "contributing_bilateral_projects": [
-                            {
-                              "grant_title": "Outcome Research Fund"
-                            }
-                          ],
-                          "contributing_programs": [
-                            {
-                              "science_program_id": "SP02",
-                              "aow_compose_code": "SP02-AOW03",
-                              "result_title": "Nutrition outcomes improved",
-                              "result_indicator_description": "Households reached with nutrition interventions",
-                              "result_indicator_type_name": "Outcome"
-                            },
-                            {
-                              "science_program_id": "SP09",
-                              "aow_compose_code": "SP09.AOW01",
-                              "result_title": "Climate-resilient crop systems adopted",
-                              "result_indicator_description": "Number of climate resilient practices documented",
-                              "result_indicator_type_name": "Output"
-                            }
-                          ]
                         }
                       }
                     ]
@@ -1797,7 +1737,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Ingestion"
+        ]
       }
     },
     "/health": {
@@ -1807,7 +1750,10 @@
           "200": {
             "description": "Service OK"
           }
-        }
+        },
+        "tags": [
+          "Health"
+        ]
       }
     },
     "/webhook": {
@@ -1845,7 +1791,10 @@
           "503": {
             "description": "The authentication service is unavailable. Retry later."
           }
-        }
+        },
+        "tags": [
+          "Webhooks"
+        ]
       },
       "get": {
         "summary": "Retrieve your webhook destination",
@@ -1865,7 +1814,10 @@
           "502": {
             "description": "The reporting service could not be reached."
           }
-        }
+        },
+        "tags": [
+          "Webhooks"
+        ]
       }
     },
     "/version": {
@@ -1931,7 +1883,10 @@
           "504": {
             "description": "Reporting did not answer in time."
           }
-        }
+        },
+        "tags": [
+          "Versioning"
+        ]
       }
     }
   },
@@ -1941,7 +1896,7 @@
         "type": "apiKey",
         "in": "header",
         "name": "x-api-key",
-        "description": "CLARISA API key of the calling platform. Validated by the Fetcher against CLARISA and forwarded to PRMS Reporting, which resolves the platform identity from it. Applied to POST /ingest only; the read endpoints are currently open."
+        "description": "CLARISA API key of the calling platform. Validated by the Fetcher against CLARISA and forwarded to PRMS Reporting, which resolves the platform identity from it. Required on POST /ingest, POST /version, the /webhook routes and GET /webhook/inbox; the read endpoints are open."
       }
     },
     "schemas": {
@@ -2394,8 +2349,14 @@
         "properties": {
           "result_code": {
             "oneOf": [
-              { "type": "string", "pattern": "^\\d+$" },
-              { "type": "integer", "minimum": 0 }
+              {
+                "type": "string",
+                "pattern": "^\\d+$"
+              },
+              {
+                "type": "integer",
+                "minimum": 0
+              }
             ],
             "description": "Optional. The PRMS result code of a result you already reported in an earlier phase, to carry it into the open reporting phase with the data in this payload (a new version that keeps the same `result_code`; the earlier-phase result is not modified). Send it as a string of digits (`\"28565\"`) or as an integer (`28565`); both are accepted. Send the full result, as for a new one: nothing is copied from the earlier phase. Omit it to create a new result, exactly as before. PRMS rejects the result, and writes nothing for it, when the code: is not found (404); belongs to another platform (403); is a Knowledge Product, or its most recent earlier-phase version is not Approved, or the code already has a result in the open phase (409); or is not a W3/Bilateral result (400). The successful response carries `response.outcomes[]` with `{ result_code, operation, status_id, status, external_reference }`, where `operation` is `created` or `versioned`. Updating a result that is already in the open phase is not available.",
             "example": "28565"
@@ -2853,5 +2814,27 @@
         }
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "Ingestion",
+      "description": "Validate and submit results. See **Request structure** and the result type sections above."
+    },
+    {
+      "name": "Webhooks",
+      "description": "Register where PRMS calls you back. See **Result decision webhooks** above."
+    },
+    {
+      "name": "Versioning",
+      "description": "Carry an approved result into the open phase. See **Versioning** above."
+    },
+    {
+      "name": "Results",
+      "description": "Read results indexed in OpenSearch."
+    },
+    {
+      "name": "Health",
+      "description": "Service liveness."
+    }
+  ]
 }
