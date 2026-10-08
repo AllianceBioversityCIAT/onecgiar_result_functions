@@ -2440,7 +2440,20 @@
             "type": "boolean",
             "default": false,
             "example": false,
-            "description": "Create the result in PRMS Reporting as 'editing' instead of 'pending review', so the reporting user completes the non-MDS fields in PRMS and submits it from there. Absent or false keeps the default ('pending review'). Send it per result, inside `data`: the ingest handler rebuilds the envelope as {tenant, op, jobId, results} and drops top-level extras, so a batch-level flag never reaches validation. A non-boolean is rejected with the row's external_reference."
+            "description": "Create the result in PRMS Reporting as 'editing' instead of 'pending review', so the reporting user completes the non-MDS fields in PRMS and submits it from there. Absent or false keeps the default ('pending review'). Send it per result, inside `data`: the ingest handler rebuilds the envelope as {tenant, op, jobId, results} and drops top-level extras, so a batch-level flag never reaches validation. A non-boolean is rejected with the row's external_reference. Ignored on a resubmission (`result_code` of a rejected result): a resubmitted result always returns to 'pending review'."
+          },
+          "result_code": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d+$"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "example": "28565",
+            "description": "PRMS code of an existing result, as returned in `results[].result.result_code` when it was first ingested and in `data.result_code` on the decision webhook. Not your own id: that is `external_reference`, which PRMS never uses to look a result up. Optional: omit it for a new result. When present, PRMS continues that result instead of creating a new one, and `results[].externalApiResponse.response.outcomes[].operation` says how: `updated` when the result is Rejected in the open reporting phase (resubmission: its data is replaced on the same record and it returns to 'pending review'), `versioned` when it was Approved in a previous phase and has no version in the open one. Any other status in the open phase is refused with 409 and nothing changes. On a resubmission send the complete corrected result: a section you leave out is cleared, not kept (except `lead_contact_person`), and the type must match the stored one. Only the platform that reported the result may send its code (403), and Knowledge Products are not supported (409). Full contract: PRMS `bilateral-result-summaries.en.md`, 'Resubmitting a rejected result'."
           },
           "result_id": {
             "description": "Identifier of the result in the source system (optional)",
