@@ -11,6 +11,7 @@
     "test": "node --test \"test/**/*.test.mjs\"",
     "start": "node --watch src/local.mjs",
     "dev": "node  --watch src/local.mjs",
+    "docs:build": "node src/docs/build-openapi.mjs",
     "build": "rm -rf dist && npx esbuild src/lambda.mjs --bundle --platform=node --target=node20 --format=cjs --outfile=dist/lambda.cjs --keep-names --log-level=info",
     "zip": "npm run build && (cd dist && zip -qr ../normalizer.zip .) && echo 'ZIP listo: normalizer.zip'"
   },

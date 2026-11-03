@@ -10,6 +10,10 @@
           "name": "Sara Jani",
           "email": "s.jani@cgiar.org"
         },
+        "lead_contact_person": {
+          "name": "Jane Doe",
+          "email": "jane.doe@cgiar.org"
+        },
         "lead_center": {
           "institution_id": 1279,
           "acronym": "ICARDA"
