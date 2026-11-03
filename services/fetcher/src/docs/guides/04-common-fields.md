@@ -66,6 +66,7 @@ Where the result lands in PRMS Reporting once it is created. By default a result
 
 - Optional on every result type. Absent is treated as `false`.
 - Must be a **boolean**. A string, a number or `"true"` in quotes is rejected.
+- **Ignored on a resubmission** (`result_code` of a rejected result): a resubmitted result always returns to **Pending review**.
 
 > ⚠️ **New 2026-09.** The field was silently discarded before it was declared: the schemas set `additionalProperties: true`, so `keep_editing` was passed through untouched and then dropped further down by Reporting's whitelist. Sending it produced no error **and no effect**. Two things changed — it is now declared on all seven types, so a non-boolean is rejected here with the row's `external_reference` instead of being forwarded; and Reporting reads it.
 
@@ -75,12 +76,23 @@ Where the result lands in PRMS Reporting once it is created. By default a result
 
 `result_code`
 
-The PRMS result code of a result you already reported and had **approved in a previous phase**. Send it to carry that result into the current phase with the data in this payload, instead of creating a new result.
+The PRMS code of a result that **already exists**: the number PRMS returned when you first sent it, and the one users see in the Reporting Tool. Send it to **continue** that result instead of creating a new one: to resubmit it after a **rejection**, or to carry it into the current phase after it was **approved in a previous phase**.
 
 - **Type:** string or integer
 - **Required:** ⚙️ Optional
 - **Description:** Digits only. `"28565"` and `28565` are both accepted. Omit it to create a new result, exactly as before.
 - **Example:** `28565`
+
+**What PRMS does with it depends on the status of that result:**
+
+| **The result with that code…** | **What happens** | **`outcomes[].operation`** |
+| --- | --- | --- |
+| *(no `result_code` sent)* | A new result is created, as always. | `created` |
+| is **Rejected** in the current reporting phase | **Resubmission.** Its data is replaced **on the same record** (same result code) and it returns to **Pending Review**. | `updated` |
+| was **Approved** in a previous phase and has no version in the current one | A new version is created in the current phase, keeping the same code. Same effect as `POST /version`, but with the data in this payload. | `versioned` |
+| is in **any other status** in the current phase (Editing, Pending Review, Approved…) | Refused with `409`. Nothing changes. Edit it in the PRMS Reporting Tool instead. | — |
+
+The operation is returned in `results[].externalApiResponse.response.outcomes[]` of the ingest response.
 
 ```json
 {
@@ -94,9 +106,21 @@ The PRMS result code of a result you already reported and had **approved in a pr
 }
 ```
 
-> ⚠️ **Send the full result.** Nothing is copied from the previous phase: the new version is built only from this payload. Anything you don't send is not in the new version.
+> ⚠️ **Send the full result, in both cases.** On a **resubmission**, the payload replaces what PRMS holds: a section you leave out is **cleared, not kept** (evidence, projects, partners, ToC mapping…). The only exception is `lead_contact_person`, which keeps its stored value. On a **version**, nothing is copied from the previous phase: the new version is built only from this payload.
 
-> ℹ️ **The status follows `keep_editing`**, as for a new result: `false` → `Pending Review`, `true` → `Editing`.
+> ⚠️ **Where to get the code:** keep the `result_code` from the ingest response of the first submission (`results[].result.result_code`) or from the decision webhook (`data.result_code`). PRMS never looks a result up by your `external_reference`.
+
+> ℹ️ **Resulting status.** A **resubmitted** result always returns to `Pending Review`: `keep_editing` is ignored. A **version** follows `keep_editing`, as for a new result: `false` → `Pending Review`, `true` → `Editing`.
+
+> ✅
+> **Validation rules (PRMS):**
+> 
+
+- **Only your own results.** A result reported by another platform is refused (`403`).
+- **Knowledge Products are not supported** in either flow (`409`): their metadata belongs to CGSpace.
+- **Same type on a resubmission.** `result_type_id` must match the stored result (`409`). A different type means a new result.
+- **A resubmission needs** a primary Science Program (`toc_mapping.science_program_id`) allocated to the lead project, and exactly one lead project: a single project, or one flagged `is_lead` (`400`).
+- **Retrying a resubmission.** After a timeout or a `5xx`, resend the same request. If it then returns `409` saying the status is *pending review*, your earlier attempt went through: do not resend again.
 
 ---
 
