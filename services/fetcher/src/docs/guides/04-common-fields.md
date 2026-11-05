@@ -67,6 +67,7 @@ Where the result lands in PRMS Reporting once it is created. By default a result
 - Optional on every result type. Absent is treated as `false`.
 - Must be a **boolean**. A string, a number or `"true"` in quotes is rejected.
 - **Ignored on a resubmission** (`result_code` of a rejected result): a resubmitted result always returns to **Pending review**.
+- **Read on a Knowledge Product correction in Editing**: `true` keeps it in **Editing**, `false` or absent sends it to **Pending review**. See **Result code**.
 
 > ⚠️ **New 2026-09.** The field was silently discarded before it was declared: the schemas set `additionalProperties: true`, so `keep_editing` was passed through untouched and then dropped further down by Reporting's whitelist. Sending it produced no error **and no effect**. Two things changed — it is now declared on all seven types, so a non-boolean is rejected here with the row's `external_reference` instead of being forwarded; and Reporting reads it.
 
@@ -89,7 +90,8 @@ The PRMS code of a result that **already exists**: the number PRMS returned when
 | --- | --- | --- |
 | *(no `result_code` sent)* | A new result is created, as always. | `created` |
 | is **Rejected** in the current reporting phase | **Resubmission.** Its data is replaced **on the same record** (same result code) and it returns to **Pending Review**. | `updated` |
-| was **Approved** in a previous phase and has no version in the current one | A new version is created in the current phase, keeping the same code. Same effect as `POST /version`, but with the data in this payload. | `versioned` |
+| is a **Knowledge Product** in **Rejected** or **Editing** in the current phase 🆕 | **Correction.** Only the fields that do not come from CGSpace are replaced, on the same record. See **Correcting a Knowledge Product** below. | `updated` |
+| was **Approved** in a previous phase and has no version in the current one | A new version is created in the current phase, keeping the same code. Same effect as `POST /version`, but with the data in this payload. Not available for Knowledge Products. | `versioned` |
 | is in **any other status** in the current phase (Editing, Pending Review, Approved…) | Refused with `409`. Nothing changes. Edit it in the PRMS Reporting Tool instead. | — |
 
 The operation is returned in `results[].externalApiResponse.response.outcomes[]` of the ingest response.
@@ -117,10 +119,64 @@ The operation is returned in `results[].externalApiResponse.response.outcomes[]`
 > 
 
 - **Only your own results.** A result reported by another platform is refused (`403`).
-- **Knowledge Products are not supported** in either flow (`409`): their metadata belongs to CGSpace.
+- **Knowledge Products can be corrected, not versioned.** A KP in Rejected or Editing in the current phase can be corrected (see below). A KP that exists only in a previous phase cannot be carried forward (`409`): report it again with its own handle.
 - **Same type on a resubmission.** `result_type_id` must match the stored result (`409`). A different type means a new result.
 - **A resubmission needs** a primary Science Program (`toc_mapping.science_program_id`) allocated to the lead project, and exactly one lead project: a single project, or one flagged `is_lead` (`400`).
 - **Retrying a resubmission.** After a timeout or a `5xx`, resend the same request. If it then returns `409` saying the status is *pending review*, your earlier attempt went through: do not resend again.
+
+### Correcting a Knowledge Product 🆕
+
+A Knowledge Product is corrected through the same `POST /ingest`, with `type: "knowledge_product"` and `data.result_code` set to its code. Its metadata belongs to CGSpace, so PRMS only takes from your payload the fields **you** own.
+
+| **Data** | **Source after the correction** |
+| --- | --- |
+| Lead center, contributing centers, ToC mapping and contributing programs, contributing partners, bilateral projects, lead contact person | **Your payload.** Replaced on the same record. A section you leave out is cleared, as on any resubmission. |
+| Title, description, geographic focus, authors, keywords, year, DOI, licence and the rest of the KP metadata | **CGSpace.** Re-read from CGSpace with the stored handle. Values in your payload are **ignored**. |
+| Handle and its evidence link | **Kept as stored.** |
+| Partners that CGSpace contributed | **Kept**, even if your payload does not send them. |
+
+**Resulting status:**
+
+| **KP status** | **`keep_editing`** | **After the correction** |
+| --- | --- | --- |
+| Rejected | any (ignored) | Pending Review |
+| Editing | `true` | Stays in Editing |
+| Editing | `false` or absent | Pending Review |
+| Any other (Pending Review, Approved…) | — | Refused with `409`. Nothing changes. |
+
+```json
+{
+  "type": "knowledge_product",
+  "data": {
+    "result_code": 28565,
+    "external_reference": "STAR-KP-186314",
+    "knowledge_product": { "handle": "https://hdl.handle.net/10568/186314" },
+    "lead_center": { "institution_id": 46, "acronym": "CIAT (Alliance)" },
+    "contributing_partners": [{ "institution_id": 6983 }],
+    "toc_mapping": { "science_program_id": "SP03", "...": "..." },
+    "contributing_bilateral_projects": [{ "grant_title": "C-A486", "is_lead": true }],
+    "...": "the rest of the fields you own, complete"
+  }
+}
+```
+
+> ℹ️ `geo_focus` is not required on a correction: the geography comes from CGSpace. A new `title` in the payload does not trigger the duplicate-title check, because it is ignored.
+
+> ✅
+> **Validation rules (PRMS), all checked before anything is written:**
+> 
+
+| **Code** | **When** |
+| --- | --- |
+| `400` | `knowledge_product.handle` is missing (refused by this API's validator, in `rejected[]`). |
+| `403` | The KP was reported by another platform. |
+| `409` | The handle differs from the stored one. `https://hdl.handle.net/10568/X`, `https://cgspace.cgiar.org/handle/10568/X` and `10568/X` count as the same handle. |
+| `409` | The KP is not in Rejected or Editing: *"Result {code} cannot be corrected: its status is {status}."* |
+| `409` | The KP exists only in a previous phase, or its status changed while the correction was being processed. |
+| `422` | CGSpace's reporting-cycle rule refuses the handle. The CGSpace message is passed through unchanged. |
+| `502` | CGSpace could not be read. Nothing was changed: retry later. |
+
+> ⚠️ A refusal changes nothing: the stored KP stays exactly as it was. Review history keeps every earlier rejection and its justification, and each correction adds a *Resubmitted* entry.
 
 ---
 
