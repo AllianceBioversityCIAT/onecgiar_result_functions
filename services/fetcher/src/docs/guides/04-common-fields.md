@@ -425,13 +425,24 @@ PRMS stores the link and **never copies the document**. Everything about what is
 
 `contributing_bilateral_projects`
 
-- **CLARISA bilateral Projects:** [https://api.clarisa.cgiar.org/api/projects](https://api.clarisa.cgiar.org/api/projects)
+- **CLARISA bilateral Projects (current phase):** [https://api.clarisa.cgiar.org/api/projects?phase=2026](https://api.clarisa.cgiar.org/api/projects?phase=2026)
 
 | **Field** | **Type** | **Required** | **Description** | **Example** |
 | --- | --- | --- | --- | --- |
-| **grant_title** | string | ✅ | **Registry code of the bilateral / NPP project** — the `code` field of the CLARISA projects catalogue, sent on its own. Do **not** send the full project title, and do not send code and title concatenated: the catalogue holds legacy rows under a past reporting phase whose name fields carry that concatenated form, and matching one of those binds the result to a project that no PRMS screen can show. A `grant_title` that resolves to no project of the current reporting phase is **rejected with 400** — before 2026-09-21 it was skipped silently and the result was created without the project or its investment. | D-200358 |
+| **grant_title** | string | ✅ | **Registry code of the bilateral / NPP project** — the `external_code` field of the CLARISA projects catalogue, sent on its own. Do **not** send the full project title, and do not send code and title concatenated: the catalogue holds legacy rows under a past reporting phase whose name fields carry that concatenated form, and matching one of those binds the result to a project that no PRMS screen can show. A `grant_title` that resolves to no project of the current reporting phase is **rejected with 400** — before 2026-09-21 it was skipped silently and the result was created without the project or its investment. | D-200358 |
 | **is_lead** | boolean | ⚙️ Optional | **Flag to identify an Bilateral Project Lead** | false |
 | usd_budget | number | ⚙️ Optional | **Optional**. If the contribution amount is known, send a positive USD value. Zero is treated as not supplied by Reporting. Do not combine a positive amount with `is_determined: true`. | 15000 |
 | is_determined | boolean | ⚙️ Optional | **Optional**. Send `true` when the amount is unknown. The budget may also be omitted; the project itself still needs `grant_title`. | false |
 
 These budget fields are stored for Innovation Development and Innovation Use, but are optional for both and never gate submission. For Innovation Use, an omitted or zero amount is stored by Reporting as yet to be determined. `grant_title` remains required for every bilateral project entry, and at least one project entry is required.
+
+### Finding the project code
+
+| Need | Request |
+| --- | --- |
+| Every project you can report against now | `GET https://api.clarisa.cgiar.org/api/projects?phase=2026` |
+| Check one code before sending it | `GET https://api.clarisa.cgiar.org/api/projects?phase=2026&code=D-200358` (an empty array means PRMS will reject it) |
+
+- **Use the current phase only.** In the current phase every project has an `external_code` and each code appears once. The unfiltered list also returns past-phase rows. Some of those have no code or repeat the same project, and PRMS does not accept them.
+- **Codes are not carried across phases.** A project reported in a past phase may have a different code now, or no row at all. Look up the code again in the current phase instead of reusing the old one.
+- **Missing or duplicated projects:** the catalogue is synced from the **W3 Registry**. PRMS and CLARISA do not edit it. If a project is missing, duplicated or has the wrong code, ask the project owner to correct it in the W3 Registry. The change shows up in CLARISA after the next sync.
