@@ -292,6 +292,17 @@ Associates the result with elements of the Theory of Change (ToC).
 | **result_indicator_type_name** | string | ❌ | **Indicator type name.** | "# Of Knowledge Products" |
 | **target_contribution** | integer | ❌ | **Contribution of this result to the matched indicator's target. Non-negative whole number. Stored only when the ToC match resolves an indicator that has a target. If omitted, 1 is stored. If sent but no indicator with a target is matched, the value is ignored and the result is still created.** | 12 |
 
+### How the indicator is matched 🆕 2026-11
+
+PRMS looks for the ToC result in the Science Program and AoW you send whose title contains `result_title`. Each indicator field you send then narrows the match **together**:
+
+- `result_indicator_description`: the indicator description must contain this text.
+- `result_indicator_type_name`: the indicator type must be exactly this value.
+
+A field you leave out does not filter. Send both when you can: two ToC results can share the same title and indicator type, and only the description tells them apart. If more than one indicator still matches, PRMS keeps the first one in a fixed order. The same payload always gives the same mapping.
+
+> ✅ Before 2026-11, sending `result_indicator_type_name` could link the result to an indicator of **another** ToC result. That is fixed. The workaround of leaving the field out is no longer needed.
+
 ---
 
 ## Contributing programs
@@ -383,11 +394,28 @@ Defines the geographical scope of the result.
 
 | **Field** | **Type** | **Required** | **Description** | **Example** |
 | --- | --- | --- | --- | --- |
-| **institution_id** | number | Optional | **Partner institution ID.** | 7 |
+| **institution_id** | number | Optional (**recommended**) | **CLARISA institution `code`.** The only way to be sure the partner is linked. | 7 |
 | **acronym** | string | Optional | **Institution acronym.** | "NARO" |
 | **name** | string | Optional | **Full name of the partner institution.** | “National Agricultural Research Organization” |
 | **usd_budget** | number | Optional | **Budget in USD contributed by this partner institution.** Stored for **Innovation Development** and **Innovation Use**; ignored for other result types. Optional — not part of the MDS. Must not be sent together with `is_determined: true`. | 75000 |
 | **is_determined** | boolean | Optional | Send `true` when this partner's contribution amount is **not yet determined**. Stores the amount as "yet to be determined" and nulls any value sent in `usd_budget`. | false |
+
+### How a partner is linked 🆕 2026-11
+
+| You send | PRMS links the partner when |
+| --- | --- |
+| `institution_id` | the CLARISA institution exists |
+| `name` and/or `acronym` only | the value is **exactly** the name or acronym of **one** CLARISA institution (spaces at the ends are ignored) |
+
+A partner that is not linked is **not** dropped silently. The result is still created, and the partner comes back in the response under `outcomes[].warnings` (see **Response examples → Warnings**):
+
+| `code` | Why it was not linked |
+| --- | --- |
+| `partner_unresolved` | No institution matches exactly, or the `institution_id` does not exist. |
+| `partner_ambiguous` | Several institutions match. Their ids are in `candidate_institution_ids`. |
+| `partner_is_cgiar_center` | The match is a CGIAR center. Centers go in `lead_center` / `contributing_center`, never as partners. |
+
+> ⚠️ **Changed in 2026-11.** Names used to be matched partially (`"Wageningen"` matched *Wageningen University and Research Centre*), and the first hit was taken. That linked wrong institutions, so partial names now return `partner_unresolved`. **Send `institution_id`.**
 
 ---
 
