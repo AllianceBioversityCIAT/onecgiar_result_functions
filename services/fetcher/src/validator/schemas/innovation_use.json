@@ -47,6 +47,16 @@
                       },
                       "actor_type_name": { "type": "string" },
                       "other_actor_type": { "type": ["string", "null"] },
+                      "count_unit": {
+                        "type": ["string", "null"],
+                        "enum": ["households", "individuals", "", null],
+                        "description": "Farmers only (actor_type_id 1): what the number counts. 'households' means one how_many total, no sex/age breakdown."
+                      },
+                      "use_nature": {
+                        "type": ["string", "null"],
+                        "enum": ["information_received", "innovation_applied", "", null],
+                        "description": "Farmers only (actor_type_id 1): whether the actors received information, advice or inputs, or applied the innovation."
+                      },
                       "sex_and_age_disaggregation": {
                         "type": ["boolean", "null"]
                       },
@@ -118,6 +128,20 @@
                         },
                         "then": {
                           "required": ["other_actor_type"]
+                        }
+                      },
+                      {
+                        "if": {
+                          "required": ["count_unit"],
+                          "properties": {
+                            "count_unit": { "const": "households" }
+                          }
+                        },
+                        "then": {
+                          "required": ["how_many"],
+                          "properties": {
+                            "how_many": { "not": { "enum": [null, ""] } }
+                          }
                         }
                       }
                     ]

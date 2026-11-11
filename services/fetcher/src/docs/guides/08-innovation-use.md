@@ -97,6 +97,8 @@ Represents groups of actors using the innovation.
 | **actor_type_id** | string or integer | ⚙️ Optional (if **actor_type_name** is provided) | Coded type of actor, from the table above. **Preferred over the name.** | 5 |
 | **actor_type_name** | string | ⚙️ Optional (if **actor_type_id** is provided) ⚠️ | Descriptive label of the actor type, matched against the table above. Case-insensitive and tolerant of spacing around the slashes. An unresolvable name is rejected. | "Researchers" |
 | **other_actor_type** | string or null | Conditional | Required when `actor_type_id` = 5. Describes the specific actor type when "Other" is selected. | "Youth farmer groups" |
+| **count_unit** 🆕 | string or null | ❌ Farmers only (recommended) | What the number counts: `households` or `individuals` (exact case). With `households`, send `how_many` only. See **Farmers follow-up answers**. | "households" |
+| **use_nature** 🆕 | string or null | ❌ Farmers only (recommended) | What the number means: `information_received` (received information, advice or inputs) or `innovation_applied` (applied the innovation). Exact case. | "innovation_applied" |
 | **sex_and_age_disaggregation** | boolean or null | ❌ | ⚠️ **Reads as "does not apply".** `false` (or omitted) → report `women` / `men` with their youth. `true` → the disaggregation is **not** available for this group, so report `how_many` only. | false |
 | **how_many** | string, integer or null | Conditional | Total number of actors in this group. Required when `sex_and_age_disaggregation` = `true`. | 120 |
 | **women** | string, integer or null | ❌ | Number of women in this actor group. | 60 |
@@ -133,6 +135,40 @@ PRMS derives non-youth as the difference and does not store it. **There is no to
 > - An actor sent with `actor_type_name` and no `actor_type_id` was **silently dropped** — stored with no type, and the request still returned `200` with "All results processed successfully". If you send names, verify the actors you expect came back.
 > - Youth was never checked against its sex total: `women: 10, women_youth: 999` was stored as sent, and the derived non-youth clamped to 0.
 > - The last two conditional rules fired when the field was **absent**, not just when it held the triggering value. Omitting `sex_and_age_disaggregation` demanded `how_many`, and identifying an actor by name demanded `other_actor_type`. Both now require the field to be present.
+
+### Farmers follow-up answers 🆕 2026-11
+
+For actors of type **Farmers/ (agro)pastoralist/ herders/ fishers** (`actor_type_id` 1), PRMS asks two questions about the number reported. Send both answers on each Farmers actor:
+
+| **Field** | **Question** | **Allowed values (exact case)** |
+| --- | --- | --- |
+| `count_unit` | Do the reported numbers refer to households or individual actors? | `households`, `individuals` |
+| `use_nature` | What best characterises the nature of this innovation use number? | `information_received` (actors who received information, advice or inputs), `innovation_applied` (actors who applied the innovation) |
+
+**Households.** A household number is one total. Send `how_many`. Any `women` / `men` / youth figures are discarded, and the row is stored as `sex_and_age_disaggregation: true`.
+
+**Mixed groups.** When one number mixes both natures, send Farmers once per group. PRMS does not add them up. Example: 5,000 farmers reached, of whom 3,800 only received advice and 1,200 applied the practice:
+
+```json
+"actors": [
+  { "actor_type_id": 1, "count_unit": "individuals", "use_nature": "information_received",
+    "sex_and_age_disaggregation": true, "how_many": 3800 },
+  { "actor_type_id": 1, "count_unit": "individuals", "use_nature": "innovation_applied",
+    "sex_and_age_disaggregation": true, "how_many": 1200 }
+]
+```
+
+**What happens to each case**
+
+| **Case** | **Result** |
+| --- | --- |
+| A value that is not one of the codes above (for example `"Households"`) | Rejected with `400`. |
+| `count_unit: "households"` without `how_many` | Rejected with `400`. |
+| Farmers actor without one of the answers | Created. The answer is stored empty and a warning comes back: `actor_count_unit_missing` / `actor_use_nature_missing`. Complete it in PRMS. |
+| An answer on an actor that is not Farmers | Created. The answer is ignored and a warning comes back: `actor_count_unit_not_applicable` / `actor_use_nature_not_applicable`. |
+| Two Farmers actors with the same `count_unit` and `use_nature` | Stored as **one** row, and the later one wins. Warning `actor_duplicate_merged` on the later index. |
+
+Absent, `null` and `""` all count as empty. Warnings are returned in `outcomes[].warnings` with `field: "innovation_use.actors"`, and `index` is the actor's position in `actors[]`. See **Response examples → Warnings**. Both answers are also returned on every actor when you read the result.
 
 ---
 
