@@ -61,11 +61,11 @@ Each row in `results[]` carries the PRMS answer at `externalApiResponse.response
 
 | **Field** | **Description** |
 | --- | --- |
-| **field** | Payload section the warning is about. Today always `contributing_partners`. |
-| **index** | Position of the entry in that array (0-based). |
-| **code** | `partner_unresolved`, `partner_ambiguous` or `partner_is_cgiar_center`. See **Common fields → How a partner is linked**. |
+| **field** | Payload section the warning is about: `contributing_partners` or `innovation_use.actors`. Partner warnings come first. |
+| **index** | Position of the entry in that array (0-based). For `innovation_use.actors`, the position in `current_innovation_use_numbers.actors[]`. |
+| **code** | Partners: `partner_unresolved`, `partner_ambiguous` or `partner_is_cgiar_center`. See **Common fields → How a partner is linked**. Innovation Use actors 🆕: `actor_count_unit_missing`, `actor_use_nature_missing`, `actor_count_unit_not_applicable`, `actor_use_nature_not_applicable` or `actor_duplicate_merged`. See **Innovation Use → Farmers follow-up answers**. |
 | **message** | Human-readable reason. |
-| **institution_id / name / acronym** | What you sent for that entry. |
+| **institution_id / name / acronym** | Partner warnings only: what you sent for that entry. |
 | **candidate_institution_ids** | `partner_ambiguous` only: the institutions that matched. |
 | **resolved_institution_id** | `partner_is_cgiar_center` only: the center the entry resolved to. |
 
