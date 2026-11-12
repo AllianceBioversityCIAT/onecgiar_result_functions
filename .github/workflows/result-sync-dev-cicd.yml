@@ -1,0 +1,210 @@
+# PRMS Result Management SYNC (DEV): CI on GitHub Actions, deploy on Jenkins (CD-only job clarisa-result-management-sync-cd).
+#
+#   GitHub Actions (build + SAM package)  ->  clarisa-result-management-sync-cd (Jenkins: verify + sam deploy)  ->  AWS
+#
+# Why (owner decision, 2026-11-11): the legacy job clarisa-result-management-sync builds the SAM package with
+# `sam build --use-container` on the Jenkins agent, so the agent needs Docker. The build moves here (the container runs
+# on the GitHub runner); Jenkins keeps the legacy `sam deploy` (same stack, parameters, credential and bucket) and no
+# longer needs Docker. The legacy job is not changed and stays available in Jenkins for manual recovery
+# (jenkins-trigger-sync.yml, workflow_dispatch only). The other result-management jobs are not part of this change.
+#
+# Build (the legacy stages Install Dependencies, Load Environment Variables, Build Project and SAM Build, unchanged):
+#   services/sync: npm ci, .env from the legacy secret (packaged in the Lambda through services/sync/.samignore, as
+#   today), npm run build:cron, npm run build, then `sam build --template template.yaml --build-dir .sam-build
+#   --use-container` without AWS credentials. Then `sam package` uploads the code to the SAM managed bucket of the legacy
+#   deploy (under <CICD_SAM_PREFIX>/code) and the packaged template is published with provenance metadata; its sha256 is
+#   handed over to Jenkins (ARTIFACTS sync=sha256:…), which verifies it before deploying.
+# The job names are part of the Jenkins contract (stage "Verify CI Run"): `CI script checks (bash -n, ShellCheck)` and
+# `publish package (sync)`. Rename them only together with the Jenkinsfile.
+#
+# Slack (Reporting Tool format, title PRMS RESULT MANAGEMENT (SYNC) NEW ENVIRONMENT):
+#   started     this workflow, at the start of the run (no `needs`)
+#   failed      this workflow, when the run failed BEFORE Jenkins accepted the request
+#   succeeded / failed (deploy)   Jenkins clarisa-result-management-sync-cd
+#
+# GitHub Environment result-sync-dev (publish and hand-over): deployment branch dev only; administrators cannot bypass.
+#   Variables: CICD_BOUND_REF (refs/heads/dev), CICD_AWS_REGION, CICD_SAM_BUCKET (SAM managed bucket of the legacy
+#   deploy), CICD_SAM_PREFIX. Secrets: CICD_BUILD_ROLE_ARN, CICD_ENV_SECRET_ID (the legacy secret id, unchanged): identifiers,
+#   kept as secrets only so GitHub masks them in these public logs.
+#   The build role trusts only this repository (repository and owner ids), the environment result-sync-dev and the ref
+#   refs/heads/dev; it can read only the Sync secret and read/write only under <CICD_SAM_PREFIX>/ in that bucket.
+#   Repository secrets JENKINS_USERNAME / JENKINS_API_TOKEN (the same as jenkins-trigger-sync.yml).
+#
+# Secret handling (only the Sync .env, as in the Jenkins job):
+#   * OIDC with `output-env-credentials: false`: only the secret-read and package steps receive credentials, through
+#     their own `env:`; the npm and SAM builds run without them (without-oidc.sh).
+#   * The .env is written git-ignored (mode 0600) and masked, never echoed; it and the SAM build directory are removed
+#     by an `if: always()` step. As today, the .env is inside the Lambda package (known risk, unchanged by this change).
+#
+# Action pinning: every `uses:` is a full commit SHA (same SHAs as the other migrated pipelines):
+#   actions/checkout                       v7.0.1  3d3c42e5aac5ba805825da76410c181273ba90b1
+#   actions/setup-node                     v7.0.0  820762786026740c76f36085b0efc47a31fe5020
+#   aws-actions/configure-aws-credentials  v6.3.0  e1253824e5c10ff9df46874f81ed3ec929e19cfd
+# SAM CLI: the version preinstalled on the GitHub-hosted runner (printed by the build step).
+name: result-sync-dev-cicd
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: result-sync-dev-cicd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------- start notification
+  notify-start:
+    name: notify start (Slack)
+    permissions: {}
+    uses: ./.github/workflows/slack-notify.reusable.yml
+    with:
+      status: started
+      title: PRMS RESULT MANAGEMENT (SYNC) NEW ENVIRONMENT
+      project: PRMS RESULT MANAGEMENT (SYNC)
+      environment-label: DEV
+    secrets:
+      SLACK_NOTIFICATIONS_WEBHOOK_URL: ${{ secrets.SLACK_NOTIFICATIONS_WEBHOOK_URL }}
+
+  # ---------------------------------------------------------------- mandatory checks
+  # The legacy job runs no lint and no tests (none added). Only the CI scripts are checked.
+  ci-script-checks:
+    name: CI script checks (bash -n, ShellCheck)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Syntax
+        run: |
+          for f in .github/scripts/*.sh; do bash -n "$f"; done
+      - name: ShellCheck (preinstalled on the runner)
+        run: shellcheck --severity=warning .github/scripts/*.sh
+
+  # ---------------------------------------------------------------- build + SAM package
+  publish-package:
+    name: publish package (sync)
+    needs: ci-script-checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: result-sync-dev
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      digest: ${{ steps.package.outputs.digest }}
+    steps:
+      - name: Enforce bound ref
+        env:
+          BOUND_REF: ${{ vars.CICD_BOUND_REF }}
+          CURRENT_REF: ${{ github.ref }}
+        run: |
+          if [ -z "${BOUND_REF:-}" ] || [ "$CURRENT_REF" != "$BOUND_REF" ]; then echo "::error::ref is not the bound ref (fail closed)"; exit 1; fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Install dependencies (legacy stage "Install Dependencies")
+        working-directory: services/sync
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - name: Assume the build role through OIDC (credentials not exported to the job)
+        id: aws-env
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.CICD_BUILD_ROLE_ARN }}
+          aws-region: ${{ vars.CICD_AWS_REGION }}
+          role-session-name: result-sync-dev-${{ github.run_id }}
+          mask-aws-account-id: true
+          output-env-credentials: false
+          output-credentials: true
+      - name: Sync .env from Secrets Manager (legacy stage "Load Environment Variables")
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.aws-env.outputs.aws-access-key-id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.aws-env.outputs.aws-secret-access-key }}
+          AWS_SESSION_TOKEN: ${{ steps.aws-env.outputs.aws-session-token }}
+          AWS_REGION: ${{ vars.CICD_AWS_REGION }}
+          SECRET_ID: ${{ secrets.CICD_ENV_SECRET_ID }}
+        run: bash .github/scripts/write-sync-env.sh
+      - name: Build handlers (legacy stage "Build Project")
+        working-directory: services/sync
+        run: |
+          npm run build:cron
+          npm run build
+          [ -f dist-cron/handler.cjs ] || { echo "::error::build output not found at dist-cron/handler.cjs"; exit 1; }
+          [ -f dist/lambda.cjs ] || { echo "::error::build output not found at dist/lambda.cjs"; exit 1; }
+          [ -s .env ] || { echo "::error::services/sync/.env missing before the SAM build"; exit 1; }
+      - name: SAM build in a container on the runner (legacy stage "SAM Build")
+        run: |
+          sam --version
+          bash .github/scripts/without-oidc.sh sam build --template template.yaml --build-dir .sam-build --use-container
+          [ -f .sam-build/SyncCronFunction/.env ] || { echo "::error::.env is not in the Lambda package (fail closed)"; exit 1; }
+          echo ".env is included in the Lambda package"
+      - name: Assume the build role through OIDC for the package (credentials not exported to the job)
+        id: aws
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.CICD_BUILD_ROLE_ARN }}
+          aws-region: ${{ vars.CICD_AWS_REGION }}
+          role-session-name: result-sync-dev-${{ github.run_id }}
+          mask-aws-account-id: true
+          output-env-credentials: false
+          output-credentials: true
+      - name: SAM package and publish the packaged template
+        id: package
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.aws.outputs.aws-access-key-id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.aws.outputs.aws-secret-access-key }}
+          AWS_SESSION_TOKEN: ${{ steps.aws.outputs.aws-session-token }}
+          AWS_REGION: ${{ vars.CICD_AWS_REGION }}
+          BUCKET: ${{ vars.CICD_SAM_BUCKET }}
+          PREFIX: ${{ vars.CICD_SAM_PREFIX }}
+          RUN_LABEL: ${{ github.run_id }}-${{ github.run_attempt }}
+          REVISION: ${{ github.sha }}
+          SOURCE: ${{ github.server_url }}/${{ github.repository }}
+        run: bash .github/scripts/package-sync.sh
+      - name: Remove the Sync .env and the SAM build directory
+        if: always()
+        run: bash .github/scripts/remove-sync-build.sh
+
+  # ---------------------------------------------------------------- CD hand-over to Jenkins
+  deploy:
+    name: deploy (Jenkins clarisa-result-management-sync-cd)
+    needs: publish-package
+    if: needs.publish-package.result == 'success' && needs.publish-package.outputs.digest != ''
+    permissions: {}
+    uses: ./.github/workflows/jenkins-cd.reusable.yml
+    with:
+      jenkins-job: clarisa-result-management-sync-cd
+      environment: result-sync-dev
+      dry-run: false # real deploy from the first run on dev (as the other migrated DEV pipelines); true = validation only
+      artifacts: sync=${{ needs.publish-package.outputs.digest }}
+    secrets:
+      JENKINS_USERNAME: ${{ secrets.JENKINS_USERNAME }}
+      JENKINS_API_TOKEN: ${{ secrets.JENKINS_API_TOKEN }}
+
+  # ---------------------------------------------------------------- CI failure notification
+  notify-ci-failure:
+    name: notify CI failure (Slack)
+    needs: [ci-script-checks, publish-package, deploy]
+    if: ${{ always() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+    permissions: {}
+    uses: ./.github/workflows/slack-notify.reusable.yml
+    with:
+      status: failed
+      title: PRMS RESULT MANAGEMENT (SYNC) NEW ENVIRONMENT
+      project: PRMS RESULT MANAGEMENT (SYNC)
+      environment-label: DEV
+      detail: >-
+        ci-script-checks=${{ needs.ci-script-checks.result }},
+        publish-package=${{ needs.publish-package.result }},
+        jenkins-hand-over=${{ needs.deploy.result }}
+    secrets:
+      SLACK_NOTIFICATIONS_WEBHOOK_URL: ${{ secrets.SLACK_NOTIFICATIONS_WEBHOOK_URL }}
