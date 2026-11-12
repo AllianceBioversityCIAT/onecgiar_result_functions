@@ -1,10 +1,9 @@
 name: Trigger Jenkins Job Sync
 
 on:
-  push:
-    branches:
-      - dev
-      - main
+  # dev and main removed (Sync DEV cutover): a push to dev runs result-sync-dev-cicd.yml -> clarisa-result-management-sync-cd,
+  # which deploys without Docker on the Jenkins agent. The legacy job clarisa-result-management-sync (it always deployed
+  # the dev branch, also on pushes to main) stays available through workflow_dispatch (manual recovery).
   workflow_dispatch: # Allows manual execution
 
 jobs:
