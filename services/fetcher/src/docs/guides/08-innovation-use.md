@@ -97,6 +97,8 @@ Represents groups of actors using the innovation.
 | **actor_type_id** | string or integer | ⚙️ Optional (if **actor_type_name** is provided) | Coded type of actor, from the table above. **Preferred over the name.** | 5 |
 | **actor_type_name** | string | ⚙️ Optional (if **actor_type_id** is provided) ⚠️ | Descriptive label of the actor type, matched against the table above. Case-insensitive and tolerant of spacing around the slashes. An unresolvable name is rejected. | "Researchers" |
 | **other_actor_type** | string or null | Conditional | Required when `actor_type_id` = 5. Describes the specific actor type when "Other" is selected. | "Youth farmer groups" |
+| **count_unit** 🆕 | string or null | ❌ Farmers only (recommended) | What the number counts: `households` or `individuals` (exact case). With `households`, send `how_many` only. See **Follow-up answers**. | "households" |
+| **use_nature** 🆕 | string or null | ❌ Every actor type (recommended) 🆕 2026-11-18 | What the number means: `information_received` (received information, advice or inputs) or `innovation_applied` (applied the innovation). Exact case. See **Follow-up answers**. | "innovation_applied" |
 | **sex_and_age_disaggregation** | boolean or null | ❌ | ⚠️ **Reads as "does not apply".** `false` (or omitted) → report `women` / `men` with their youth. `true` → the disaggregation is **not** available for this group, so report `how_many` only. | false |
 | **how_many** | string, integer or null | Conditional | Total number of actors in this group. Required when `sex_and_age_disaggregation` = `true`. | 120 |
 | **women** | string, integer or null | ❌ | Number of women in this actor group. | 60 |
@@ -133,6 +135,52 @@ PRMS derives non-youth as the difference and does not store it. **There is no to
 > - An actor sent with `actor_type_name` and no `actor_type_id` was **silently dropped** — stored with no type, and the request still returned `200` with "All results processed successfully". If you send names, verify the actors you expect came back.
 > - Youth was never checked against its sex total: `women: 10, women_youth: 999` was stored as sent, and the derived non-youth clamped to 0.
 > - The last two conditional rules fired when the field was **absent**, not just when it held the triggering value. Omitting `sex_and_age_disaggregation` demanded `how_many`, and identifying an actor by name demanded `other_actor_type`. Both now require the field to be present.
+
+### Follow-up answers (unit: Farmers; nature: every actor type) 🆕 2026-11
+
+PRMS asks two questions about the number reported. `use_nature` applies to **every actor type** 🆕 2026-11-18. `count_unit` applies to **Farmers/ (agro)pastoralist/ herders/ fishers** (`actor_type_id` 1) only. Send `use_nature` on every actor, and `count_unit` on each Farmers actor:
+
+| **Field** | **Question** | **Allowed values (exact case)** |
+| --- | --- | --- |
+| `count_unit` (Farmers only) | Do the reported numbers refer to households or individual actors? | `households`, `individuals` |
+| `use_nature` (every actor type) 🆕 2026-11-18 | What best characterises the nature of this innovation use number? | `information_received` (actors who received information, advice or inputs), `innovation_applied` (actors who applied the innovation) |
+
+**Households.** A household number is one total. Send `how_many`. Any `women` / `men` / youth figures are discarded, and the row is stored as `sex_and_age_disaggregation: true`.
+
+**Mixed groups.** When one number mixes both natures, send the actor type once per nature, for any actor type 🆕 2026-11-18. PRMS does not add them up. Example: 5,000 farmers reached, of whom 3,800 only received advice and 1,200 applied the practice:
+
+```json
+"actors": [
+  { "actor_type_id": 1, "count_unit": "individuals", "use_nature": "information_received",
+    "sex_and_age_disaggregation": true, "how_many": 3800 },
+  { "actor_type_id": 1, "count_unit": "individuals", "use_nature": "innovation_applied",
+    "sex_and_age_disaggregation": true, "how_many": 1200 }
+]
+```
+
+Any other type works the same way, without `count_unit`. Example: Researchers, 25 who received information and 12 who applied the innovation:
+
+```json
+"actors": [
+  { "actor_type_id": 2, "use_nature": "information_received", "sex_and_age_disaggregation": true, "how_many": 25 },
+  { "actor_type_id": 2, "use_nature": "innovation_applied", "sex_and_age_disaggregation": true, "how_many": 12 }
+]
+```
+
+**What happens to each case**
+
+| **Case** | **Result** |
+| --- | --- |
+| A value that is not one of the codes above (for example `"Households"`) | Rejected with `400`. |
+| `count_unit: "households"` without `how_many` | Rejected with `400`. |
+| Farmers actor without `count_unit` | Created. The answer is stored empty and a warning comes back: `actor_count_unit_missing`. Complete it in PRMS. |
+| Any actor without `use_nature` 🆕 2026-11-18 | Created. The answer is stored empty and a warning comes back: `actor_use_nature_missing`. Complete it in PRMS. |
+| `count_unit` on an actor that is not Farmers | Created. The answer is ignored and a warning comes back: `actor_count_unit_not_applicable`. |
+| `use_nature` on any actor type 🆕 2026-11-18 | Accepted. `actor_use_nature_not_applicable` is retired and no longer returned. |
+| Two actors of the same type with the same `use_nature` (and the same `count_unit` for Farmers, or the same `other_actor_type` for Other) 🆕 2026-11-18 | Stored as **one** row, and the later one wins. Warning `actor_duplicate_merged` on the later index: `Another actor of the same type with the same count_unit and use_nature was sent; the rows are stored as one and the later one wins.` |
+| Same type, different `use_nature` 🆕 2026-11-18 | Kept as separate rows, for every type. |
+
+Absent, `null` and `""` all count as empty. Warnings are returned in `outcomes[].warnings` with `field: "innovation_use.actors"`, and `index` is the actor's position in `actors[]`. See **Response examples → Warnings**. Both answers are also returned on every actor when you read the result. `use_nature` is returned on every actor type 🆕 2026-11-18.
 
 ---
 

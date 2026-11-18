@@ -34,6 +34,45 @@ When the payload passes validation and events are successfully published to Even
 
 ---
 
+## Warnings 🆕 2026-11
+
+Each row in `results[]` carries the PRMS answer at `externalApiResponse.response.outcomes[]`. When PRMS creates or updates the result but leaves part of the payload out, that row lists why in `warnings`. An empty array means nothing was left out.
+
+```json
+{
+  "result_code": "10070",
+  "operation": "created",
+  "status": "editing",
+  "external_reference": "MY-REF-001",
+  "warnings": [
+    {
+      "field": "contributing_partners",
+      "index": 2,
+      "code": "partner_ambiguous",
+      "message": "Partner \"AARI\" matches 2 CLARISA institutions; it was not linked. Send its CLARISA institution_id.",
+      "institution_id": null,
+      "name": null,
+      "acronym": "AARI",
+      "candidate_institution_ids": [2734, 3856]
+    }
+  ]
+}
+```
+
+| **Field** | **Description** |
+| --- | --- |
+| **field** | Payload section the warning is about: `contributing_partners` or `innovation_use.actors`. Partner warnings come first. |
+| **index** | Position of the entry in that array (0-based). For `innovation_use.actors`, the position in `current_innovation_use_numbers.actors[]`. |
+| **code** | Partners: `partner_unresolved`, `partner_ambiguous` or `partner_is_cgiar_center`. See **Common fields → How a partner is linked**. Innovation Use actors 🆕: `actor_count_unit_missing`, `actor_use_nature_missing`, `actor_count_unit_not_applicable` or `actor_duplicate_merged` (`actor_use_nature_not_applicable` is retired 🆕 2026-11-18). See **Innovation Use → Follow-up answers**. |
+| **message** | Human-readable reason. |
+| **institution_id / name / acronym** | Partner warnings only: what you sent for that entry. |
+| **candidate_institution_ids** | `partner_ambiguous` only: the institutions that matched. |
+| **resolved_institution_id** | `partner_is_cgiar_center` only: the center the entry resolved to. |
+
+A warning does not fail the row: `success` stays `true`. Read `warnings` on every row, fix the entry, and correct the result if needed.
+
+---
+
 ## Validation Failure Normal API
 
 If one or more results fail schema validation, the API will return a structured error message detailing which properties are missing or invalid.
