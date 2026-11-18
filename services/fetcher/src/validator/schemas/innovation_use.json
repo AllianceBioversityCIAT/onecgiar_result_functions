@@ -55,7 +55,7 @@
                       "use_nature": {
                         "type": ["string", "null"],
                         "enum": ["information_received", "innovation_applied", "", null],
-                        "description": "Farmers only (actor_type_id 1): whether the actors received information, advice or inputs, or applied the innovation."
+                        "description": "Applies to every actor type: whether the actors received information, advice or inputs, or applied the innovation."
                       },
                       "sex_and_age_disaggregation": {
                         "type": ["boolean", "null"]
