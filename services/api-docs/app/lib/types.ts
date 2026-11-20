@@ -86,6 +86,10 @@ export type ResultDetail = {
   } | null;
   regions?: Array<{ code?: number | null; name?: string | null }>;
   countries?: Array<{ code?: string | null; name?: string | null }>;
-  evidences?: Array<{ link?: string | null; description?: string | null }>;
+  evidences?: Array<{
+    link?: string | null;
+    description?: string | null;
+    is_public?: boolean | null;
+  }>;
   prms_link?: string;
 };
