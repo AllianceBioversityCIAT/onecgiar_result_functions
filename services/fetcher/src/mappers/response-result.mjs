@@ -429,6 +429,7 @@ export class EvidencesMapper {
   constructor(evidenceObject) {
     this.link = evidenceObject?.link;
     this.description = evidenceObject?.description;
+    this.is_public = evidenceObject?.is_public ?? null;
   }
 
   static from(evidenceObject) {
