@@ -48,7 +48,8 @@
         "evidence": [
           {
             "link": "www.google.com.co",
-            "description": "Adoption survey report"
+            "description": "Adoption survey report",
+            "is_public": true
           }
         ],
         "contributing_bilateral_projects": [

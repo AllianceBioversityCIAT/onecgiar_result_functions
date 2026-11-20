@@ -339,7 +339,8 @@
         "required": ["link"],
         "properties": {
           "link": { "type": "string" },
-          "description": { "type": "string" }
+          "description": { "type": "string" },
+          "is_public": { "type": ["boolean", "null"] }
         },
         "additionalProperties": false
       }

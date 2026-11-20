@@ -425,16 +425,17 @@ A partner that is not linked is **not** dropped silently. The result is still cr
 
 | **Field** | **Type** | **Required** | **Description** | **Example** |
 | --- | --- | --- | --- | --- |
-| link | string (`http(s)` URL) | ✅ | **Publicly accessible link to the supporting evidence** (paper, report, dataset, etc.). Must include the scheme. File storage platforms are not accepted — see the rules below. | `"https://cgspace.cgiar.org/handle/10568/181939"` |
+| link | string (`http(s)` URL) | ✅ | **Link to the supporting evidence** (paper, report, dataset, etc.). It must be publicly accessible unless the item sends `is_public: false`. Must include the scheme. File storage platforms are accepted only with `is_public: false` — see the rules below. | `"https://cgspace.cgiar.org/handle/10568/181939"` |
 | description | string | ❌ | **Brief description of the evidence.** | `"Peer-reviewed article summarizing multi-country trials."` |
+| is_public | boolean \| null | ❌ | **Whether the evidence may be shown publicly.** `false` marks it private; `null` or omitted means untagged, which PRMS treats as public. Only `false` lets a file storage platform link (SharePoint, OneDrive, Google Drive, Dropbox) through. | `false` |
 
 PRMS stores the link and **never copies the document**. Everything about what is accepted follows from that: whoever opens the link later — a reviewer, the CGIAR Results Dashboard — gets exactly what you sent, or nothing.
 
 | Rule | Detail |
 | --- | --- |
 | **Scheme required** ⚠️ 2026-08 | The link must start with `http://` or `https://`. A bare file name is rejected. |
-| **No file storage platforms** ⚠️ 2026-08 | SharePoint, OneDrive, Google Drive and Dropbox links are rejected, whatever the tenant. |
-| **Publicly reachable** | A link nobody outside your organisation can open is of no use as evidence, even when it is technically accepted. |
+| **No file storage platforms** ⚠️ 2026-08 | SharePoint, OneDrive, Google Drive and Dropbox links are rejected, whatever the tenant, unless the item sends `is_public: false`. |
+| **Publicly reachable** | A public link (no `is_public: false`) that nobody outside your organisation can open is of no use as evidence, even when it is technically accepted. A private link may require sign-in: PRMS shows it to reviewers with a "Private" tag and does not block access. |
 
 ✅ `https://cgspace.cgiar.org/handle/10568/181939`  
 ✅ `https://doi.org/10.1234/abcd.2025.01`  
@@ -443,7 +444,7 @@ PRMS stores the link and **never copies the document**. Everything about what is
 
 > ⚠️ **Both rules were already in force in the PRMS reporting tool** and stated on screen there; this API simply did not apply them. Until 2026-08 the same link was refused in the form and accepted here.
 
-> ℹ️ **Confidential evidence has no route through this API.** The API accepts links only. Evidence that cannot be public is reported through the PRMS reporting tool with **Upload file** and answering **No** to the public question: the file is then stored in the PRMS repository, kept off the Results Dashboard, and reachable only by CGIAR staff holding the repository link.
+> ℹ️ **Evidence that cannot be public.** Send it as a link with `is_public: false`. With `is_public: false`, a link on a file storage platform (Google Drive, Dropbox, SharePoint, OneDrive) is accepted, and PRMS keeps it private: it is withheld from the AI quality payload and tagged "Private" for reviewers. To store a file itself, use **Upload file** in the PRMS reporting tool.
 
 **Where the rejection appears:** these two rules are applied by PRMS, not by this service's pre-checks. A bad link comes back as a failed row in `results[]` (HTTP 207), not in `rejected[]` (HTTP 422). Validate on your side if you want to catch it before submitting.
 

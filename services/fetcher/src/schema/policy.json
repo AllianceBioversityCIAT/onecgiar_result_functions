@@ -34,7 +34,8 @@
         "evidence": [
           {
             "link": "www.gipiti.com",
-            "description": "Policy document and implementation plan"
+            "description": "Policy document and implementation plan",
+            "is_public": true
           }
         ],
         "contributing_bilateral_projects": [
