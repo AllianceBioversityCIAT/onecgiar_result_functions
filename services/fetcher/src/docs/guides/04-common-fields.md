@@ -425,7 +425,7 @@ A partner that is not linked is **not** dropped silently. The result is still cr
 
 | **Field** | **Type** | **Required** | **Description** | **Example** |
 | --- | --- | --- | --- | --- |
-| link | string (`http(s)` URL) | ✅ | **Publicly accessible link to the supporting evidence** (paper, report, dataset, etc.). Must include the scheme. File storage platforms are accepted only with `is_public: false` — see the rules below. | `"https://cgspace.cgiar.org/handle/10568/181939"` |
+| link | string (`http(s)` URL) | ✅ | **Link to the supporting evidence** (paper, report, dataset, etc.). It must be publicly accessible unless the item sends `is_public: false`. Must include the scheme. File storage platforms are accepted only with `is_public: false` — see the rules below. | `"https://cgspace.cgiar.org/handle/10568/181939"` |
 | description | string | ❌ | **Brief description of the evidence.** | `"Peer-reviewed article summarizing multi-country trials."` |
 | is_public | boolean \| null | ❌ | **Whether the evidence may be shown publicly.** `false` marks it private; `null` or omitted means untagged, which PRMS treats as public. Only `false` lets a file storage platform link (SharePoint, OneDrive, Google Drive, Dropbox) through. | `false` |
 
@@ -435,7 +435,7 @@ PRMS stores the link and **never copies the document**. Everything about what is
 | --- | --- |
 | **Scheme required** ⚠️ 2026-08 | The link must start with `http://` or `https://`. A bare file name is rejected. |
 | **No file storage platforms** ⚠️ 2026-08 | SharePoint, OneDrive, Google Drive and Dropbox links are rejected, whatever the tenant, unless the item sends `is_public: false`. |
-| **Publicly reachable** | A link nobody outside your organisation can open is of no use as evidence, even when it is technically accepted. |
+| **Publicly reachable** | A public link (no `is_public: false`) that nobody outside your organisation can open is of no use as evidence, even when it is technically accepted. A private link may require sign-in: PRMS shows it to reviewers with a "Private" tag and does not block access. |
 
 ✅ `https://cgspace.cgiar.org/handle/10568/181939`  
 ✅ `https://doi.org/10.1234/abcd.2025.01`  
